@@ -3,6 +3,7 @@
 # General Rust ignores
 /target/
 /Cargo.lock
+!/Cargo.lock
 **/*.rs.bk
 
 # Ignore artifacts from `cargo check`
@@ -37,6 +38,7 @@
 /node_modules/
 /pnpm-lock.yaml
 /package-lock.json
+!/package-lock.json
 /yarn.lock
 /vite.config.ts
 /vite.config.js
@@ -75,6 +77,10 @@ app.log
 # Ingnore meta_data and settings
 /config/meta_data.json
 /config/settings.json
+
+# Theme validation generated output
+/.tmp/theme-validation/
+/artifacts/theme-validation/
 
 # Ignore logs
 /logs/*

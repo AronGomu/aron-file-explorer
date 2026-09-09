@@ -67,6 +67,13 @@ Windows until then please refer to the compilation from source for your computer
 
 ## Installation from source
 
+Clone this repository:
+
+```bash
+git clone https://github.com/AronGomu/aron-file-explorer.git
+cd aron-file-explorer
+```
+
 ### Prerequisites for installing from source
 
 - [NodeJS](https://nodejs.org/) (stable version)
@@ -192,7 +199,8 @@ Lots of changes were made in the course of the InformatiCup from the year 2025. 
 in Germany. The given task was to contribute to existing open source projects. The team members were
 [Marco Brandt](https://github.com/CodeMarco05), [Daniel Schatz](https://github.com/xd1i0),
 [Lauritz Wiebusch](https://github.com/wielauritz), [Sören Panten](https://github.com/SPKonig). The
-repo can be found under [FileExplorer](https://github.com/CodeMarco05/FileExplorer).
+original repo can be found under [FileExplorer](https://github.com/CodeMarco05/FileExplorer).
+This independent project is maintained at [aron-file-explorer](https://github.com/AronGomu/aron-file-explorer).
 
 ## ⚡ Performance
 

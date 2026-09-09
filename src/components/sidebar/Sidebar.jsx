@@ -9,8 +9,6 @@ import Favorites from './Favorites';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
 import AddSftpConnectionView from './AddSftpConnectionView';
-import PermissionHelper from '../common/PermissionHelper';
-import {open} from '@tauri-apps/plugin-dialog';
 import './sidebar.css';
 import {showConfirm, showError, showSuccess} from "../../utils/NotificationSystem.js";
 
@@ -38,26 +36,6 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
     const [sftpConnections, setSftpConnections] = useState([]);
     const [isAddSftpModalOpen, setIsAddSftpModalOpen] = useState(false);
     
-    // Permission helper state
-    const [isPermissionHelperOpen, setIsPermissionHelperOpen] = useState(false);
-    const [permissionDirectory, setPermissionDirectory] = useState(null);
-
-    // Quick browse to protected folder
-    const browseToProtectedFolder = async (folderName, expectedPath) => {
-        try {
-            const selectedPath = await open({
-                directory: true,
-                title: `Browse to your ${folderName} folder`,
-                defaultPath: expectedPath ? expectedPath.substring(0, expectedPath.lastIndexOf('/')) : undefined
-            });
-            
-            if (selectedPath) {
-                await handleItemClick(selectedPath, folderName);
-            }
-        } catch (error) {
-            console.error(`Failed to browse to ${folderName}:`, error);
-        }
-    };
     // Load SFTP connections from localStorage
     const loadSftpConnections = React.useCallback(() => {
         try {
@@ -122,14 +100,13 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
         const saved = localStorage.getItem('sidebarSectionsCollapsed');
         return saved ? JSON.parse(saved) : {
             quickAccess: false,
-            thisPC: false,
             favorites: false,
             drives: false
         };
     });
 
     /**
-     * Load system info to get proper user directories
+     * Load system info to identify the current OS
      */
     useEffect(() => {
         const loadSystemInfo = async () => {
@@ -167,11 +144,10 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
     };
 
     /**
-     * Handles clicking on a sidebar item with navigation history update and permission handling
+     * Handles clicking on a sidebar item with navigation history update
      * @param {string} path - Path to navigate to
-     * @param {string} [name] - Display name of the directory (for permission helper)
      */
-    const handleItemClick = async (path, name = null) => {
+    const handleItemClick = async (path) => {
         let targetPath = path;
         
         // Handle SFTP files - navigate to parent directory instead of trying to open as directory
@@ -212,19 +188,7 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
         // Always reload the directory, even if it's already selected
         window.dispatchEvent(new CustomEvent('force-explorer-view'));
         
-        const success = await loadDirectory(targetPath);
-        
-        // If loading failed and it's a user directory, offer permission helper
-        if (!success && name) {
-            const isUserDir = ['Desktop', 'Documents', 'Downloads', 'Pictures', 'Movies', 'Music'].some(dir => 
-                targetPath.toLowerCase().includes(dir.toLowerCase())
-            );
-            
-            if (isUserDir) {
-                setPermissionDirectory({ path: targetPath, name });
-                setIsPermissionHelperOpen(true);
-            }
-        }
+        await loadDirectory(targetPath);
     };
     // Refresh disks when switching to 'this-pc' or 'explorer' view
     React.useEffect(() => {
@@ -324,59 +288,6 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
         }
     };
 
-    /**
-     * Gets user directories based on OS
-     * @returns {Array<{name: string, path: string, icon: string}>} Array of user directory objects
-     */
-    const getUserDirectories = () => {
-        if (!systemInfo) return [];
-
-        const dirs = [];
-        const homeDir = systemInfo.user_home_dir;
-        const os = systemInfo.current_running_os;
-
-        if (os === 'windows') {
-            dirs.push(
-                { name: 'Desktop', path: `${homeDir}\\Desktop`, icon: 'desktop' },
-                { name: 'Documents', path: `${homeDir}\\Documents`, icon: 'documents' },
-                { name: 'Downloads', path: `${homeDir}\\Downloads`, icon: 'downloads' },
-                { name: 'Pictures', path: `${homeDir}\\Pictures`, icon: 'pictures' },
-                { name: 'Music', path: `${homeDir}\\Music`, icon: 'music' },
-                { name: 'Videos', path: `${homeDir}\\Videos`, icon: 'videos' }
-            );
-        } else {
-            dirs.push(
-                { name: 'Desktop', path: `${homeDir}/Desktop`, icon: 'desktop' },
-                { name: 'Documents', path: `${homeDir}/Documents`, icon: 'documents' },
-                { name: 'Downloads', path: `${homeDir}/Downloads`, icon: 'downloads' },
-                { name: 'Pictures', path: `${homeDir}/Pictures`, icon: 'pictures' },
-                { name: 'Music', path: `${homeDir}/Music`, icon: 'music' },
-                { name: 'Videos', path: `${homeDir}/Movies`, icon: 'videos' }
-            );
-        }
-
-        return dirs;
-    };
-
-    const userDirectories = getUserDirectories();
-
-    /**
-     * Gets user volume (for macOS dual mount handling)
-     * @returns {Object|null} User volume object or null if not found
-     */
-    const getUserVolume = () => {
-        if (!systemInfo || !volumes.length) return null;
-
-        const homeDir = systemInfo.user_home_dir;
-
-        // Find volume that contains user directory but is not root
-        return volumes.find(vol =>
-            homeDir.startsWith(vol.mount_point) && vol.mount_point !== '/'
-        );
-    };
-
-    const userVolume = getUserVolume();
-
     return (
         <>
             <aside className="sidebar">
@@ -403,66 +314,6 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                         )}
                     </section>
                     */}
-
-                    {/* This PC section */}
-                    <section className="sidebar-section">
-                        <div className="sidebar-section-header">
-                            <h3 className="sidebar-section-title">This PC</h3>
-                            <button
-                                className="section-collapse-button"
-                                onClick={() => toggleSectionCollapse('thisPC')}
-                                aria-label={sectionCollapsed.thisPC ? 'Expand This PC' : 'Collapse This PC'}
-                            >
-                                <span className={`icon icon-chevron-${sectionCollapsed.thisPC ? 'up' : 'down'}`}></span>
-                            </button>
-                        </div>
-                        {!sectionCollapsed.thisPC && (
-                            <ul className="sidebar-list">
-                                <SidebarItem
-                                    icon="computer"
-                                    name="This PC"
-                                    path="this-pc"
-                                    isActive={currentView === 'this-pc'}
-                                    onClick={() => {
-                                        navigateTo(null); // Clear explorer path
-                                        document.dispatchEvent(new CustomEvent('open-this-pc'));
-                                    }}
-                                />
-
-                                {/* User volume (for macOS/Windows user directory) */}
-                                {userVolume && (
-                                    <SidebarItem
-                                        icon="user"
-                                        name={`User (${userVolume.volume_name || 'User Disk'})`}
-                                        path={userVolume.mount_point}
-                                        isActive={currentView === 'explorer' && currentPath === userVolume.mount_point}
-                                        onClick={() => handleItemClick(userVolume.mount_point)}
-                                        info={`${(userVolume.available_space / 1024 / 1024 / 1024).toFixed(1)}GB free`}
-                                    />
-                                )}
-
-                                {/* User directories */}
-                                {userDirectories.map((dir) => {
-                                    const isProtectedDir = ['Desktop', 'Documents', 'Downloads'].includes(dir.name);
-                                    return (
-                                        <SidebarItem
-                                            key={dir.path}
-                                            icon={dir.icon}
-                                            name={dir.name}
-                                            path={dir.path}
-                                            isActive={currentView === 'explorer' && currentPath === dir.path}
-                                            onClick={() => handleItemClick(dir.path, dir.name)}
-                                            actions={isProtectedDir ? [{
-                                                icon: 'folder-open',
-                                                tooltip: `Browse to ${dir.name} folder`,
-                                                onClick: () => browseToProtectedFolder(dir.name, dir.path)
-                                            }] : []}
-                                        />
-                                    );
-                                })}
-                            </ul>
-                        )}
-                    </section>
 
                     {/* Favorites section */}
                     <section className="sidebar-section">
@@ -650,20 +501,6 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                 onAdd={addSftpConnection}
             />
 
-            {/* Permission Helper Modal */}
-            <PermissionHelper
-                isOpen={isPermissionHelperOpen}
-                onClose={() => {
-                    setIsPermissionHelperOpen(false);
-                    setPermissionDirectory(null);
-                }}
-                directoryPath={permissionDirectory?.path}
-                directoryName={permissionDirectory?.name}
-                onDirectorySelected={(selectedPath) => {
-                    // Navigate to the selected directory
-                    handleItemClick(selectedPath, permissionDirectory?.name);
-                }}
-            />
                 </div>
 
                 {/* Bottom actions */}
