@@ -65,6 +65,9 @@
 *.swo
 *~
 
+# Ignore generated codebase graph
+/graphify-out/
+
 
 # Ignore custom path for files
 /src-tauri/config
