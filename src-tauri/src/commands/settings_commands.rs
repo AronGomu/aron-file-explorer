@@ -289,7 +289,7 @@ mod tests_settings_commands {
 
         let state = create_test_settings_state_with_temp_file(temp_file.path().to_path_buf());
         let json = get_settings_as_json_impl(state);
-        assert!(json.contains("\"darkmode\":false"));
+        assert!(json.contains("\"darkmode\":true"));
         assert!(json.contains("\"logging_level\":\"Full\""));
     }
 
@@ -297,7 +297,7 @@ mod tests_settings_commands {
     fn test_get_setting_field_existing_key() {
         let state = create_test_settings_state();
         let value = get_setting_field_impl(state.clone(), "darkmode".to_string()).unwrap();
-        assert_eq!(value, json!(false));
+        assert_eq!(value, json!(true));
     }
 
     #[test]
@@ -310,11 +310,11 @@ mod tests_settings_commands {
     #[test]
     fn test_update_settings_field_success() {
         let state = create_test_settings_state();
-        let result = update_settings_field_impl(state.clone(), "darkmode".to_string(), json!(true));
+        let result = update_settings_field_impl(state.clone(), "darkmode".to_string(), json!(false));
         assert!(result.is_ok());
 
         let updated = get_setting_field_impl(state.clone(), "darkmode".to_string()).unwrap();
-        assert_eq!(updated, json!(true));
+        assert_eq!(updated, json!(false));
     }
 
     #[test]
@@ -330,7 +330,7 @@ mod tests_settings_commands {
         let state = create_test_settings_state();
 
         let mut updates = serde_json::Map::new();
-        updates.insert("darkmode".to_string(), json!(true));
+        updates.insert("darkmode".to_string(), json!(false));
         updates.insert("default_theme".to_string(), json!("solarized"));
 
         let result = update_multiple_settings_impl(state.clone(), updates);
@@ -339,7 +339,7 @@ mod tests_settings_commands {
         let darkmode = get_setting_field_impl(state.clone(), "darkmode".to_string()).unwrap();
         let theme = get_setting_field_impl(state.clone(), "default_theme".to_string()).unwrap();
 
-        assert_eq!(darkmode, json!(true));
+        assert_eq!(darkmode, json!(false));
         assert_eq!(theme, json!("solarized"));
     }
 
@@ -359,12 +359,12 @@ mod tests_settings_commands {
         let state = create_test_settings_state();
         // Prefix unused variable with underscore
         let _updated_data =
-            update_settings_field_impl(state.clone(), "darkmode".to_string(), json!(true));
+            update_settings_field_impl(state.clone(), "darkmode".to_string(), json!(false));
 
         let result = reset_settings_impl(state.clone());
         assert!(result.is_ok());
 
         let darkmode = get_setting_field_impl(state.clone(), "darkmode".to_string()).unwrap();
-        assert_eq!(darkmode, json!(false));
+        assert_eq!(darkmode, json!(true));
     }
 }

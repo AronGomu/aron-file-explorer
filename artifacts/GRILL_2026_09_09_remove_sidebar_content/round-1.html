@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sidebar removal scope</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0b0a08; --panel:#17130d; --panel-2:#1f190f; --text:#fff7ed; --muted:#c9b99f; --line:#4a3b25; --accent:#fbbf24; --accent-2:#fb923c; --focus:#facc15; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font:16px/1.55 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    main { width:min(960px,calc(100% - 32px)); margin:0 auto; padding:48px 0 96px; }
+    header { display:grid; gap:12px; margin-bottom:32px; }
+    .eyebrow { color:var(--accent); font-size:.75rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+    h1,h2,p { margin:0; } h1 { font-size:clamp(2rem,5vw,3.5rem); line-height:1.08; letter-spacing:-.035em; }
+    .lede { max-width:70ch; color:var(--muted); }
+    .tree { display:flex; align-items:center; gap:8px; overflow:auto; padding:16px; margin:24px 0 32px; border:1px solid var(--line); border-radius:12px; background:var(--panel); color:var(--muted); white-space:nowrap; }
+    .tree b { color:var(--text); } .node { padding:6px 10px; border:1px solid var(--line); border-radius:999px; } .node.active { border-color:var(--accent); color:var(--accent); } .arrow { color:var(--line); }
+    .visuals { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin:0 0 32px; }
+    figure { min-width:0; margin:0; padding:18px; border:1px solid var(--line); border-radius:14px; background:var(--panel); }
+    figcaption { margin-bottom:14px; color:var(--muted); font-size:.85rem; } figcaption b { display:block; color:var(--text); font-size:1rem; }
+    svg { display:block; width:100%; height:auto; } svg text { font-family:ui-sans-serif,system-ui,sans-serif; }
+    .svg-node { fill:var(--panel-2); stroke:var(--line); stroke-width:2; } .svg-node.active { stroke:var(--accent); } .svg-line { fill:none; stroke:var(--line); stroke-width:2; } .svg-arrow { fill:var(--line); } .svg-label { fill:var(--text); font-size:12px; } .svg-note { fill:var(--muted); font-size:10px; } .svg-accent { fill:var(--accent); }
+    form { display:grid; gap:20px; }
+    fieldset { min-width:0; margin:0; padding:24px; border:1px solid var(--line); border-radius:16px; background:var(--panel); }
+    legend { max-width:100%; padding:0 8px; font-size:1.15rem; font-weight:750; }
+    .why { margin:0 0 18px; color:var(--muted); font-size:.925rem; }
+    .choices { display:grid; gap:10px; }
+    .choice { display:grid; grid-template-columns:auto 1fr; gap:12px; align-items:start; padding:14px; border:1px solid var(--line); border-radius:10px; background:var(--panel-2); cursor:pointer; }
+    .choice:has(input:checked) { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset; }
+    input { width:18px; height:18px; margin-top:3px; accent-color:var(--accent); }
+    .rank { display:inline-block; margin-left:7px; color:var(--accent-2); font-size:.72rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
+    .detail { display:block; margin-top:3px; color:var(--muted); font-size:.875rem; }
+    label.precision { display:block; margin-top:18px; font-size:.85rem; font-weight:700; color:var(--muted); }
+    textarea { width:100%; min-height:90px; margin-top:7px; padding:12px; resize:vertical; border:1px solid var(--line); border-radius:10px; background:#100d08; color:var(--text); font:inherit; }
+    input:focus-visible,textarea:focus-visible,button:focus-visible { outline:3px solid var(--focus); outline-offset:2px; }
+    .actions { position:sticky; bottom:16px; display:flex; gap:12px; align-items:center; justify-content:space-between; padding:14px; border:1px solid var(--line); border-radius:14px; background:rgba(19,23,28,.96); box-shadow:0 16px 40px #0008; backdrop-filter:blur(10px); }
+    button { padding:11px 16px; border:0; border-radius:9px; background:var(--accent); color:#211500; font:inherit; font-weight:800; cursor:pointer; }
+    #status { color:var(--muted); font-size:.875rem; }
+    @media (max-width:700px) { .visuals { grid-template-columns:1fr; } }
+    @media (max-width:600px) { main { width:min(100% - 20px,960px); padding-top:28px; } fieldset { padding:18px 14px; } .actions { align-items:flex-start; flex-direction:column; } button { width:100%; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <span class="eyebrow">Grill me · Round 1 · Removal boundary</span>
+    <h1>Sidebar removal scope</h1>
+    <p class="lede">One scope decision before planning. Choose intended removal, copy summary, paste into chat. Planning only; app source untouched.</p>
+  </header>
+
+  <nav class="tree" aria-label="Design tree progress"><span class="node">Removal plan</span><span class="arrow">→</span><span class="node active">Q1: UI boundary</span><span class="arrow">→</span><span class="node">Tickets + contracts</span></nav>
+
+  <section class="visuals" aria-label="Technical context">
+    <!-- Prefer inline SVG. Every image needs role="img", aria-labelledby, title, and desc. -->
+    <figure><figcaption><b>V1: Current sidebar</b>src/components/sidebar/Sidebar.jsx:383–650</figcaption><svg viewBox="0 0 400 220" role="img" aria-labelledby="diagram-title diagram-desc"><title id="diagram-title">Sidebar removal boundary</title><desc id="diagram-desc">sidebar-content wraps This PC, Favorites, Drives, Network. Choose entire container or This PC section.</desc><rect class="svg-node active" x="10" y="10" width="380" height="200" rx="10"/><text class="svg-label" x="25" y="35">sidebar-content</text><rect class="svg-node active" x="25" y="50" width="350" height="40" rx="5"/><text class="svg-label" x="40" y="75">This PC + user shortcuts</text><text class="svg-label" x="40" y="120">Favorites</text><text class="svg-label" x="40" y="155">Drives</text><text class="svg-label" x="40" y="190">Network</text></svg></figure>
+  </section>
+
+  <form id="questions">
+    <!-- Repeat one fieldset per frontier question. Keep data-question unique. -->
+    <fieldset data-question="Q1: What disappears?"><legend>Q1: What disappears?</legend><p class="why">sidebar-content contains more than This PC. Removal scope changes navigation access.</p><div class="choices"><label class="choice"><input type="checkbox" value="A1: Remove entire sidebar-content"><span><b>A1: Remove entire sidebar-content</b><span class="rank">Recommended</span><span class="detail">Remove This PC, folder shortcuts, Favorites, Drives, Network sidebar UI. Main views/backend stay outside removal scope.</span></span></label><label class="choice"><input type="checkbox" value="A2: Remove only This PC section"><span><b>A2: Remove only This PC section</b><span class="rank">Second</span><span class="detail">Remove This PC heading, shortcut, user-volume shortcut, user-directory shortcuts. Keep Favorites, Drives, Network.</span></span></label><label class="choice"><input type="checkbox" value="A3: Remove wrapper only"><span><b>A3: Remove wrapper only</b><span class="rank">Third</span><span class="detail">Remove sidebar-content div; retain every section. Layout-only change.</span></span></label></div><label class="precision">Custom scope<textarea placeholder="Choose A1, A2, A3; specify exceptions or replacement UI."></textarea></label></fieldset>
+
+    <div class="actions">
+      <span id="status" role="status">Selections stay in this page until copied.</span>
+      <button type="button" id="copy-summary">Copy answer summary</button>
+    </div>
+  </form>
+</main>
+<script>
+  const button = document.querySelector('#copy-summary');
+  const status = document.querySelector('#status');
+
+  function buildSummary() {
+    const sections = [...document.querySelectorAll('fieldset[data-question]')].map((field, index) => {
+      const question = field.dataset.question;
+      const selected = [...field.querySelectorAll('input[type="checkbox"]:checked')].map(input => `- ${input.value}`);
+      const precision = field.querySelector('textarea').value.trim();
+      const answers = selected.length ? selected.join('\n') : '- No recommended answer selected';
+      return `${index + 1}. ${question}\n${answers}${precision ? `\nPrecision: ${precision}` : ''}`;
+    });
+    return `Round 1 · Removal boundary — Sidebar removal scope\n\n${sections.join('\n\n')}`;
+  }
+
+  button.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(buildSummary());
+      status.textContent = 'Summary copied to clipboard.';
+    } catch (_) {
+      const fallback = document.createElement('textarea');
+      fallback.value = buildSummary();
+      document.body.appendChild(fallback);
+      fallback.select();
+      document.execCommand('copy');
+      fallback.remove();
+      status.textContent = 'Summary copied to clipboard.';
+    }
+  });
+</script>
+</body>
+</html>

@@ -119,7 +119,7 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Settings {
-            darkmode: false,
+            darkmode: true,
             custom_themes: vec![],
             default_theme: "".to_string(),
             default_themes_path: Default::default(),
@@ -674,7 +674,7 @@ mod tests_settings {
     #[test]
     fn test_default_settings() {
         let settings = Settings::default();
-        assert_eq!(settings.darkmode, false);
+        assert_eq!(settings.darkmode, true);
         //assert_eq!(settings.custom_themes, vec![]);
         assert_eq!(settings.default_theme, "".to_string());
         //assert_eq!(settings.default_themes_path, Default::default());
@@ -714,7 +714,7 @@ mod tests_settings {
         assert!(read_result.is_ok(), "Should be able to read settings file");
 
         let settings = read_result.unwrap();
-        assert_eq!(settings.darkmode, false);
+        assert_eq!(settings.darkmode, true);
         assert_eq!(settings.default_theme, "".to_string());
         //assert_eq!(settings.default_themes_path, Default::default());
         //assert_eq!(settings.default_folder_path_on_opening, Default::default());
@@ -731,7 +731,7 @@ mod tests_settings {
         let settings_state = SettingsState::new_with_path(test_path.clone());
 
         let mut updates = Map::new();
-        updates.insert("darkmode".to_string(), json!(true));
+        updates.insert("darkmode".to_string(), json!(false));
         updates.insert("default_theme".to_string(), json!("solarized"));
 
         let result = settings_state.update_multiple_settings(&updates);
@@ -747,7 +747,7 @@ mod tests_settings {
         );
 
         let loaded_settings = loaded.unwrap();
-        assert_eq!(loaded_settings.darkmode, true);
+        assert_eq!(loaded_settings.darkmode, false);
         assert_eq!(loaded_settings.default_theme, "solarized");
     }
 
@@ -789,7 +789,7 @@ mod tests_settings {
     /// Tests updating the darkmode setting field.
     ///
     /// Verifies that:
-    /// 1. The darkmode field can be updated to true
+    /// 1. The darkmode field can be updated to false
     /// 2. The returned settings object reflects the updated value
     #[test]
     fn test_update_darkmode_field() {
@@ -797,9 +797,9 @@ mod tests_settings {
             tempfile::NamedTempFile::new().unwrap().path().to_path_buf(),
         );
 
-        let result = state.update_setting_field("darkmode", json!(true));
+        let result = state.update_setting_field("darkmode", json!(false));
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().darkmode, true);
+        assert_eq!(result.unwrap().darkmode, false);
     }
 
     /// Tests updating the default_theme setting field.
@@ -940,13 +940,13 @@ mod tests_settings {
 
         // Set a known value
         settings_state
-            .update_setting_field("darkmode", json!(true))
+            .update_setting_field("darkmode", json!(false))
             .unwrap();
 
         // Call get_setting_field
         let result = settings_state.get_setting_field("darkmode");
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), json!(true));
+        assert_eq!(result.unwrap(), json!(false));
     }
 
     /// Tests error handling when retrieving a non-existent key.
@@ -997,14 +997,14 @@ mod tests_settings {
         let settings_state = SettingsState::new_with_path(temp_file.path().to_path_buf());
 
         let mut updates: Map<String, Value> = Map::new();
-        updates.insert("darkmode".into(), Value::Bool(true));
+        updates.insert("darkmode".into(), Value::Bool(false));
         updates.insert("default_theme".into(), Value::String("gruvbox".into()));
 
         let result = settings_state.update_multiple_settings(&updates);
         assert!(result.is_ok());
 
         let updated = result.unwrap();
-        assert_eq!(updated.darkmode, true);
+        assert_eq!(updated.darkmode, false);
         assert_eq!(updated.default_theme, "gruvbox");
     }
 

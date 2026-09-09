@@ -4,7 +4,7 @@ import { invoke } from '@tauri-apps/api/core';
 // Default settings - using exact backend keys and supported values
 const defaultSettings = {
     // Core UI settings
-    darkmode: false,
+    darkmode: true,
     custom_themes: [],
     default_theme: "",
     default_themes_path: "",

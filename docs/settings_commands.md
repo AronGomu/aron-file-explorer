@@ -14,7 +14,7 @@ The current settings consist of the following fields. A nearer explanation of ea
 
 ```json
 {
-   "darkmode":false,
+   "darkmode":true,
    "custom_themes":[
       
    ],

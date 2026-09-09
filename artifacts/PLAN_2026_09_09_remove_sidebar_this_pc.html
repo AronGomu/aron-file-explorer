@@ -1,0 +1,126 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Plan: remove sidebar This PC</title><style>
+:root{color-scheme:dark;--bg:#10151d;--panel:#192331;--fg:#edf3fb;--muted:#adbed3;--line:#34475e;--accent:#84dbbc}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 system-ui,sans-serif}main{max-width:1100px;margin:auto;padding:40px 24px 80px}h1,h2,h3{line-height:1.2}h2{margin-top:40px}a{color:var(--accent)}.card,details{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px;margin:20px 0}summary{cursor:pointer;font-weight:700}code{font-size:.88em;overflow-wrap:anywhere}pre{overflow:auto;padding:18px;background:var(--bg);border-radius:8px;white-space:pre-wrap}.table{overflow:auto}table{border-collapse:collapse;width:100%;font-size:.88em}td{border:1px solid var(--line);padding:10px;vertical-align:top}.check{border-left:3px solid var(--accent);padding-left:12px}.muted{color:var(--muted)}svg{width:100%;max-height:130px}p{overflow-wrap:anywhere}</style></head><body><main><p class="muted">2026-09-09 · PLAN COMPLETE · IMPL NOT STARTED</p><h1>Remove sidebar This PC</h1><p>Remove built-in heading, This PC shortcut, user-volume/folder shortcuts. Keep wrapper, Favorites, Drives, Network, footer, main This PC view.</p><nav><a href="PLAN_2026_09_09_remove_sidebar_this_pc.md">MD index</a> · <a href="PLAN_2026_09_09_remove_sidebar_this_pc/T1_remove_this_pc_section.md">T1 MD</a> · <a href="#review">Review</a></nav><section class="card"><h2>Ticket flow</h2><svg viewBox="0 0 850 100" role="img" aria-labelledby="ft fd"><title id="ft">Single vertical slice</title><desc id="fd">T1: preflight, red tests, remove section, green tests, desktop validation. No dependencies.</desc><rect x="5" y="10" width="840" height="80" rx="12" fill="#10151d" stroke="#84dbbc"/><text x="425" y="45" text-anchor="middle" fill="#edf3fb" font-size="18">T1 · Remove This PC section</text><text x="425" y="73" text-anchor="middle" fill="#adbed3" font-size="15">Preflight → Red → Removal → Green → Desktop checks</text></svg><p>Depends: none · State: NOT STARTED · Parallelism: unnecessary</p></section><section class="card"><h2>Verification boundary</h2><p>Native Node source-contract tests + build + isolated desktop checks. New deps: 0. ADRs: 0 — reversible UI removal, no new architecture constraint.</p><p class="muted">Fresh-context review complete; two amendments accepted. App tests not run during planning.</p></section><details open><summary>T1 · Full implementation contract</summary><h2>T1: Remove sidebar This PC section</h2>
+<p><strong>Plan:</strong> <code>./artifacts/PLAN_2026_09_09_remove_sidebar_this_pc.md</code>  </p>
+<p><strong>Depends:</strong> none  </p>
+<p><strong>Commit outcome:</strong> Sidebar starts with Favorites; This PC section/shortcuts absent; remaining navigation unchanged.</p>
+<h3>Context (self-contained)</h3>
+<p>C1. Goal: remove only sidebar This PC section, not <code>.sidebar-content</code>. User chose A2: heading, This PC shortcut, user-volume shortcut, user-directory shortcuts disappear; Favorites, Drives, Network stay.</p>
+<p>C2. Slice: single vertical change, including setup preflight, regression test, private orphan cleanup, desktop validation. No parallel writer needed.</p>
+<p>C3. Out: backend commands, main <code>ThisPCView</code>, CSS redesign, new navigation, storage migration, unrelated errors, generated-code edits. Preserve dirty worktree/staging. No commit/push without separate request.</p>
+<h3>Assumptions</h3>
+<p>A1. No replacement shortcuts. Existing Favorites pointing to user folders remain valid.</p>
+<p>A2. Keep legacy <code>sidebarSectionsCollapsed.thisPC</code> when already stored; remove default property only. No storage writes merely from mounting.</p>
+<p>A3. Native Node source-contract tests fit small removal without new deps. These do not prove rendered behavior; desktop checks remain mandatory.</p>
+<p>A4. No user-owned account/key/package setup required. Node/npm/node_modules present during planning. Resolve missing desktop prerequisites before source edits; never system-apply.</p>
+<h3>Requirements</h3>
+<p>R1. Remove complete This PC <code>&lt;section&gt;</code> at <code>src/components/sidebar/Sidebar.jsx:407–465</code>, not wrapper at line 383.</p>
+<p>R2. Retain active headings in order: Favorites, Drives, Network. No empty replacement section. Retain footer actions Terminal, Settings, Templates, Add Source.</p>
+<p>R3. Remove newly orphaned <code>browseToProtectedFolder</code>, <code>getUserDirectories</code>, <code>userDirectories</code>, <code>getUserVolume</code>, <code>userVolume</code>, imported <code>open</code>, default <code>thisPC</code> collapse property.</p>
+<p>R4. Remove newly unreachable private permission-helper chain: <code>PermissionHelper</code> import/render, <code>isPermissionHelperOpen</code>, <code>permissionDirectory</code>, corresponding setters, named-directory failure branch. Change private signature to <code>handleItemClick = async (path) =&gt;</code>; replace <code>const success = await loadDirectory(targetPath);</code> with <code>await loadDirectory(targetPath);</code>. Retain navigation/SFTP/history behavior preceding removed branch. Do not delete shared <code>PermissionHelper.jsx</code>.</p>
+<p>R5. Keep metadata loading/state: <code>systemInfo.current_running_os</code> still selects drive ejection command. Keep volume loading, <code>SidebarItem</code>, <code>navigateTo</code>, shared providers, dialog dep. Keep commented Quick Access code; pre-existing dead code outside scope.</p>
+<p>R6. Keep <code>MainLayout.jsx</code>, <code>ThisPCView.jsx</code>, CSS, package manifest/lock, Rust untouched. Add only <code>tests/sidebar-this-pc.test.mjs</code> plus Sidebar change; graph refresh may change generated graph files separately.</p>
+<h3>Inputs</h3>
+<p>I1. Read <code>src/components/sidebar/Sidebar.jsx:1–768</code> — helpers/state, sections, retained modals/footer.</p>
+<p>I2. Read <code>src/components/sidebar/Favorites.jsx:16–131</code> — invokes <code>onItemClick(item.path)</code> without directory name.</p>
+<p>I3. Read <code>src/layouts/MainLayout.jsx:334–453,758–759</code> — existing <code>open-this-pc</code> event receiver/view; unchanged.</p>
+<p>I4. Read <code>src/components/sidebar/sidebar.css:22–46</code> — wrapper sizing/scrollbar; unchanged.</p>
+<p>I5. Read <code>package.json:6–29</code>, <code>AGENTS.md</code>; inspect <code>git status --short</code> before editing. Existing dirty files include package manifest, Rust, providers, explorer list, docs, Nix files.</p>
+<p>I6. From Depends: none. No predecessor contract.</p>
+<h3>Interface contract (level 5)</h3>
+<h4>Produces — existing public export unchanged</h4>
+<pre><code>const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) =&gt; {
+    // Existing remaining UI; This PC section removed.
+};
+export default Sidebar;</code></pre>
+<h4>Consumes — existing provider/child names unchanged</h4>
+<pre><code>const { volumes, loadDirectory, loadVolumes } = useFileSystem();
+const { currentPath, navigateTo } = useHistory();
+const { removeFromFavorites } = useContextMenu();
+const { navigateToSftpConnection, createSftpUrl, isSftpPath, parseSftpPath, createSftpPath } = useSftp();</code></pre>
+<pre><code>{
+  &quot;selector&quot;: &quot;aside.sidebar &gt; .sidebar-content&quot;,
+  &quot;count&quot;: 1,
+  &quot;headings&quot;: [&quot;Favorites&quot;, &quot;Drives&quot;, &quot;Network&quot;],
+  &quot;absentSectionHeading&quot;: &quot;This PC&quot;,
+  &quot;absentSectionControls&quot;: [&quot;Expand This PC&quot;, &quot;Collapse This PC&quot;],
+  &quot;retainedFooterLabels&quot;: [&quot;Toggle Terminal&quot;, &quot;Settings&quot;, &quot;Templates&quot;, &quot;Add Datasource&quot;]
+}</code></pre>
+<h4>Storage contract</h4>
+<pre><code>// Fresh default: same existing unrelated properties, no thisPC.
+{ quickAccess: false, favorites: false, drives: false }
+// Existing values: parsed as before; no migration or removal of unknown keys.
+localStorage.getItem(&#x27;sidebarSectionsCollapsed&#x27;);
+localStorage.setItem(&#x27;sidebarSectionsCollapsed&#x27;, JSON.stringify(newSectionCollapsed));</code></pre>
+<p>B1. Errors: no new error type/code/message. Remaining failures unchanged. No fallback UI replacing removed section.</p>
+<p>B2. Invariants: all <code>currentView</code> values render same retained sections; volume metadata can still load; mounts never erase favorites/connections/collapse data. Favorites named Desktop or This PC remain allowed; absence applies to built-in section, not arbitrary user data.</p>
+<p>B3. Integration links: no new process/host/library boundary. Existing <code>document</code> event <code>open-this-pc</code> remains received by <code>handleOpenThisPC</code> in <code>src/layouts/MainLayout.jsx:334,437</code>, observed by <code>&lt;ThisPCView /&gt;</code> at line 759. Only removed section&#x27;s dispatch disappears; main listener remains.</p>
+<h3>TDD</h3>
+<p class="check">☐ D1. Red — add <code>tests/sidebar-this-pc.test.mjs</code> using only <code>node:test</code>, <code>node:assert/strict</code>, <code>node:fs</code>. <code>node --test tests/sidebar-this-pc.test.mjs</code> must fail against unchanged Sidebar on removed-heading/shortcut assertions.</p>
+<p class="check">☐ D2. Green — apply R1–R6 minimal removal; same command passes.</p>
+<p class="check">☐ D3. Refactor — only newly orphaned private chain; same test command remains green.</p>
+<h3>Test plan</h3>
+<p>Source tests read <code>new URL(&#x27;../src/components/sidebar/Sidebar.jsx&#x27;, import.meta.url)</code> with UTF-8. Static checks deliberately test removal shape, not React runtime.</p>
+<div class="table"><table>
+<tr><td>ID / Test name</td><td>Input</td><td>Expect</td></tr>
+<tr><td>S1 / removes built-in This PC section</td><td>Sidebar source</td><td>No <code>&lt;h3 className=&quot;sidebar-section-title&quot;&gt;This PC&lt;/h3&gt;</code>, <code>name=&quot;This PC&quot;</code>, <code>sectionCollapsed.thisPC</code>, <code>thisPC: false</code></td></tr>
+<tr><td>S2 / removes built-in user shortcuts</td><td>Sidebar source</td><td>No identifiers <code>browseToProtectedFolder</code>, <code>getUserDirectories</code>, <code>userDirectories</code>, <code>getUserVolume</code>, <code>userVolume</code></td></tr>
+<tr><td>S3 / retains sidebar shell and navigation</td><td>Sidebar source</td><td><code>className=&quot;sidebar-content&quot;</code>, <code>className=&quot;sidebar-footer&quot;</code>; exact h3 titles Favorites → Drives → Network occur once in increasing source order; footer labels from contract remain</td></tr>
+<tr><td>S4 / retains drive metadata and shared loading</td><td>Sidebar source</td><td><code>get_meta_data_as_json</code>, <code>setSystemInfo</code>, <code>loadVolumes</code>, <code>systemInfo?.current_running_os?.toLowerCase()</code> remain</td></tr>
+<tr><td>S5 / removes orphan permission helper only</td><td>Sidebar source</td><td>No <code>PermissionHelper</code>, <code>permissionDirectory</code>, <code>isPermissionHelperOpen</code>, <code>@tauri-apps/plugin-dialog</code>; <code>await loadDirectory(targetPath);</code> remains</td></tr>
+<tr><td>M1 / fresh sidebar</td><td>Desktop app, fresh disposable profile, explorer then this-pc view</td><td>DOM contract above; no gap where old section lived; scrolling/footer functional</td></tr>
+<tr><td>M2 / legacy collapsed sections</td><td>Disposable localStorage <code>sidebarSectionsCollapsed</code> = <code>{&quot;thisPC&quot;:true,&quot;favorites&quot;:false,&quot;drives&quot;:false,&quot;network&quot;:false}</code>; reload, toggle each retained section twice</td><td>Section absent; each retained toggle works/persists; unknown legacy key tolerated; retained sections return expanded</td></tr>
+<tr><td>M3 / retained navigation</td><td>Disposable profile with benign local favorite to existing folder; mounted drive; empty Network</td><td>Favorite/drive navigate; Network add dialog opens/closes; footer actions work; no new runtime errors; do not eject disks or connect external accounts</td></tr>
+<tr><td>M4 / main This PC view survives</td><td>DevTools <code>document.dispatchEvent(new CustomEvent(&#x27;open-this-pc&#x27;))</code></td><td>Main This PC view opens, sidebar still matches contract; existing main-view folder navigation works</td></tr>
+</table></div>
+<h3>Impl steps</h3>
+<p class="check">☐ P1. Frontload setup/user interaction before edits. Verify: <code>node --version</code>, <code>npm --version</code>, <code>test -d node_modules</code>, <code>npm run build</code>, isolated desktop procedure below; desktop opens. Never clear user&#x27;s data. If native launch fails, record exact prerequisite/error before implementation. No accounts/secrets needed; no package installation planned.</p>
+<p class="check">☐ P2. Record worktree baseline; create feature branch <code>plan/remove-sidebar-this-pc</code> if absent. Verify: <code>git status --short</code>, <code>git branch --show-current</code>; preserve existing changes/staging. Do not reset/stash user work.</p>
+<p class="check">☐ P3. Add native tests per S1–S5. Verify: Red failure identifies old section, not missing deps/syntax.</p>
+<p class="check">☐ P4. Remove section/private orphan chain per R1–R6. Verify: same test cmd passes; review <code>git diff -- src/components/sidebar/Sidebar.jsx</code>; no surviving caller broken.</p>
+<p class="check">☐ P5. Validate M1–M4, build. Verify: capture each manual outcome, test output, build exit code; runtime gap means incomplete ticket, never checked done.</p>
+<p class="check">☐ P6. Refresh graph after source changes: <code>graphify update .</code>. Verify: success output; inspect generated diff separately, report unrelated refresh noise without deleting it.</p>
+<h3>Validation</h3>
+<p class="check">☐ V1. <code>node --test tests/sidebar-this-pc.test.mjs</code> — S1–S5 pass; Red + Green evidence recorded.</p>
+<p class="check">☐ V2. <code>npm run build</code> — exit 0; compare warnings with preflight baseline.</p>
+<p class="check">☐ V3. Isolated desktop procedure below — M1–M4 outcomes recorded; no runtime regressions from slice.</p>
+<p class="check">☐ V4. No silent-failure swallow on added paths — none expected, removal adds no error path. Existing untouched SFTP catches remain outside scope; report, do not fix.</p>
+<p class="check">☐ V5. App functional — Favorites, Drives, Network, footer, main This PC route exercised; no destructive/eject test.</p>
+<p class="check">☐ V6. <code>git diff --check -- src/components/sidebar/Sidebar.jsx</code>; <code>git diff --no-index --check /dev/null tests/sidebar-this-pc.test.mjs</code> — no whitespace diagnostics. Confirm only intended source/test paths changed beyond preserved baseline/generated graph.</p>
+<p class="check">☐ V7. Commit msg draft: <code>refactor(sidebar): remove redundant This PC shortcuts</code>. Draft only; no commit authorization.</p>
+<h3>Isolated desktop procedure (Linux)</h3>
+<p>Backend config/logs use process cwd (<code>src-tauri/src/constants.rs:7–20</code>). WebView state needs separate HOME/XDG dirs. Do not launch ordinary <code>npm run tauri dev</code> against user profile for these checks.</p>
+<p class="check">☐ H1. Start frontend in separate terminal: <code>npm run dev</code>. Verify: configured dev URL <code>http://localhost:1420</code> responds (<code>src-tauri/tauri.conf.json:9</code>).</p>
+<p class="check">☐ H2. Build debug binary inside existing Nix dev shell; launch from fresh scratch cwd with isolated HOME/XDG. Execute following block from repo root. Verify: desktop opens; printed scratch path differs from real HOME; generated config/logs stay under scratch <code>work</code>; WebView state stays under scratch <code>data</code>/<code>cache</code>. If isolation cannot be observed, do not seed storage; record blocker.</p>
+<pre><code>ROOT=&quot;$PWD&quot;
+mkdir -p &quot;$ROOT/.tmp&quot;
+RUN_DIR=&quot;$(mktemp -d &quot;$ROOT/.tmp/sidebar-this-pc.XXXXXX&quot;)&quot;
+export ROOT RUN_DIR
+mkdir -p &quot;$RUN_DIR/home&quot; &quot;$RUN_DIR/config&quot; &quot;$RUN_DIR/data&quot; &quot;$RUN_DIR/cache&quot; &quot;$RUN_DIR/state&quot; &quot;$RUN_DIR/work&quot;
+printf &#x27;Isolated run: %s\n&#x27; &quot;$RUN_DIR&quot;
+nix develop --no-warn-dirty --command bash -c &#x27;
+  cargo build --manifest-path &quot;$ROOT/src-tauri/Cargo.toml&quot; --bin src-tauri --target-dir &quot;$RUN_DIR/target&quot; &amp;&amp;
+  cd &quot;$RUN_DIR/work&quot; &amp;&amp;
+  env HOME=&quot;$RUN_DIR/home&quot; XDG_CONFIG_HOME=&quot;$RUN_DIR/config&quot; XDG_DATA_HOME=&quot;$RUN_DIR/data&quot; XDG_CACHE_HOME=&quot;$RUN_DIR/cache&quot; XDG_STATE_HOME=&quot;$RUN_DIR/state&quot; &quot;$RUN_DIR/target/debug/src-tauri&quot;
+&#x27;</code></pre>
+<p class="check">☐ H3. Use only scratch-owned directories as Favorites/navigation fixtures. In isolated WebView DevTools, seed M2 collapse JSON; never copy real favorites/SFTP data. Verify: M1–M4 results captured; disk eject/external SFTP connection not exercised.</p>
+<p class="check">☐ H4. Close app/frontend. Inspect own <code>RUN_DIR</code> before cleanup; remove only run-owned scratch through approved targeted cleanup. Verify: evidence retained outside scratch; no user paths removed. No wildcard/root cleanup.</p>
+<h3>Risks / limits</h3>
+<p>L1. Source-contract tests cannot prove DOM/event behavior. M1–M4 mandatory, never replaced with static claims.</p>
+<p>L2. Existing metadata mock fallback, SFTP swallowing/listener cleanup unchanged. Shared bugs unrelated to removal stay out.</p>
+<p>L3. No architecture decision introduced: reversible UI subtraction, unchanged wire/storage/public APIs. ADR count: 0 per ADR eligibility rules.</p></details><section id="review" class="card"><h2>Plan coherence review</h2>
+<h3>Evidence</h3>
+<p>E1. Fresh-context read-only reviewer run <code>86c67194-41b7-4f15-a909-bbe1f3f4a654</code> completed. Source/ticket inspection only; no app execution.</p>
+<p>E2. Reviewer: scope, private orphan chain, metadata preservation coherent; main listener/view retained. No predecessor mismatch; no critical blocker.</p>
+<h3>Arbitration</h3>
+<div class="table"><table>
+<tr><td>ID</td><td>Finding</td><td>Decision</td><td>Evidence</td></tr>
+<tr><td>R1</td><td>Removal range omitted closing section</td><td>AMEND accepted</td><td>T1 R1 now <code>Sidebar.jsx:407–465</code>; source line 465 is closing tag</td></tr>
+<tr><td>R2</td><td>Disposable-profile procedure unspecified</td><td>AMEND accepted</td><td>T1 isolated desktop section specifies fresh cwd, HOME/XDG isolation, direct debug binary launch, observed isolation gate before seeding</td></tr>
+<tr><td>R3</td><td>Single ticket; no dependency mismatch</td><td>Accepted</td><td>T1 Depends none; index has one node</td></tr>
+<tr><td>R4</td><td>ADR 0 appropriate</td><td>Accepted</td><td>Reversible UI-only subtraction; no wire/storage/public API redesign</td></tr>
+</table></div>
+<h3>Assumptions / limits</h3>
+<p>A1. Index red-team skipped: one ticket, threshold greater than six.</p>
+<p>A2. Parent verified/amended findings. No second reviewer pass. Isolated launch commands are proposed implementation checks, not executed during planning; runtime feasibility still requires preflight evidence.</p>
+<p>A3. Plan complete, implementation NOT STARTED. Source-contract tests/desktop checks not executed; no claim of app correctness.</p>
+<p>A4. Missing project glossary skill remains unrelated setup gap. Existing SFTP errors remain outside scope.</p></section></main></body></html>
