@@ -511,6 +511,7 @@ const MainLayout = () => {
          * @param {KeyboardEvent} e - The keyboard event
          */
         const handleKeyDown = (e) => {
+            if (e.target.closest?.('.enhanced-terminal')) return;
             // Global search: Ctrl+Shift+F
             if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') {
                 e.preventDefault();
@@ -961,12 +962,10 @@ const MainLayout = () => {
                                 overflow: isTerminalOpen ? 'visible' : 'hidden'
                             }}
                         >
-                            {isTerminalOpen && (
-                                <Terminal
-                                    isOpen={isTerminalOpen}
-                                    onToggle={() => setIsTerminalOpen(!isTerminalOpen)}
-                                />
-                            )}
+                            <Terminal
+                                isOpen={isTerminalOpen}
+                                onToggle={() => setIsTerminalOpen(prev => !prev)}
+                            />
                         </div>
                     </div>
                 </div>

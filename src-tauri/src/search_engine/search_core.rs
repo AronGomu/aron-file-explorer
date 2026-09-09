@@ -899,7 +899,6 @@ impl SearchCore {
                 if !seen.contains(&p) {
                     seen.insert(p.clone());
                     self.results_buffer.push((p, s));
-
                     #[cfg(feature = "search-progress-logging")]
                     {
                         added_fuzzy += 1;

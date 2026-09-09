@@ -225,6 +225,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
      */
     useEffect(() => {
         const handleKeyDown = (e) => {
+            if (e.target.closest?.('.enhanced-terminal')) return;
             setIsShiftKeyPressed(e.shiftKey);
             setIsCtrlKeyPressed(e.ctrlKey || e.metaKey);
 
