@@ -1,12 +1,12 @@
 # Sidebar This PC removal — final implementation report
 
-State: **partial**. Code committed locally; full runtime acceptance, main merge, publication pending.
+State: **partial acceptance; local integration done**. User explicitly requested “move to main”; main fast-forwarded to `36e7539`. Full runtime acceptance/publication remain pending.
 
 ## Ticket State List
 
 | ID | Ticket | Implementation | Validation | Integration |
 | --- | --- | --- | --- | --- |
-| T1 | Remove sidebar This PC section | Implemented; commit `611fbbb984ea9c9b9f122006516cd6fd04b00130` | Source tests/build pass; desktop coverage partial | Branch `plan/remove-sidebar-this-pc`; not merged or pushed |
+| T1 | Remove sidebar This PC section | Implemented; commit `611fbbb984ea9c9b9f122006516cd6fd04b00130` | Source tests/build pass; desktop coverage partial | Merged locally into `main`; not pushed |
 
 ## Evidence
 
@@ -17,6 +17,8 @@ State: **partial**. Code committed locally; full runtime acceptance, main merge,
 - E5. `git diff --check` plus new-test whitespace check passed. `git diff --exit-code -- src/main.jsx src-tauri/tauri.conf.json src/components/sidebar/sidebar.css` passed after all temporary runtime instrumentation was removed.
 - E6. Final `graphify update .` passed: 1,666 nodes, 4,100 edges, 123 communities. Generated worktree graph kept untracked, outside product commit. Warning: `Cargo.toml` produced zero nodes; missing-skill warnings remain. No LLM extraction used.
 - E7. Intended diff credential-pattern scan returned no matches. Source commit includes only `src/components/sidebar/Sidebar.jsx` plus `tests/sidebar-this-pc.test.mjs`. Main worktree staged/unstaged changes were not included.
+- E8. `git merge --ff-only plan/remove-sidebar-this-pc` passed. Binary staged/unstaged diffs compared byte-for-byte before/after: unchanged. Main-checkout tests passed 5/5; `npm run build` passed with same CSS/import warnings. Remaining runtime gaps were disclosed before explicit local integration request.
+- E9. Main `graphify update .` passed: 2,540 nodes, 4,905 edges, 197 communities. Generated changes/backups remain untracked; community-label and zero-node Cargo.toml warnings remain.
 
 ## Runtime observations
 
@@ -34,7 +36,7 @@ Runtime harness was temporary validation instrumentation, not committed test cov
 - F1. `src/components/sidebar/Sidebar.jsx`: removed built-in section, user shortcuts, newly orphaned permission-helper chain; retained metadata, navigation, SFTP/history, remaining sections/footer. Updated now-stale metadata comment.
 - F2. `tests/sidebar-this-pc.test.mjs`: five native Node source-contract tests; exact retained-heading uniqueness/order; retained footer accessible label.
 - F3. `artifacts/FINAL_IMPLEMENTATION_REPORT_remove_sidebar_this_pc.md`: this report.
-- F4. Generated `graphify-out/` exists only in ticket worktree; not committed. Main graph not refreshed because source not merged.
+- F4. Generated `graphify-out/` refreshed in ticket worktree and main; not committed.
 
 ## Assumptions
 
@@ -67,17 +69,17 @@ Static tests do not prove full UI behavior. Remaining M1–M4 gaps keep T1 incom
 ## User TODO
 
 - [ ] U1. Confirm proposed publication destination: reply **“Use fork; publish after remaining validation passes.”** Verify: explicit confirmation received before any push.
-- [ ] U2. After remaining runtime checks pass, orchestrator may merge/publish ticket and report. Verify: main contains source commit; remote SHA matches local main. No PR requested.
+- [ ] U2. After remaining runtime checks pass, orchestrator may publish ticket/report with U1 authorization. Verify: remote SHA matches local main. Local merge already complete. No PR requested.
 
 ## Remaining agent work
 
 - [ ] W1. Finish runtime gaps listed M1–M4 using isolated profile. Verify: DOM count, overflow scrolling, raw legacy-key preservation, actual folder contents, main-view navigation, runtime error record.
-- [ ] W2. Merge validated ticket into main without disturbing staged/unstaged user changes. Verify: intended diff only; tests/build pass after integration.
+- [x] W2. Merge locally into main per explicit user request without disturbing staged/unstaged user changes. Verify: fast-forward succeeded; existing diffs identical; tests/build passed after integration. Full runtime acceptance remains W1.
 - [ ] W3. Publish only after U1. Verify: remote SHA matches intended branch/main commits.
 - [ ] W4. Remove plan index, matching ticket directory, matching HTML/progress, remaining run scratch only after successful main integration/publication. Verify: final report retained; unrelated artifacts untouched.
 
 ## Cleanup / residual risks
 
 - C1. Owned app/frontend processes stopped. Temporary `node_modules` symlink removed. Ticket `.tmp/`, `.pi-subagents/`, worker ledger `/tmp/ship-run-20260909-remove-sidebar-this-pc.md` removed. Temporary `src/main.jsx` / Tauri config edits fully restored.
-- C2. Final graph regenerated after cleanup; kept untracked. Plan artifacts retained because main integration is incomplete. Existing unrelated artifacts, branches, worktrees remain.
+- C2. Final graph regenerated after cleanup; kept untracked. Plan artifacts retained because runtime acceptance/publication remain incomplete. Existing unrelated artifacts, branches, worktrees remain.
 - C3. Out-of-scope existing SFTP error swallowing/listener cleanup, CSS warning, Rust warnings unchanged. No backend/shared permission component/CSS/package changes committed.
