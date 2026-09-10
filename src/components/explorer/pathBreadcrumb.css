@@ -56,8 +56,8 @@
     height: 24px;
     border-radius: var(--radius-md);
     font-size: var(--font-size-sm);
-    color: var(--text-on-accent, #fff);
-    background-color: var(--background-breadcrumb, rgba(80, 120, 255, 0.18));
+    color: var(--text-primary);
+    background-color: var(--surface-active);
     cursor: pointer;
     border: none;
     margin: 0 8px;
@@ -72,14 +72,15 @@
 }
 
 .segment-button:hover {
-    color: var(--text-on-accent, #fff);
-    background-color: var(--background-breadcrumb-hover, rgba(80, 120, 255, 0.32));
+    color: var(--text-primary);
+    background-color: var(--surface-hover);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
 }
 
 .segment-button.current {
-    color: var(--accent);
+    color: var(--text-primary);
     font-weight: var(--font-weight-medium);
-    background-color: var(--background-breadcrumb, rgba(80, 120, 255, 0.18));
+    background-color: var(--surface-active);
 }
 
 .segment-divider {
@@ -210,7 +211,7 @@
     border-radius: var(--radius-md);
     background-color: transparent;
     color: var(--text-secondary);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-strong);
     cursor: pointer;
     transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
     flex-shrink: 0;
@@ -219,7 +220,7 @@
 .copy-path-btn:hover {
     background-color: var(--surface-hover);
     color: var(--text-primary);
-    border-color: var(--text-tertiary);
+    border-color: var(--border-strong);
 }
 
 .copy-path-btn .icon {
@@ -254,18 +255,6 @@
     }
 }
 
-:root {
-    --background-breadcrumb: color-mix(in srgb, var(--accent) 8%, white 40%);
-    --background-breadcrumb-hover: color-mix(in srgb, var(--accent) 16%, white 20%);
-    --text-breadcrumb: var(--text-primary);
-    --text-on-accent: #000;
-}
-
-@media (prefers-color-scheme: dark) {
-    :root {
-        --background-breadcrumb: color-mix(in srgb, var(--accent) 70%, black 30%);
-        --background-breadcrumb-hover: color-mix(in srgb, var(--accent) 90%, black 10%);
-        --text-breadcrumb: #fff;
-        --text-on-accent: #fff;
-    }
+.path-breadcrumb:focus-within {
+    box-shadow: inset 0 0 0 2px var(--focus-ring);
 }

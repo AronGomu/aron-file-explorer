@@ -62,23 +62,12 @@ const SidebarItem = ({
         e.preventDefault();
     };
 
-    /**
-     * Handles selectstart events to prevent text selection
-     * @param {React.SyntheticEvent} e - The selectstart event
-     */
-    const handleSelectStart = (e) => {
-        // Prevent any text selection
-        e.preventDefault();
-        return false;
-    };
-
     return (
         <li
             className={`sidebar-item ${isActive ? 'active' : ''}`}
             onClick={onClick}
             onDoubleClick={handleDoubleClick}
             onMouseDown={handleMouseDown}
-            onSelectStart={handleSelectStart}
             onContextMenu={handleContextMenu}
             title={isCollapsed ? name : undefined}
         >

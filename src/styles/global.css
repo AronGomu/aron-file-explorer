@@ -23,7 +23,7 @@ body {
 }
 
 a {
-    color: var(--accent);
+    color: var(--text-primary);
     text-decoration: none;
 }
 
@@ -57,7 +57,7 @@ img, svg {
 }
 
 :focus {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
 }
 
@@ -66,13 +66,13 @@ img, svg {
 }
 
 :focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
 }
 
 ::selection {
     background-color: var(--accent);
-    color: var(--color-white);
+    color: var(--text-on-accent);
 }
 
 /* Scrollbar styling */
@@ -198,16 +198,16 @@ img, svg {
     justify-content: center;
     padding: 4px 8px;
     border-radius: 4px;
-    color: var(--text-color);
+    color: var(--text-primary);
     margin-left: 8px;
 }
 
 .terminal-toggle:hover {
-    background-color: var(--hover-color);
+    background-color: var(--surface-hover);
 }
 
 .terminal-toggle.active {
-    color: var(--accent-color);
+    color: var(--accent);
 }
 
 .terminal-toggle .icon {

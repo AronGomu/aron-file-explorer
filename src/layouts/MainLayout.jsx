@@ -588,7 +588,7 @@ const MainLayout = () => {
                 top: 20px;
                 right: 20px;
                 background: var(--accent);
-                color: white;
+                color: var(--text-on-accent);
                 padding: 12px 20px;
                 border-radius: 6px;
                 z-index: 10000;

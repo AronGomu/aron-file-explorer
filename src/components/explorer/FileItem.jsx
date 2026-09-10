@@ -107,16 +107,6 @@ const FileItem = ({
     };
 
     /**
-     * Handles selectstart events to prevent text selection
-     * @param {React.SyntheticEvent} e - The selectstart event
-     */
-    const handleSelectStart = (e) => {
-        // Prevent any text selection
-        e.preventDefault();
-        return false;
-    };
-
-    /**
      * Handles double-click events on the file item
      * @param {React.MouseEvent} e - The double-click event
      */
@@ -148,7 +138,6 @@ const FileItem = ({
                 onClick={handleClick}
                 onDoubleClick={handleDoubleClick}
                 onMouseDown={handleMouseDown}
-                onSelectStart={handleSelectStart}
                 onContextMenu={handleContextMenu}
                 data-path={item.path}
             >

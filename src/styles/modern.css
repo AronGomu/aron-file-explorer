@@ -9,7 +9,7 @@
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     border: 1px solid rgba(var(--border-rgb), 0.3);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 32px var(--shadow);
 }
 
 /* Modern spotlight effect for hovering items */
@@ -149,21 +149,22 @@
     border-radius: var(--radius-lg);
     background: var(--background);
     box-shadow:
-            8px 8px 16px rgba(0, 0, 0, 0.05),
-            -8px -8px 16px rgba(255, 255, 255, 0.05);
+            8px 8px 16px var(--shadow),
+            -8px -8px 16px var(--shadow);
 }
 
 .neumorphic-inset {
     border-radius: var(--radius-lg);
     background: var(--background);
     box-shadow:
-            inset 5px 5px 10px rgba(0, 0, 0, 0.05),
-            inset -5px -5px 10px rgba(255, 255, 255, 0.05);
+            inset 5px 5px 10px var(--shadow),
+            inset -5px -5px 10px var(--shadow);
 }
 
 /* Modern gradients */
 .gradient-primary {
-    background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, purple));
+    color: var(--text-on-accent);
+    background: linear-gradient(135deg, var(--accent), var(--accent-hover));
 }
 
 .gradient-surface {
@@ -177,7 +178,7 @@
 
 .btn-hover-float:hover {
     transform: translateY(-3px);
-    box-shadow: 0 7px 14px rgba(var(--accent-rgb), 0.1);
+    box-shadow: 0 7px 14px var(--shadow);
 }
 
 .btn-hover-glow {
@@ -204,7 +205,7 @@
 
 /* Text gradients */
 .text-gradient {
-    background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 70%, purple));
+    background: linear-gradient(90deg, var(--text-primary), var(--text-secondary));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -227,7 +228,7 @@
 
 .grid-modern .grid-item:hover {
     transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 20px var(--shadow);
 }
 
 /* Focus ring enhancements */
@@ -238,7 +239,7 @@
 
 .focus-ring:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.4);
+    box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 /* Skeleton loading animation */

@@ -80,6 +80,8 @@ inside() {
     source /selection.sh
   elif [[ "${NATIVE_THEME_SCENARIO:-}" = reload ]]; then
     source /reload.sh
+  elif [[ "${NATIVE_THEME_SCENARIO:-}" = explorer ]]; then
+    source /explorer.sh
   fi
   find /fixture -type f -printf '%P\n' | sort > /evidence/fixture-files.txt
   test ! -e /home
@@ -100,9 +102,10 @@ elif [[ "${1:-}" = --scenario && $# = 2 ]]; then
   case "$2" in
     selection) selection=1 ;;
     reload) scenario=reload ;;
+    explorer) scenario=explorer ;;
     *) printf 'Unknown native theme scenario: %s\n' "$2" >&2; exit 2 ;;
   esac
-elif [[ $# != 0 ]]; then printf 'Usage: bash scripts/capture-native-theme.sh [--selection | --scenario selection|reload]\n' >&2; exit 2
+elif [[ $# != 0 ]]; then printf 'Usage: bash scripts/capture-native-theme.sh [--selection | --scenario selection|reload|explorer]\n' >&2; exit 2
 fi
 
 repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
@@ -128,7 +131,7 @@ test -f "$THEME_VALIDATION_MESA/share/glvnd/egl_vendor.d/50_mesa.json"
 
 sandbox_path=""
 tools=(bash cat env sort find readlink mkdir sleep grep sha256sum Xvfb xwininfo magick)
-if [[ "$selection" = 1 || "$scenario" = reload ]]; then tools+=(xdotool jq cp chmod cmp); fi
+if [[ "$selection" = 1 || "$scenario" = reload || "$scenario" = explorer ]]; then tools+=(xdotool jq cp chmod cmp); fi
 x11_library=""
 if [[ "$scenario" = reload ]]; then
   tools+=(date mv rm python3)
@@ -171,6 +174,10 @@ if [[ -n "${THEME_VALIDATION_PACKAGE_ROOT:-}" ]]; then
   printf 'kind=extracted-deb\npackage-root=%s\ninstalled=no\n' "$package_root" > "$evidence/package-fixture.txt"
   sha256sum "$package_root/usr/lib/Explr/themes/LICENSE" > "$evidence/package-license.sha256"
 fi
+scenario_mount=()
+if [[ "$scenario" = explorer ]]; then
+  scenario_mount=(--ro-bind "$repo/scripts/native-theme-explorer.sh" /explorer.sh)
+fi
 args=(
   --die-with-parent --unshare-all --new-session --clearenv
   --ro-bind /nix/store /nix/store --proc /proc --dev /dev --tmpfs /tmp
@@ -184,6 +191,7 @@ args=(
   --setenv NATIVE_THEME_SELECTION "$selection"
   --ro-bind "$repo/scripts/native-theme-reload.sh" /reload.sh
   --setenv NATIVE_THEME_SCENARIO "$scenario"
+  "${scenario_mount[@]}"
   --setenv NATIVE_X11_LIBRARY "$x11_library"
   --chdir /fixture/cwd
   --setenv PATH "$sandbox_path" --setenv NATIVE_CAPTURE_SANDBOX 1

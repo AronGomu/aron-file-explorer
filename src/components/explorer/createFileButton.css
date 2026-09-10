@@ -9,7 +9,7 @@
     height: 36px;
     padding: 0 var(--space-md);
     background-color: var(--accent);
-    color: var(--color-white);
+    color: var(--text-on-accent);
     border-radius: var(--radius-md);
     font-size: var(--font-size-sm);
     font-weight: var(--font-weight-medium);
@@ -23,7 +23,6 @@
 .create-button .icon {
     width: 16px;
     height: 16px;
-    filter: invert();
 }
 
 .create-dropdown {
@@ -34,7 +33,7 @@
     background-color: var(--surface);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-strong);
     z-index: var(--z-index-dropdown);
     animation: dropdown-fade 0.15s ease-out;
 }
@@ -87,7 +86,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: var(--backdrop);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -165,7 +164,7 @@
 .input-field {
     width: 100%;
     padding: var(--space-sm) var(--space-md);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-strong);
     border-radius: var(--radius-md);
     background-color: var(--background);
     color: var(--text-primary);
@@ -176,7 +175,7 @@
 .input-field:focus {
     border-color: var(--accent);
     outline: none;
-    box-shadow: 0 0 0 2px var(--accent-surface);
+    box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 .modal-footer {
@@ -196,7 +195,7 @@
 
 .button-primary {
     background-color: var(--accent);
-    color: var(--color-white);
+    color: var(--text-on-accent);
     border: none;
 }
 
@@ -205,14 +204,16 @@
 }
 
 .button-primary:disabled {
-    opacity: 0.6;
+    opacity: 1;
+    background-color: var(--surface-active);
+    color: var(--text-secondary);
     cursor: not-allowed;
 }
 
 .button-secondary {
     background-color: transparent;
     color: var(--text-primary);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-strong);
 }
 
 .button-secondary:hover {
@@ -221,9 +222,13 @@
 
 /* Icon placeholders */
 .icon-plus {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='12' y1='5' x2='12' y2='19'%3E%3C/line%3E%3Cline x1='5' y1='12' x2='19' y2='12'%3E%3C/line%3E%3C/svg%3E");
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='12' y1='5' x2='12' y2='19'%3E%3C/line%3E%3Cline x1='5' y1='12' x2='19' y2='12'%3E%3C/line%3E%3C/svg%3E") center / contain no-repeat;
+    background-color: currentColor;
+    background-image: none !important;
 }
 
 .icon-chevron-down {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") center / contain no-repeat;
+    background-color: currentColor;
+    background-image: none !important;
 }

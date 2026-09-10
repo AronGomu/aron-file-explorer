@@ -25,7 +25,7 @@
 
 .btn-primary {
     background-color: var(--accent);
-    color: var(--color-white);
+    color: var(--text-on-accent);
     border: none;
 }
 
@@ -36,37 +36,41 @@
 .btn-secondary {
     background-color: transparent;
     color: var(--text-primary);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-strong);
 }
 
 .btn-secondary:hover:not(:disabled) {
     background-color: var(--surface-hover);
-    border-color: var(--text-tertiary);
+    border-color: var(--border-strong);
 }
 
 .btn-ghost {
     background-color: transparent;
-    color: var(--text-secondary);
+    color: var(--text-primary);
     border: none;
 }
 
 .btn-ghost:hover:not(:disabled) {
     background-color: var(--surface-hover);
     color: var(--text-primary);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
 }
 
 .btn-danger {
-    background-color: var(--error);
-    color: var(--color-white);
+    background-color: var(--error-surface);
+    color: var(--text-primary);
     border: none;
+    box-shadow: inset 0 0 0 1px var(--border-strong);
 }
 
 .btn-danger:hover:not(:disabled) {
-    background-color: color-mix(in srgb, var(--error) 85%, black);
+    background-color: var(--surface-hover);
 }
 
 .btn:disabled {
-    opacity: 0.6;
+    opacity: 1;
+    background-color: var(--surface-active);
+    color: var(--text-secondary);
     cursor: not-allowed;
 }
 
@@ -140,8 +144,9 @@
     position: absolute;
     z-index: var(--z-index-tooltip);
     padding: var(--space-xs) var(--space-sm);
-    background-color: var(--text-primary);
-    color: var(--background);
+    background-color: var(--surface);
+    color: var(--text-primary);
+    box-shadow: 0 0 0 1px var(--border-strong);
     font-size: var(--font-size-xs);
     border-radius: var(--radius-sm);
     white-space: nowrap;
@@ -168,7 +173,7 @@
     top: 100%;
     left: 50%;
     transform: translateX(-50%);
-    border-color: var(--text-primary) transparent transparent transparent;
+    border-color: var(--border-strong) transparent transparent transparent;
 }
 
 .tooltip-bottom {
@@ -182,7 +187,7 @@
     bottom: 100%;
     left: 50%;
     transform: translateX(-50%);
-    border-color: transparent transparent var(--text-primary) transparent;
+    border-color: transparent transparent var(--border-strong) transparent;
 }
 
 .tooltip-left {
@@ -196,7 +201,7 @@
     top: 50%;
     left: 100%;
     transform: translateY(-50%);
-    border-color: transparent transparent transparent var(--text-primary);
+    border-color: transparent transparent transparent var(--border-strong);
 }
 
 .tooltip-right {
@@ -210,7 +215,7 @@
     top: 50%;
     right: 100%;
     transform: translateY(-50%);
-    border-color: transparent var(--text-primary) transparent transparent;
+    border-color: transparent var(--border-strong) transparent transparent;
 }
 
 .tooltip-visible {
@@ -233,7 +238,7 @@
     background-color: var(--surface);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-strong);
     list-style: none;
     animation: dropdownAnimation var(--transition-fast);
 }
@@ -320,7 +325,7 @@
     background-color: var(--surface);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-strong);
     list-style: none;
     animation: dropdownAnimation var(--transition-fast);
 }
@@ -332,7 +337,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: var(--backdrop);
     display: flex;
     align-items: center;
     justify-content: center;

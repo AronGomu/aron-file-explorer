@@ -234,16 +234,6 @@ const TabManager = ({ children }) => {
     };
 
     /**
-     * Handles selectstart events to prevent text selection
-     * @param {React.SyntheticEvent} e - The selectstart event
-     */
-    const handleSelectStart = (e) => {
-        // Prevent any text selection
-        e.preventDefault();
-        return false;
-    };
-
-    /**
      * Handles close button interactions with text selection prevention
      * @param {string} tabId - ID of the tab to close
      * @param {React.MouseEvent} e - The click event
@@ -275,7 +265,6 @@ const TabManager = ({ children }) => {
                             onClick={() => switchToTab(tab.id)}
                             onDoubleClick={handleDoubleClick}
                             onMouseDown={handleMouseDown}
-                            onSelectStart={handleSelectStart}
                             onContextMenu={(e) => {
                                 e.preventDefault();
                                 // Show context menu with options: duplicate, close, close others, etc.
@@ -309,7 +298,6 @@ const TabManager = ({ children }) => {
                                         onClick={(e) => handleCloseTab(tab.id, e)}
                                         onDoubleClick={handleDoubleClick}
                                         onMouseDown={handleMouseDown}
-                                        onSelectStart={handleSelectStart}
                                         aria-label="Close tab"
                                     >
                                         <span className="icon icon-x"></span>

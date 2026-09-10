@@ -25,16 +25,18 @@
 
 .file-item:hover {
     background-color: var(--surface-hover);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
 }
 
 .file-item.selected {
     background-color: var(--accent-surface);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
 }
 
 .file-item.focused {
-    /* Just use a slightly different background - very subtle */
     background-color: var(--surface-hover);
-    /* No border at all - purely background-based indication */
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
 }
 
 .file-item.focused.selected {
@@ -44,8 +46,7 @@
 
 /* Cut state - files marked for moving */
 .file-item.cut {
-    opacity: 0.6;
-    filter: grayscale(50%);
+    color: var(--text-secondary);
 }
 
 .file-item.cut .file-name {
@@ -54,6 +55,10 @@
 
 .file-item.cut .file-icon-container {
     opacity: 0.7;
+}
+
+.file-item.selected.cut .file-name {
+    color: var(--text-primary);
 }
 
 /* Grid view */
@@ -174,6 +179,13 @@
     color: var(--text-secondary);
 }
 
+.file-item.view-mode-list.selected .file-info,
+.file-item.view-mode-details.selected .column-type,
+.file-item.view-mode-details.selected .column-size,
+.file-item.view-mode-details.selected .column-modified {
+    color: var(--text-primary);
+}
+
 /* Rename input */
 .rename-form {
     width: 100%;
@@ -188,7 +200,7 @@
     color: var(--text-primary);
     font-size: inherit;
     outline: none;
-    box-shadow: 0 0 0 2px var(--accent-surface);
+    box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 /* File icon styles */
@@ -202,36 +214,40 @@
 }
 
 .file-item.directory .file-icon {
-    color: var(--accent);
+    color: var(--folder);
+}
+
+.file-icon-folder {
+    color: var(--folder);
 }
 
 /* Custom icons for different file types */
 .file-icon-image {
-    color: #4ade80; /* green */
+    color: var(--file-image);
 }
 
 .file-icon-video {
-    color: #f97316; /* orange */
+    color: var(--file-video);
 }
 
 .file-icon-audio {
-    color: #8b5cf6; /* purple */
+    color: var(--file-audio);
 }
 
 .file-icon-code {
-    color: #3b82f6; /* blue */
+    color: var(--file-code);
 }
 
 .file-icon-archive {
-    color: #f59e0b; /* amber */
+    color: var(--file-archive);
 }
 
 .file-icon-pdf {
-    color: #ef4444; /* red */
+    color: var(--file-pdf);
 }
 
 .file-icon-text {
-    color: #6b7280; /* gray */
+    color: var(--file-text);
 }
 
 /* Responsive adjustments */

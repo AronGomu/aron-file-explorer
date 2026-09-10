@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { renderCase } from "./cases.jsx";
 import { mockIPC } from "@tauri-apps/api/mocks";
+import { explorerCases, explorerIPC } from "./explorer.jsx";
 
 import { applyThemeToDOM, EMBEDDED_THEMES } from "../../../src/themes/applyTheme";
 import "../../../src/styles/variables.css";
@@ -24,7 +25,7 @@ if (caseId === "reload") window.themeReload = snapshot => {
   for (const handler of themeListeners.values()) window.__TAURI_INTERNALS__.runCallback(handler, { payload: snapshot });
 };
 mockIPC((command, args) => {
-  if (caseId === "settings" || caseId === "reload") {
+  if (caseId === "settings" || caseId === "reload" || explorerCases.includes(caseId)) {
     if (command === "plugin:event|listen" && args.event === "themes-changed") { themeListeners.set(args.handler, args.handler); return args.handler; }
     if (command === "plugin:event|unlisten" && args.event === "themes-changed") { themeListeners.delete(args.eventId); return; }
     if (command === "get_settings_snapshot") return { settings, loadError: null };
@@ -36,6 +37,7 @@ mockIPC((command, args) => {
     }
     if (command === "reset_settings_command") { settings = { active_theme_id: "system" }; return JSON.stringify(settings); }
   }
+  if (explorerCases.includes(caseId)) return explorerIPC(command, args);
   throw new Error(`Unknown theme gallery IPC command: ${command}`);
 });
 

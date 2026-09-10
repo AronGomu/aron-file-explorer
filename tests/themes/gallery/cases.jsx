@@ -4,7 +4,10 @@ import ThemeProvider from "../../../src/providers/ThemeProvider.jsx";
 import SettingsPanel from "../../../src/components/settings/SettingsPanel.jsx";
 import Button from "../../../src/components/common/Button.jsx";
 
+import { ExplorerCase, explorerCases } from "./explorer.jsx";
+
 export function renderCase(caseId) {
+  if (explorerCases.includes(caseId)) return <ExplorerCase caseId={caseId} />;
   switch (caseId) {
     case "reload":
     case "settings":

@@ -31,8 +31,9 @@ const NavigationButtons = () => {
                     position: fixed;
                     top: 20px;
                     right: 20px;
-                    background: var(--success);
-                    color: white;
+                    background: var(--success-surface);
+                    color: var(--text-primary);
+                    box-shadow: 0 0 0 1px var(--border-strong);
                     padding: 8px 16px;
                     border-radius: 4px;
                     z-index: 10000;
@@ -53,8 +54,9 @@ const NavigationButtons = () => {
                     position: fixed;
                     top: 20px;
                     right: 20px;
-                    background: var(--error);
-                    color: white;
+                    background: var(--error-surface);
+                    color: var(--text-primary);
+                    box-shadow: 0 0 0 1px var(--border-strong);
                     padding: 8px 16px;
                     border-radius: 4px;
                     z-index: 10000;
@@ -80,8 +82,9 @@ const NavigationButtons = () => {
                     position: fixed;
                     top: 20px;
                     right: 20px;
-                    background: var(--success);
-                    color: white;
+                    background: var(--success-surface);
+                    color: var(--text-primary);
+                    box-shadow: 0 0 0 1px var(--border-strong);
                     padding: 8px 16px;
                     border-radius: 4px;
                     z-index: 10000;
@@ -102,8 +105,9 @@ const NavigationButtons = () => {
                     position: fixed;
                     top: 20px;
                     right: 20px;
-                    background: var(--error);
-                    color: white;
+                    background: var(--error-surface);
+                    color: var(--text-primary);
+                    box-shadow: 0 0 0 1px var(--border-strong);
                     padding: 8px 16px;
                     border-radius: 4px;
                     z-index: 10000;
