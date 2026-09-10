@@ -1,19 +1,16 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { showError } from '../utils/NotificationSystem';
 
 // Default settings - using exact backend keys and supported values
 const defaultSettings = {
     // Core UI settings
-    darkmode: true,
-    custom_themes: [],
-    default_theme: "",
-    default_themes_path: "",
+    active_theme_id: "system",
     default_folder_path_on_opening: "",
     default_view: "grid", // Grid, List, Details
     font_size: "Medium", // Small, Medium, Large
     show_hidden_files_and_folders: false,
     show_details_panel: false,
-    accent_color: "#0672ef",
 
     // Behavior settings
     confirm_delete: true,
@@ -40,243 +37,117 @@ const defaultSettings = {
     default_checksum_hash: "SHA256",
 };
 
-// Create context
-const SettingsContext = createContext({
-    settings: defaultSettings,
-    isLoading: true,
-    error: null,
-    updateSetting: () => {},
-    updateMultipleSettings: () => {},
-    resetSettings: () => {},
-    reloadSettings: () => {},
-});
+const LOAD_ERROR = 'Could not load settings. Defaults are temporary; existing file was not changed.';
+const SettingsContext = createContext(null);
 
-// Provider component
+function flattenSettings(settings) {
+    const search = settings.backend_settings?.search_engine_config ?? {};
+    return {
+        ...defaultSettings,
+        ...settings,
+        ...Object.fromEntries([
+            'search_engine_enabled', 'case_sensitive_search', 'index_hidden_files', 'fuzzy_search_enabled',
+        ].filter(key => Object.hasOwn(search, key)).map(key => [key, search[key]])),
+        ...(settings.backend_settings?.default_checksum_hash && {
+            default_checksum_hash: settings.backend_settings.default_checksum_hash,
+        }),
+    };
+}
+
 export default function SettingsProvider({ children }) {
     const [settings, setSettings] = useState(defaultSettings);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [loadError, setLoadError] = useState(null);
+    const queue = useRef(Promise.resolve());
+    const loadGeneration = useRef(0);
 
-    // Load settings from backend
-    const loadSettings = async () => {
-        setIsLoading(true);
-        setError(null);
-
-        try {
-            console.log('Loading settings from backend...');
-            const settingsJson = await invoke('get_settings_as_json');
-            const loadedSettings = JSON.parse(settingsJson);
-
-            console.log('Loaded settings:', loadedSettings);
-
-            // Extract nested backend settings for easier access
-            const flattenedSettings = {
-                ...loadedSettings,
-                // Extract search engine settings from nested structure
-                ...(loadedSettings.backend_settings?.search_engine_config && {
-                    search_engine_enabled: loadedSettings.backend_settings.search_engine_config.search_engine_enabled,
-                    case_sensitive_search: loadedSettings.backend_settings.search_engine_config.case_sensitive_search,
-                    index_hidden_files: loadedSettings.backend_settings.search_engine_config.index_hidden_files,
-                    fuzzy_search_enabled: loadedSettings.backend_settings.search_engine_config.fuzzy_search_enabled,
-                }),
-                // Extract other backend settings
-                ...(loadedSettings.backend_settings && {
-                    default_checksum_hash: loadedSettings.backend_settings.default_checksum_hash,
-                }),
-            };
-
-            // Merge with default settings to ensure all fields exist
-            const mergedSettings = {
-                ...defaultSettings,
-                ...flattenedSettings,
-            };
-
-            setSettings(mergedSettings);
-            console.log('Settings loaded successfully');
-        } catch (error) {
-            console.error('Failed to load settings:', error);
-            setError('Failed to load settings from backend');
-
-            // Use default settings if loading fails
-            setSettings(defaultSettings);
-
-            // Try to save default settings to backend
-            try {
-                console.log('Saving default settings to backend...');
-                await invoke('update_multiple_settings_command', {
-                    updates: defaultSettings,
-                });
-                console.log('Default settings saved successfully');
-            } catch (saveError) {
-                console.error('Failed to save default settings:', saveError);
-                setError('Failed to load and save default settings');
-            }
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    // Load settings on mount
-    useEffect(() => {
-        loadSettings();
+    // Serialize local writes/reset/snapshots so late responses cannot restore old preferences.
+    const enqueue = useCallback(operation => {
+        const result = queue.current.then(operation);
+        queue.current = result.then(() => undefined, () => undefined);
+        return result;
     }, []);
 
-    // Update a single setting
-    const updateSetting = async (key, value) => {
-        console.log(`Updating setting: ${key} = ${value}`);
-
-        try {
-            // Update in backend
-            const updatedSettingsJson = await invoke('update_settings_field', {
-                key,
-                value
-            });
-
-            // Parse the response to get the updated settings
-            if (updatedSettingsJson) {
-                const updatedSettings = JSON.parse(updatedSettingsJson);
-                setSettings(updatedSettings);
-            } else {
-                // Fallback: just update the local state
-                setSettings(prev => ({
-                    ...prev,
-                    [key]: value,
-                }));
+    const loadSettings = useCallback(() => {
+        const generation = ++loadGeneration.current;
+        return enqueue(async () => {
+            if (generation !== loadGeneration.current) return;
+            try {
+                const snapshot = await invoke('get_settings_snapshot');
+                if (generation !== loadGeneration.current) return;
+                setSettings(flattenSettings(snapshot.settings));
+                setLoadError(snapshot.loadError);
+                if (snapshot.loadError) showError(snapshot.loadError, 5000);
+            } catch {
+                if (generation !== loadGeneration.current) return;
+                setLoadError(LOAD_ERROR);
+                showError(LOAD_ERROR, 5000);
+            } finally {
+                if (generation === loadGeneration.current) setIsLoading(false);
             }
+        });
+    }, [enqueue]);
 
-            console.log(`Setting ${key} updated successfully`);
-        } catch (error) {
-            console.error(`Failed to update setting ${key}:`, error);
-            setError(`Failed to update ${key}: ${error.message || error}`);
-
-            // Update local state anyway for better UX, but show the error
-            setSettings(prev => ({
-                ...prev,
-                [key]: value,
-            }));
-
-            // Clear error after a few seconds
-            setTimeout(() => setError(null), 5000);
-        }
-    };
-
-    // Update multiple settings at once
-    const updateMultipleSettings = async (updates) => {
-        console.log('Updating multiple settings:', updates);
-
-        try {
-            // Update in backend
-            const updatedSettingsJson = await invoke('update_multiple_settings_command', {
-                updates
-            });
-
-            // Parse the response to get the updated settings
-            if (updatedSettingsJson) {
-                const updatedSettings = JSON.parse(updatedSettingsJson);
-                setSettings(updatedSettings);
-            } else {
-                // Fallback: just update the local state
-                setSettings(prev => ({
-                    ...prev,
-                    ...updates,
-                }));
-            }
-
-            console.log('Multiple settings updated successfully');
-        } catch (error) {
-            console.error('Failed to update multiple settings:', error);
-            setError(`Failed to update settings: ${error.message || error}`);
-
-            // Update local state anyway for better UX, but show the error
-            setSettings(prev => ({
-                ...prev,
-                ...updates,
-            }));
-
-            // Clear error after a few seconds
-            setTimeout(() => setError(null), 5000);
-        }
-    };
-
-    // Reset settings to defaults
-    const resetSettings = async () => {
-        console.log('Resetting settings to defaults');
-
-        try {
-            // Reset in backend
-            await invoke('reset_settings');
-
-            // Update local state
-            setSettings(defaultSettings);
-
-            console.log('Settings reset successfully');
-        } catch (error) {
-            console.error('Failed to reset settings:', error);
-            setError(`Failed to reset settings: ${error.message || error}`);
-
-            // Update local state anyway for better UX, but show the error
-            setSettings(defaultSettings);
-
-            // Clear error after a few seconds
-            setTimeout(() => setError(null), 5000);
-        }
-    };
-
-    // Reload settings from backend
-    const reloadSettings = () => {
+    useEffect(() => {
         loadSettings();
-    };
+        return () => { loadGeneration.current++; };
+    }, [loadSettings]);
 
-    const contextValue = {
-        settings,
-        isLoading,
-        error,
-        updateSetting,
-        updateMultipleSettings,
-        resetSettings,
-        reloadSettings,
-    };
+    const updateSetting = useCallback((key, value) => enqueue(async () => {
+        if (key === 'active_theme_id') {
+            const result = await invoke('set_active_theme_id', { id: value });
+            setSettings(previous => ({ ...previous, active_theme_id: result.active_theme_id }));
+            return;
+        }
+        try {
+            const json = await invoke('update_settings_field', { key, value });
+            setSettings(flattenSettings(JSON.parse(json)));
+            setError(null);
+        } catch (failure) {
+            setError(`Failed to update ${key}: ${failure.message || failure}`);
+        }
+    }), [enqueue]);
 
-    // Show loading state if settings are not loaded yet
-    if (isLoading) {
-        return (
-            <div style={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                height: '100vh',
-                flexDirection: 'column',
-                gap: '16px'
-            }}>
-                <div style={{
-                    width: '40px',
-                    height: '40px',
-                    border: '3px solid #f3f4f6',
-                    borderTopColor: '#3b82f6',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite'
-                }} />
-                <div style={{
-                    color: '#6b7280',
-                    fontSize: '14px'
-                }}>
-                    Loading settings...
-                </div>
-                <style>{`
-                    @keyframes spin {
-                        to { transform: rotate(360deg); }
-                    }
-                `}</style>
-            </div>
-        );
-    }
+    const updateMultipleSettings = useCallback(updates => enqueue(async () => {
+        if (Object.keys(updates).some(key => key.split('.')[0] === 'active_theme_id')) {
+            throw new Error('Use set_active_theme_id for theme selection');
+        }
+        try {
+            const json = await invoke('update_multiple_settings_command', { updates });
+            setSettings(flattenSettings(JSON.parse(json)));
+            setError(null);
+        } catch (failure) {
+            setError(`Failed to update settings: ${failure.message || failure}`);
+        }
+    }), [enqueue]);
+
+    const resetSettings = useCallback(() => enqueue(async () => {
+        try {
+            const json = await invoke('reset_settings_command');
+            setSettings(flattenSettings(JSON.parse(json)));
+            setError(null);
+        } catch (failure) {
+            setError(`Failed to reset settings: ${failure.message || failure}`);
+            throw failure;
+        }
+    }), [enqueue]);
 
     return (
-        <SettingsContext.Provider value={contextValue}>
-            {children}
+        <SettingsContext.Provider value={{ settings, isLoading, error: loadError || error,
+            updateSetting, updateMultipleSettings, resetSettings, reloadSettings: loadSettings }}>
+            {isLoading ? (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center',
+                    height: '100vh', flexDirection: 'column', gap: '16px',
+                    backgroundColor: 'var(--background)', color: 'var(--text-secondary)' }}>
+                    <div style={{ width: '40px', height: '40px', border: '3px solid var(--border)',
+                        borderTopColor: 'var(--focus-ring)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                    <div style={{ fontSize: '14px' }}>Loading settings...</div>
+                    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                </div>
+            ) : children}
         </SettingsContext.Provider>
     );
 }
 
-// Custom hook for using the settings context
 export const useSettings = () => useContext(SettingsContext);

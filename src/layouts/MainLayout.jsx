@@ -1,5 +1,4 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { useTheme } from '../providers/ThemeProvider';
 import { useFileSystem } from '../providers/FileSystemProvider';
 import { useContextMenu } from '../providers/ContextMenuProvider';
 import { useHistory } from '../providers/HistoryProvider';
@@ -50,7 +49,6 @@ import {replaceFileName} from "../utils/pathUtils.js";
  * @returns {JSX.Element} The MainLayout component
  */
 const MainLayout = () => {
-    const { theme, toggleTheme } = useTheme();
     const { isLoading, currentDirData, selectedItems, loadDirectory, volumes, focusedItem, setFocusedItem, renameItem: fsRenameItem } = useFileSystem();
     const { isSftpPath, parseSftpPath, createSftpUrl } = useSftp();
     const { 
@@ -842,16 +840,7 @@ const MainLayout = () => {
                                         onChange={handleViewModeChange}
                                     />
                                 )}
-                                
-                                <button
-                                    className="icon-button"
-                                    onClick={toggleTheme}
-                                    title={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}
-                                    aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
-                                >
-                                    <span className={`icon ${theme === 'light' ? 'icon-moon' : 'icon-sun'}`}></span>
-                                </button>
-                                
+
                                 <button
                                     className="icon-button toggle-hidden-files"
                                     onClick={handleHiddenFilesToggle}

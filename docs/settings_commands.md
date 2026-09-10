@@ -2,30 +2,26 @@
 
 Error Structure as json can be found [here](./error_structure.md).
 
+Theme selection uses `set_active_theme_id`; settings loading uses structured `get_settings_snapshot`. See [theme contracts](./themes.md). Generic field/batch writes containing `active_theme_id` reject `Use set_active_theme_id for theme selection` before mutation.
+
 ## Content
 - [Get All Settings](#get_settings_as_json-endpoint)
 - [Get a Specific Setting](#get_setting_field-endpoint)
 - [Update a Setting Field](#update_settings_field-endpoint)
 - [Update Multiple Settings](#update_multiple_settings_command-endpoint)
-- [Reset Settings](#reset_settings-endpoint)
+- [Reset Settings](#reset_settings_command-endpoint)
 
 # Current settings
 The current settings consist of the following fields. A nearer explanation of each field can be found text them or unter the settings object.
 
 ```json
 {
-   "darkmode":true,
-   "custom_themes":[
-      
-   ],
-   "default_theme":"",
-   "default_themes_path":"",
+   "active_theme_id":"system",
    "default_folder_path_on_opening":"",
    "default_view":"Grid",
    "font_size":"Medium",
    "show_hidden_files_and_folders":false,
    "show_details_panel":false,
-   "accent_color":"#000000",
    "confirm_delete":true,
    "auto_refresh_dir":true,
    "sort_direction":"Acscending",
@@ -162,7 +158,7 @@ useEffect(() => {
 useEffect(() => {
     const fetchThemeSetting = async () => {
         try {
-            const themeValue = await invoke("get_setting_field", { key: "theme" });
+            const themeValue = await invoke("get_setting_field", { key: "active_theme_id" });
             console.log("Theme setting:", themeValue);
         } catch (error) {
             console.error("Error fetching theme setting:", error);
@@ -188,11 +184,8 @@ useEffect(() => {
 ```typescript jsx
 const updateTheme = async () => {
     try {
-        const updatedSettings = await invoke("update_settings_field", { 
-            key: "theme", 
-            value: "dark" 
-        });
-        console.log("Updated settings:", JSON.parse(updatedSettings));
+        const updatedSettings = await invoke("set_active_theme_id", { id: "catppuccin-mocha" });
+        console.log("Updated selection:", updatedSettings);
     } catch (error) {
         console.error("Error updating theme:", error);
     }
@@ -214,9 +207,8 @@ const updateTheme = async () => {
 const updateMultipleSettings = async () => {
     try {
         const updates = {
-            "theme": "dark",
-            "notifications": true,
-            "language": "en"
+            "show_hidden_files_and_folders": true,
+            "show_details_panel": true
         };
         
         const updatedSettings = await invoke("update_multiple_settings_command", { 
@@ -229,21 +221,21 @@ const updateMultipleSettings = async () => {
 };
 ```
 
-# `reset_settings` endpoint
+# `reset_settings_command` endpoint
 
 ---
 ## Parameters
 - `None`
 
 ## Returns
-- Ok(()): If the settings file was successfully reset.
+- R1. Ok(String): Updated settings JSON after successful reset; active theme becomes System.
 - Err(String): An error message if the reset failed.
 
 ## Example call
 ```typescript jsx
 const resetSettings = async () => {
     try {
-        await invoke("reset_settings");
+        await invoke("reset_settings_command");
         console.log("Settings reset to default.");
     } catch (error) {
         console.error("Failed to reset settings:", error);

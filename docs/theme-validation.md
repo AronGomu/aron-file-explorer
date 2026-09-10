@@ -25,9 +25,9 @@ PLAYWRIGHT_BROWSERS_PATH="$PWD/.tmp/theme-validation/playwright-browsers" nix de
 
 URL: `http://127.0.0.1:1422/?case=harness-button&theme=catppuccin-latte|catppuccin-mocha`.
 
-T1 supplies only actual production Button. Unknown cases throw `Unknown theme gallery case: ${caseId}`. Gallery-only `mockIPC` rejects every command with `Unknown theme gallery IPC command: ${command}`; Button needs no IPC data. Unit coverage imports actual gallery entrypoint, calls real `@tauri-apps/api/core` `invoke`. Future cases must explicitly add their own allowlisted fixtures. No production frontend entrypoint or native IPC modification.
+Gallery supplies actual production Button plus T2 Settings. Unknown cases throw `Unknown theme gallery case: ${caseId}`. Gallery-only `mockIPC` rejects every command with `Unknown theme gallery IPC command: ${command}`; Button needs no IPC data. Unit coverage imports actual gallery entrypoint, calls real `@tauri-apps/api/core` `invoke`. Future cases must explicitly add their own allowlisted fixtures. No production frontend entrypoint or native IPC modification.
 
-**T1 `theme` query is a placeholder. Latte/Mocha screenshots are identical.** They prove navigation/render/capture plumbing, not palette separation. T2 owns theme colors/providers. Do not add fixture palettes here.
+T2 uses production JSON seeds/root activator for both query values. `settings` renders production SettingsProvider → ThemeProvider → SettingsPanel with explicit fixture-only IPC. Unknown IPC still rejects; no fixture code enters production bundle.
 
 ## JS / bundle checks
 
@@ -82,3 +82,28 @@ Capture rejects near-uniform images, but **exit 0 or window existence alone is n
 | `harness-button` | T1 placeholder capture | Identical T1 capture | Not a native gallery case |
 | Production app shell | T2+ colors | T2+ colors | T1 fixture-only rendered screenshot |
 | Settings / reload / remaining surfaces | Owning follow-up ticket | Owning follow-up ticket | T6 integrated evidence |
+
+
+## T2 selection validation
+
+Run filtered Rust suites only after auditing reset/path safety. Runner pins worktree-local target; test children receive isolated cwd/HOME/all XDG/TMPDIR. Settings tests now retain injected paths and preserve malformed source bytes. Full Rust suite is still deferred; runner is environment isolation, not native filesystem sandbox.
+
+```bash
+nix develop --no-warn-dirty --command node scripts/run-isolated-rust-tests.mjs --filter theme_
+nix develop --no-warn-dirty --command node scripts/run-isolated-rust-tests.mjs --filter tests_settings
+npm run test:themes -- tests/themes/definition.test.js tests/themes/selection.test.jsx tests/themes/migration-contract.test.js
+PLAYWRIGHT_BROWSERS_PATH="$PWD/.tmp/theme-validation/playwright-browsers" nix develop --no-warn-dirty --command npm run test:themes:visual -- tests/themes/visual/settings.spec.js --repeat-each 3
+```
+
+Native UI selection automation extends original sandbox; no app test hooks. At fixed 1200x800 viewport, real X11 actions select System/Latte/Mocha, verify persisted JSON, deny saves via fixture directory permissions, restart, edit seeded JSON, restart again, migrate legacy settings. Screenshots plus before/after settings/seed files retained. Tab/file/terminal-input screenshots require visual inspection; no claim based solely on window existence.
+
+```bash
+CARGO_TARGET_DIR="$PWD/target" npm run tauri -- build --debug --no-bundle -- --locked
+THEME_VALIDATION_FONTS="$(nix eval --raw nixpkgs#dejavu_fonts.outPath)" \
+THEME_VALIDATION_MESA="$(nix eval --raw nixpkgs#mesa.outPath)" \
+nix shell nixpkgs#bubblewrap nixpkgs#xvfb nixpkgs#xorg.xwininfo \
+  nixpkgs#imagemagick nixpkgs#dejavu_fonts nixpkgs#mesa nixpkgs#xdotool nixpkgs#jq \
+  --command bash scripts/capture-native-theme.sh --selection
+```
+
+Authoring/decoder limits: [themes.md](./themes.md). Schema/JS/Rust content parity is scoped to common decoder domain; surrogate/numeric exceptions are explicit shared fixtures. Native Linux proof does not claim macOS/Windows support verification or media readiness. T3 owns live watching; T4/T5 own remaining component colors. Fresh independent review remains mandatory.

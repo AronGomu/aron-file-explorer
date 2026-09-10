@@ -606,10 +606,6 @@
     background-color: var(--surface-hover);
 }
 
-.theme-dark .icon {
-    filter: invert();
-}
-
 /* Add these missing icon classes to your CSS files */
 
 /* File type icons */

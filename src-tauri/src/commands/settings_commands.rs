@@ -1,5 +1,5 @@
 use crate::error_handling::{Error, ErrorCode};
-use crate::state::SettingsState;
+use crate::state::{SettingsState, SettingsLoadStatus, SettingsSnapshot, THEME_SELECTION_COMMAND};
 use serde_json::to_string;
 use std::io;
 use std::sync::{Arc, Mutex};
@@ -46,6 +46,24 @@ pub fn get_settings_as_json_impl(state: Arc<Mutex<SettingsState>>) -> String {
             "Failed to serialize settings to JSON".to_string(),
         ).to_json()
     }
+}
+
+#[tauri::command]
+pub fn get_settings_snapshot(
+    state: State<'_, Arc<Mutex<SettingsState>>>,
+    status: State<'_, SettingsLoadStatus>,
+) -> Result<SettingsSnapshot, String> {
+    get_settings_snapshot_impl(state.inner(), status.inner())
+}
+
+pub(crate) fn get_settings_snapshot_impl(
+    state: &Arc<Mutex<SettingsState>>, status: &SettingsLoadStatus,
+) -> Result<SettingsSnapshot, String> {
+    let state = state.lock().map_err(|_| "Failed to acquire lock on settings state")?;
+    let settings = state.0.lock().map_err(|_| "Failed to acquire lock on settings state")?;
+    let settings = SettingsState::settings_to_json_map(&settings)
+        .map_err(|_| "Failed to serialize settings snapshot")?;
+    Ok(SettingsSnapshot { settings: serde_json::Value::Object(settings), load_error: status.0.clone() })
 }
 
 /// Retrieves the value of a specific setting field.
@@ -136,6 +154,9 @@ pub fn update_settings_field_impl(
     key: String,
     value: serde_json::Value,
 ) -> Result<String, String> {
+    if key.split('.').next() == Some("active_theme_id") {
+        return Err(THEME_SELECTION_COMMAND.to_string());
+    }
     let settings_state = state.lock().map_err(|_| {
         Error::new(
             ErrorCode::InternalError,
@@ -195,6 +216,9 @@ pub fn update_multiple_settings_impl(
     state: Arc<Mutex<SettingsState>>,
     updates: serde_json::Map<String, serde_json::Value>,
 ) -> Result<String, String> {
+    if updates.keys().any(|key| key.split('.').next() == Some("active_theme_id")) {
+        return Err(THEME_SELECTION_COMMAND.to_string());
+    }
     let settings_state = state.lock().map_err(|_| {
         Error::new(
             ErrorCode::InternalError,
@@ -272,7 +296,7 @@ mod tests_settings_commands {
     // Testing: Helper function to create a test SettingsState
     fn create_test_settings_state() -> Arc<Mutex<SettingsState>> {
         let temp_file = tempfile::NamedTempFile::new().unwrap();
-        let path = temp_file.path().to_path_buf();
+        let path = temp_file.path().with_extension("settings.json");
 
         // Create a settings state with a temporary file path
         Arc::new(Mutex::new(SettingsState::new_with_path(path)))
@@ -287,17 +311,17 @@ mod tests_settings_commands {
     fn test_get_settings_as_json_contains_default() {
         let temp_file = tempfile::NamedTempFile::new().unwrap();
 
-        let state = create_test_settings_state_with_temp_file(temp_file.path().to_path_buf());
+        let state = create_test_settings_state_with_temp_file(temp_file.path().with_extension("settings.json"));
         let json = get_settings_as_json_impl(state);
-        assert!(json.contains("\"darkmode\":true"));
+        assert!(json.contains("\"show_hidden_files_and_folders\":false"));
         assert!(json.contains("\"logging_level\":\"Full\""));
     }
 
     #[test]
     fn test_get_setting_field_existing_key() {
         let state = create_test_settings_state();
-        let value = get_setting_field_impl(state.clone(), "darkmode".to_string()).unwrap();
-        assert_eq!(value, json!(true));
+        let value = get_setting_field_impl(state.clone(), "show_hidden_files_and_folders".to_string()).unwrap();
+        assert_eq!(value, json!(false));
     }
 
     #[test]
@@ -310,11 +334,11 @@ mod tests_settings_commands {
     #[test]
     fn test_update_settings_field_success() {
         let state = create_test_settings_state();
-        let result = update_settings_field_impl(state.clone(), "darkmode".to_string(), json!(false));
+        let result = update_settings_field_impl(state.clone(), "show_hidden_files_and_folders".to_string(), json!(true));
         assert!(result.is_ok());
 
-        let updated = get_setting_field_impl(state.clone(), "darkmode".to_string()).unwrap();
-        assert_eq!(updated, json!(false));
+        let updated = get_setting_field_impl(state.clone(), "show_hidden_files_and_folders".to_string()).unwrap();
+        assert_eq!(updated, json!(true));
     }
 
     #[test]
@@ -330,16 +354,16 @@ mod tests_settings_commands {
         let state = create_test_settings_state();
 
         let mut updates = serde_json::Map::new();
-        updates.insert("darkmode".to_string(), json!(false));
-        updates.insert("default_theme".to_string(), json!("solarized"));
+        updates.insert("show_hidden_files_and_folders".to_string(), json!(true));
+        updates.insert("default_folder_path_on_opening".to_string(), json!("solarized"));
 
         let result = update_multiple_settings_impl(state.clone(), updates);
         assert!(result.is_ok());
 
-        let darkmode = get_setting_field_impl(state.clone(), "darkmode".to_string()).unwrap();
-        let theme = get_setting_field_impl(state.clone(), "default_theme".to_string()).unwrap();
+        let show_hidden_files_and_folders = get_setting_field_impl(state.clone(), "show_hidden_files_and_folders".to_string()).unwrap();
+        let theme = get_setting_field_impl(state.clone(), "default_folder_path_on_opening".to_string()).unwrap();
 
-        assert_eq!(darkmode, json!(false));
+        assert_eq!(show_hidden_files_and_folders, json!(true));
         assert_eq!(theme, json!("solarized"));
     }
 
@@ -359,12 +383,12 @@ mod tests_settings_commands {
         let state = create_test_settings_state();
         // Prefix unused variable with underscore
         let _updated_data =
-            update_settings_field_impl(state.clone(), "darkmode".to_string(), json!(false));
+            update_settings_field_impl(state.clone(), "show_hidden_files_and_folders".to_string(), json!(true));
 
         let result = reset_settings_impl(state.clone());
         assert!(result.is_ok());
 
-        let darkmode = get_setting_field_impl(state.clone(), "darkmode".to_string()).unwrap();
-        assert_eq!(darkmode, json!(true));
+        let show_hidden_files_and_folders = get_setting_field_impl(state.clone(), "show_hidden_files_and_folders".to_string()).unwrap();
+        assert_eq!(show_hidden_files_and_folders, json!(false));
     }
 }

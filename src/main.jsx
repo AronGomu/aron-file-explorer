@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
+import { bootstrapTheme } from "./themes/applyTheme";
 // Wichtig: Hier Tauri API importieren, wenn es irgendwo in der App verwendet wird
 import { invoke } from "@tauri-apps/api/core";
 
@@ -25,6 +26,8 @@ document.head.appendChild(fontLink);
 
 // Stelle sicher, dass window.invoke verfügbar ist, falls du es global verwendest
 window.__TAURI_INVOKE__ = invoke;
+
+bootstrapTheme();
 
 // Initialize the application
 ReactDOM.createRoot(document.getElementById("root")).render(

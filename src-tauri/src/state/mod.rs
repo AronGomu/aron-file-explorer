@@ -24,6 +24,7 @@
 pub mod meta_data;
 pub mod searchengine_data;
 pub mod settings_data;
+pub(crate) mod config_file;
 pub mod logging;
 
 pub use settings_data::*;
@@ -37,7 +38,8 @@ use tauri::{Builder, Wry};
 pub fn setup_app_state(app: Builder<Wry>) -> Builder<Wry> {
     // Create our shared state instances
     let meta_data_state = Arc::new(Mutex::new(MetaDataState::new()));
-    let settings_state = Arc::new(Mutex::new(SettingsState::new()));
+    let (settings, load_status) = load_settings_state();
+    let settings_state = Arc::new(Mutex::new(settings));
     let search_engine_state = Arc::new(Mutex::new(SearchEngineState::new(settings_state.clone())));
     
     // Initialize the logger with the settings state
@@ -46,5 +48,6 @@ pub fn setup_app_state(app: Builder<Wry>) -> Builder<Wry> {
     //To add more just .manage
     app.manage(meta_data_state)
         .manage(settings_state)
+        .manage(load_status)
         .manage(search_engine_state)
 }

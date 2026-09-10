@@ -10,7 +10,7 @@ inside() {
   test ! -e /tmp/.X11-unix
   cat /proc/self/mountinfo > /evidence/mountinfo.txt
   printf 'cwd=%s\n' "$PWD" > /evidence/environment.txt
-  for key in HOME TMPDIR XDG_CONFIG_HOME XDG_CACHE_HOME XDG_DATA_HOME XDG_STATE_HOME XDG_RUNTIME_DIR XDG_CONFIG_DIRS XDG_DATA_DIRS PATH FONTCONFIG_FILE GDK_BACKEND WEBKIT_DISABLE_COMPOSITING_MODE LIBGL_ALWAYS_SOFTWARE __EGL_VENDOR_LIBRARY_FILENAMES LIBGL_DRIVERS_PATH; do
+  for key in SHELL HOME TMPDIR XDG_CONFIG_HOME XDG_CACHE_HOME XDG_DATA_HOME XDG_STATE_HOME XDG_RUNTIME_DIR XDG_CONFIG_DIRS XDG_DATA_DIRS PATH FONTCONFIG_FILE GDK_BACKEND WEBKIT_DISABLE_COMPOSITING_MODE LIBGL_ALWAYS_SOFTWARE __EGL_VENDOR_LIBRARY_FILENAMES LIBGL_DRIVERS_PATH; do
     printf '%s=%s\n' "$key" "${!key}" >> /evidence/environment.txt
   done
 
@@ -52,9 +52,9 @@ inside() {
   xwininfo -root -tree > /evidence/display-ready.txt
   printf 'pid=%s display=%s socket=/tmp/.X11-unix/X%s\n' "$display_pid" "$DISPLAY" "$display" > /evidence/display-owner.txt
   readlink "/proc/$display_pid/exe" >> /evidence/display-owner.txt
-  printf '%s\n' 'Xvfb -displayfd 3 -screen 0 1200x800x24 -nolisten tcp' '/app/src-tauri' > /evidence/inside-argv.txt
+  printf '%s\n' 'Xvfb -displayfd 3 -screen 0 1200x800x24 -nolisten tcp' "$NATIVE_CAPTURE_BINARY" > /evidence/inside-argv.txt
 
-  /app/src-tauri > /evidence/app.stdout.log 2> /evidence/app.stderr.log &
+  "$NATIVE_CAPTURE_BINARY" > /evidence/app.stdout.log 2> /evidence/app.stderr.log &
   app_pid=$!
   for ((attempt=0; attempt<150; attempt++)); do
     kill -0 "$app_pid"
@@ -65,6 +65,8 @@ inside() {
   grep -q '"Explr"' /evidence/xwininfo.txt
   sleep 8
   kill -0 "$app_pid"
+  readlink "/proc/$app_pid/exe" > /evidence/running-executable.txt
+  sha256sum "/proc/$app_pid/exe" > /evidence/running-executable.sha256
   kill -0 "$display_pid"
   xwininfo -root -tree > /evidence/xwininfo.txt
   magick import -window root /evidence/screenshot.png
@@ -74,6 +76,9 @@ inside() {
     return 1
   fi
   printf 'alive-before-capture=yes\nstop=SIGTERM-after-capture\nvisual-review=required\n' > /evidence/app.status
+  if [[ "${NATIVE_THEME_SELECTION:-0}" = 1 ]]; then
+    source /selection.sh
+  fi
   find /fixture -type f -printf '%P\n' | sort > /evidence/fixture-files.txt
   test ! -e /home
   test ! -e /run
@@ -86,10 +91,25 @@ if [[ "${1:-}" = --inside ]]; then
   inside
   exit 0
 fi
-[[ $# = 0 ]] || { printf 'Usage: bash scripts/capture-native-theme.sh\n' >&2; exit 2; }
+selection=0
+if [[ "${1:-}" = --selection && $# = 1 ]]; then selection=1
+elif [[ $# != 0 ]]; then printf 'Usage: bash scripts/capture-native-theme.sh [--selection]\n' >&2; exit 2
+fi
 
 repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
-test -x "$repo/target/debug/src-tauri"
+binary="$repo/target/debug/src-tauri"
+app_binary=/app/src-tauri
+binary_mount=(--ro-bind "$binary" "$app_binary")
+if [[ -n "${THEME_VALIDATION_PACKAGE_ROOT:-}" ]]; then
+  package_root=$(readlink -f "$THEME_VALIDATION_PACKAGE_ROOT")
+  [[ "$package_root" = "$repo/.tmp/theme-validation/"* ]]
+  binary="$package_root/usr/bin/src-tauri"
+  app_binary=/usr/bin/src-tauri
+  test -f "$package_root/usr/lib/Explr/themes/LICENSE"
+  cmp "$repo/src-tauri/resources/themes/LICENSE" "$package_root/usr/lib/Explr/themes/LICENSE"
+  binary_mount=(--ro-bind "$package_root/usr" /usr)
+fi
+test -x "$binary"
 : "${THEME_VALIDATION_FONTS:?Set THEME_VALIDATION_FONTS to the nixpkgs dejavu_fonts store path}"
 [[ "$THEME_VALIDATION_FONTS" = /nix/store/* ]]
 test -d "$THEME_VALIDATION_FONTS/share/fonts"
@@ -98,7 +118,9 @@ test -d "$THEME_VALIDATION_FONTS/share/fonts"
 test -f "$THEME_VALIDATION_MESA/share/glvnd/egl_vendor.d/50_mesa.json"
 
 sandbox_path=""
-for tool in bash cat env sort find readlink mkdir sleep grep Xvfb xwininfo magick; do
+tools=(bash cat env sort find readlink mkdir sleep grep sha256sum Xvfb xwininfo magick)
+if [[ "$selection" = 1 ]]; then tools+=(xdotool jq cp chmod cmp); fi
+for tool in "${tools[@]}"; do
   path=$(readlink -f "$(command -v "$tool")")
   [[ "$path" = /nix/store/* ]] || { printf 'Tool outside Nix store: %s\n' "$tool" >&2; exit 1; }
   sandbox_path="${sandbox_path:+$sandbox_path:}$(dirname "$path")"
@@ -127,17 +149,25 @@ source_state() {
   done
 }
 source_state > "$evidence/source-config.before"
-sha256sum "$repo/Cargo.lock" "$repo/target/debug/src-tauri" > "$evidence/build-identity.txt"
+sha256sum "$repo/Cargo.lock" "$binary" > "$evidence/build-identity.txt"
+if [[ -n "${THEME_VALIDATION_PACKAGE_ROOT:-}" ]]; then
+  printf 'kind=extracted-deb\npackage-root=%s\ninstalled=no\n' "$package_root" > "$evidence/package-fixture.txt"
+  sha256sum "$package_root/usr/lib/Explr/themes/LICENSE" > "$evidence/package-license.sha256"
+fi
 args=(
   --die-with-parent --unshare-all --new-session --clearenv
   --ro-bind /nix/store /nix/store --proc /proc --dev /dev --tmpfs /tmp
   --dir /bin --symlink "$shell" /bin/sh
   --ro-bind "$scratch/etc" /etc
   --bind "$scratch/fixture" /fixture --bind "$evidence" /evidence
-  --ro-bind "$repo/target/debug/src-tauri" /app/src-tauri
+  "${binary_mount[@]}"
+  --setenv NATIVE_CAPTURE_BINARY "$app_binary"
   --ro-bind "$repo/scripts/capture-native-theme.sh" /capture.sh
+  --ro-bind "$repo/scripts/native-theme-selection.sh" /selection.sh
+  --setenv NATIVE_THEME_SELECTION "$selection"
   --chdir /fixture/cwd
   --setenv PATH "$sandbox_path" --setenv NATIVE_CAPTURE_SANDBOX 1
+  --setenv SHELL /bin/sh
   --setenv HOME /fixture/home --setenv TMPDIR /fixture/tmp
   --setenv XDG_CONFIG_HOME /fixture/config --setenv XDG_CACHE_HOME /fixture/cache
   --setenv XDG_DATA_HOME /fixture/data --setenv XDG_STATE_HOME /fixture/state

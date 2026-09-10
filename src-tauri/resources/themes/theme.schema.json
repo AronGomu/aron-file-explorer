@@ -1,0 +1,230 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ThemeDefinition v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "id",
+    "name",
+    "appearance",
+    "tokens"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "./theme.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+      "maxLength": 64,
+      "not": {
+        "const": "system"
+      }
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "\\S"
+    },
+    "appearance": {
+      "enum": [
+        "light",
+        "dark"
+      ]
+    },
+    "tokens": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "background",
+        "backgroundSecondary",
+        "backgroundTertiary",
+        "surface",
+        "surfaceHover",
+        "surfaceActive",
+        "border",
+        "borderStrong",
+        "textPrimary",
+        "textSecondary",
+        "textTertiary",
+        "textOnAccent",
+        "accent",
+        "accentHover",
+        "accentSurface",
+        "focusRing",
+        "error",
+        "errorSurface",
+        "success",
+        "successSurface",
+        "warning",
+        "warningSurface",
+        "info",
+        "infoSurface",
+        "backdrop",
+        "shadow",
+        "folder",
+        "fileImage",
+        "fileVideo",
+        "fileAudio",
+        "fileCode",
+        "fileArchive",
+        "filePdf",
+        "fileText",
+        "previewCheckerboardLight",
+        "previewCheckerboardDark"
+      ],
+      "properties": {
+        "background": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "backgroundSecondary": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "backgroundTertiary": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "surface": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "surfaceHover": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "surfaceActive": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "border": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "borderStrong": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "textPrimary": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "textSecondary": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "textTertiary": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "textOnAccent": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "accent": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "accentHover": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "accentSurface": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "focusRing": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "error": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "errorSurface": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "success": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "successSurface": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "warning": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "warningSurface": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "info": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "infoSurface": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "backdrop": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "shadow": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "folder": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "fileImage": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "fileVideo": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "fileAudio": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "fileCode": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "fileArchive": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "filePdf": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "fileText": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "previewCheckerboardLight": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        },
+        "previewCheckerboardDark": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$"
+        }
+      }
+    }
+  }
+}

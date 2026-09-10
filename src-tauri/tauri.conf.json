@@ -32,6 +32,7 @@
   },
   "bundle": {
     "active": true,
+    "resources": {"resources/themes/LICENSE": "themes/LICENSE"},
     "targets": ["deb", "rpm", "dmg", "msi"],
     "icon": ["icons/logo_32x32.png", "icons/logo_128x128.png", "icons/logo.icns", "icons/logo.ico"],
     "windows": {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useSettings } from '../../providers/SettingsProvider';
+import { useTheme } from '../../providers/ThemeProvider';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
 import './settings.css';
@@ -14,6 +15,8 @@ import './settings.css';
  */
 const SettingsPanel = ({ isOpen, onClose }) => {
     const { settings, error, updateSetting, resetSettings, reloadSettings } = useSettings();
+    const { activeThemeId, themes, themeDirectory, isLoading, isSaving, setTheme } = useTheme();
+    const unavailable = activeThemeId !== 'system' && !themes.some(theme => theme.id === activeThemeId);
     const [isResetting, setIsResetting] = useState(false);
     const [activeTab, setActiveTab] = useState('appearance');
     const [localError, setLocalError] = useState(null);
@@ -27,15 +30,6 @@ const SettingsPanel = ({ isOpen, onClose }) => {
         { id: 'behavior', label: 'Behavior', icon: 'settings' },
         { id: 'search', label: 'Search', icon: 'search' },
         { id: 'advanced', label: 'Advanced', icon: 'cog' }
-    ];
-
-    /**
-     * Theme options configuration
-     * @type {Array<{id: boolean, label: string}>}
-     */
-    const themes = [
-        { id: false, label: 'Light' },
-        { id: true, label: 'Dark' }
     ];
 
     /**
@@ -153,21 +147,15 @@ const SettingsPanel = ({ isOpen, onClose }) => {
     const renderAppearanceTab = () => (
         <div className="settings-tab-content">
             <div className="settings-section">
-                <h3>Theme</h3>
-                <div className="radio-group">
-                    {themes.map(theme => (
-                        <label key={theme.id.toString()} className="radio-option">
-                            <input
-                                type="radio"
-                                name="darkmode"
-                                value={theme.id}
-                                checked={settings.darkmode === theme.id}
-                                onChange={(e) => updateSetting('darkmode', e.target.value === 'true')}
-                            />
-                            <span>{theme.label}</span>
-                        </label>
-                    ))}
-                </div>
+                <h3><label htmlFor="theme-selection">Theme</label></h3>
+                <select id="theme-selection" className="settings-select" value={activeThemeId}
+                    disabled={isLoading || isSaving || isResetting}
+                    onChange={event => setTheme(event.target.value)} aria-describedby="theme-directory">
+                    <option value="system">System</option>
+                    {themes.map(theme => <option key={theme.id} value={theme.id}>{theme.name}</option>)}
+                    {unavailable && <option value={activeThemeId} disabled>{activeThemeId} (unavailable)</option>}
+                </select>
+                <div id="theme-directory" className="input-hint">{themeDirectory}</div>
             </div>
 
             <div className="settings-section">
@@ -199,21 +187,6 @@ const SettingsPanel = ({ isOpen, onClose }) => {
                         <option key={size.id} value={size.id}>{size.label}</option>
                     ))}
                 </select>
-            </div>
-
-            <div className="settings-section">
-                <h3>Accent Color</h3>
-                <div className="form-group">
-                    <input
-                        type="color"
-                        value={settings.accent_color || '#0672ef'}
-                        onChange={(e) => updateSetting('accent_color', e.target.value)}
-                        className="color-picker"
-                    />
-                    <div className="input-hint">
-                        Choose your preferred accent color for the interface.
-                    </div>
-                </div>
             </div>
 
             <div className="settings-section">
@@ -483,7 +456,7 @@ const SettingsPanel = ({ isOpen, onClose }) => {
                 <Button
                     variant="danger"
                     onClick={handleReset}
-                    disabled={isResetting}
+                    disabled={isResetting || isSaving}
                 >
                     {isResetting ? 'Resetting...' : 'Reset All Settings'}
                 </Button>

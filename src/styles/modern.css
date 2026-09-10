@@ -12,19 +12,6 @@
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
-/* CSS variables for RGB color values */
-:root {
-    --background-rgb: 255, 255, 255;
-    --border-rgb: 224, 228, 232;
-    --accent-rgb: 6, 114, 239;
-}
-
-.theme-dark {
-    --background-rgb: 20, 21, 24;
-    --border-rgb: 42, 45, 58;
-    --accent-rgb: 59, 130, 246;
-}
-
 /* Modern spotlight effect for hovering items */
 .spotlight-effect {
     position: relative;

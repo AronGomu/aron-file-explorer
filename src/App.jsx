@@ -13,24 +13,24 @@ function ErrorFallback() {
     return (
         <div style={{
             padding: '20px',
-            color: '#333',
-            backgroundColor: '#f8f8f8',
+            color: 'var(--text-primary)',
+            backgroundColor: 'var(--background)',
             fontFamily: 'system-ui, sans-serif',
             maxWidth: '800px',
             margin: '40px auto',
-            border: '1px solid #ddd',
+            border: '1px solid var(--border-strong)',
             borderRadius: '8px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+            boxShadow: '0 2px 8px var(--shadow)'
         }}>
-            <h1 style={{ color: '#d32f2f' }}>Fast File Explorer</h1>
+            <h1 style={{ color: 'var(--text-primary)' }}>Fast File Explorer</h1>
             <p>The application could not be loaded properly. Try refreshing the page.</p>
             <p>If the problem persists, check the console (F12) for error messages.</p>
             <button
                 onClick={() => window.location.reload()}
                 style={{
                     padding: '8px 16px',
-                    backgroundColor: '#0078d4',
-                    color: 'white',
+                    backgroundColor: 'var(--accent)',
+                    color: 'var(--text-on-accent)',
                     border: 'none',
                     borderRadius: '4px',
                     cursor: 'pointer',

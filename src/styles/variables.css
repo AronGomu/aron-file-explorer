@@ -3,68 +3,6 @@
     --color-white: #ffffff;
     --color-black: #000000;
 
-    /* Light theme */
-    --light-background: #ffffff;
-    --light-background-secondary: #f5f7fa;
-    --light-background-tertiary: #eef1f5;
-    --light-surface: #ffffff;
-    --light-surface-hover: #f5f7fa;
-    --light-surface-active: #eef1f5;
-    --light-border: #e0e4e8;
-    --light-text-primary: #1a1c1e;
-    --light-text-secondary: #4b5563;
-    --light-text-tertiary: #6b7280;
-    --light-accent: #0672ef;
-    --light-accent-hover: #0560c7;
-    --light-accent-surface: #e6f1ff;
-    --light-error: #dc2626;
-    --light-success: #16a34a;
-    --light-warning: #f59e0b;
-    --light-info: #0891b2;
-
-    /* Dark theme */
-    --dark-background: #141518;
-    --dark-background-secondary: #1c1e24;
-    --dark-background-tertiary: #23252f;
-    --dark-surface: #1c1e24;
-    --dark-surface-hover: #23252f;
-    --dark-surface-active: #2a2d3a;
-    --dark-border: #2a2d3a;
-    --dark-text-primary: #f3f4f6;
-    --dark-text-secondary: #d1d5db;
-    --dark-text-tertiary: #9ca3af;
-    --dark-accent: #3b82f6;
-    --dark-accent-hover: #2563eb;
-    --dark-accent-surface: #1e40af33;
-    --dark-error: #ef4444;
-    --dark-success: #22c55e;
-    --dark-warning: #f97316;
-    --dark-info: #06b6d4;
-
-    /* Default variables - applied immediately */
-    --background: var(--light-background);
-    --background-secondary: var(--light-background-secondary);
-    --background-tertiary: var(--light-background-tertiary);
-    --surface: var(--light-surface);
-    --surface-hover: var(--light-surface-hover);
-    --surface-active: var(--light-surface-active);
-    --border: var(--light-border);
-    --text-primary: var(--light-text-primary);
-    --text-secondary: var(--light-text-secondary);
-    --text-tertiary: var(--light-text-tertiary);
-    --accent: var(--light-accent);
-    --accent-hover: var(--light-accent-hover);
-    --accent-surface: var(--light-accent-surface);
-    --error: var(--light-error);
-    --success: var(--light-success);
-    --warning: var(--light-warning);
-    --info: var(--light-info);
-
-    /* RGB variants for transparency effects */
-    --background-rgb: 255, 255, 255;
-    --border-rgb: 224, 228, 232;
-    --accent-rgb: 6, 114, 239;
-
     /* Spacing */
     --space-xxs: 2px;
     --space-xs: 4px;
@@ -100,10 +38,10 @@
     --font-weight-bold: 700;
 
     /* Shadows */
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    --shadow-sm: 0 1px 2px var(--shadow);
+    --shadow-md: 0 4px 6px -1px var(--shadow), 0 2px 4px -1px var(--shadow);
+    --shadow-lg: 0 10px 15px -3px var(--shadow), 0 4px 6px -2px var(--shadow);
+    --shadow-xl: 0 20px 25px -5px var(--shadow), 0 10px 10px -5px var(--shadow);
 
     /* Transitions */
     --transition-fast: 150ms ease-in-out;

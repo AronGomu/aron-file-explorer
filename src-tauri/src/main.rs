@@ -8,10 +8,11 @@ pub mod models;
 mod search_engine;
 mod state;
 mod terminal;
+mod themes;
 
 use crate::commands::{
     command_exec_commands, terminal_commands, file_system_operation_commands, hash_commands, meta_data_commands,
-    search_engine_commands, settings_commands, template_commands, volume_operations_commands, sftp_file_system_operation_commands, preview_commands, permission_commands
+    search_engine_commands, settings_commands, template_commands, volume_operations_commands, sftp_file_system_operation_commands, preview_commands, permission_commands, theme_commands
 };
 use tauri::ipc::Invoke;
 use tauri::Manager;
@@ -47,6 +48,9 @@ fn all_commands() -> fn(Invoke) -> bool {
         volume_operations_commands::get_system_volumes_information,
         // Settings commands
         settings_commands::get_settings_as_json,
+        settings_commands::get_settings_snapshot,
+        theme_commands::get_theme_catalog,
+        theme_commands::set_active_theme_id,
         settings_commands::update_settings_field,
         settings_commands::get_setting_field,
         settings_commands::update_multiple_settings_command,
@@ -114,6 +118,7 @@ async fn main() {
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(all_commands())
         .setup(|app| {
+            app.manage(themes::catalog::ThemeState::new(app));
             // Safely show/focus the main window if it exists
             if let Some(window) = app.get_window("main") {
                 let _ = window.show();

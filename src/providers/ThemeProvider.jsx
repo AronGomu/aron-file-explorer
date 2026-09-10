@@ -1,211 +1,138 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { useSettings } from './SettingsProvider';
+import { showError } from '../utils/NotificationSystem';
+import { resolveThemeId, validateThemeDefinition } from '../themes/themeContract';
+import { applyThemeToDOM, systemTheme } from '../themes/applyTheme';
 
-// Create context
-const ThemeContext = createContext({
-    theme: 'light',
-    toggleTheme: () => {},
-    setTheme: () => {},
-});
+const ThemeContext = createContext(null);
+const compareCodepoints = (a, b) => {
+    const left = [...a], right = [...b];
+    for (let i = 0; i < Math.min(left.length, right.length); i++) {
+        const difference = left[i].codePointAt(0) - right[i].codePointAt(0);
+        if (difference) return difference;
+    }
+    return left.length - right.length;
+};
+const rank = id => ['catppuccin-latte', 'catppuccin-mocha'].indexOf(id);
 
-// Theme provider component
 export default function ThemeProvider({ children }) {
-    const [theme, setThemeState] = useState('light');
+    const { settings, updateSetting } = useSettings();
+    const [prefersDark, setPrefersDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const [catalog, setCatalog] = useState({ revision: 0, themes: [], issues: [], directory: '' });
     const [isLoading, setIsLoading] = useState(true);
+    const [pending, setPending] = useState(null);
+    const busy = useRef(false);
+    const [rendered, setRendered] = useState(() => systemTheme(prefersDark));
+    const renderedRef = useRef(rendered);
+    const notices = useRef(new Set());
+    const activeThemeId = pending ?? settings.active_theme_id;
+    const themes = [...catalog.themes].sort((a, b) => {
+        const ar = rank(a.id), br = rank(b.id);
+        if (ar !== br && (ar >= 0 || br >= 0)) return (ar < 0 ? 2 : ar) - (br < 0 ? 2 : br);
+        return compareCodepoints(a.name, b.name) || compareCodepoints(a.id, b.id);
+    });
 
-    // Function to apply theme to DOM
-    const applyThemeToDOM = (newTheme) => {
-        // Update DOM class
-        document.documentElement.classList.remove(`theme-${theme}`);
-        document.documentElement.classList.add(`theme-${newTheme}`);
-
-        // Update CSS variables
-        if (newTheme === 'dark') {
-            document.body.style.setProperty('--background', 'var(--dark-background)');
-            document.body.style.setProperty('--background-secondary', 'var(--dark-background-secondary)');
-            document.body.style.setProperty('--background-tertiary', 'var(--dark-background-tertiary)');
-            document.body.style.setProperty('--surface', 'var(--dark-surface)');
-            document.body.style.setProperty('--surface-hover', 'var(--dark-surface-hover)');
-            document.body.style.setProperty('--surface-active', 'var(--dark-surface-active)');
-            document.body.style.setProperty('--border', 'var(--dark-border)');
-            document.body.style.setProperty('--text-primary', 'var(--dark-text-primary)');
-            document.body.style.setProperty('--text-secondary', 'var(--dark-text-secondary)');
-            document.body.style.setProperty('--text-tertiary', 'var(--dark-text-tertiary)');
-            document.body.style.setProperty('--accent', 'var(--dark-accent)');
-            document.body.style.setProperty('--accent-hover', 'var(--dark-accent-hover)');
-            document.body.style.setProperty('--accent-surface', 'var(--dark-accent-surface)');
-            document.body.style.setProperty('--error', 'var(--dark-error)');
-            document.body.style.setProperty('--success', 'var(--dark-success)');
-            document.body.style.setProperty('--warning', 'var(--dark-warning)');
-            document.body.style.setProperty('--info', 'var(--dark-info)');
-        } else {
-            document.body.style.setProperty('--background', 'var(--light-background)');
-            document.body.style.setProperty('--background-secondary', 'var(--light-background-secondary)');
-            document.body.style.setProperty('--background-tertiary', 'var(--light-background-tertiary)');
-            document.body.style.setProperty('--surface', 'var(--light-surface)');
-            document.body.style.setProperty('--surface-hover', 'var(--light-surface-hover)');
-            document.body.style.setProperty('--surface-active', 'var(--light-surface-active)');
-            document.body.style.setProperty('--border', 'var(--light-border)');
-            document.body.style.setProperty('--text-primary', 'var(--light-text-primary)');
-            document.body.style.setProperty('--text-secondary', 'var(--light-text-secondary)');
-            document.body.style.setProperty('--text-tertiary', 'var(--light-text-tertiary)');
-            document.body.style.setProperty('--accent', 'var(--light-accent)');
-            document.body.style.setProperty('--accent-hover', 'var(--light-accent-hover)');
-            document.body.style.setProperty('--accent-surface', 'var(--light-accent-surface)');
-            document.body.style.setProperty('--error', 'var(--light-error)');
-            document.body.style.setProperty('--success', 'var(--light-success)');
-            document.body.style.setProperty('--warning', 'var(--light-warning)');
-            document.body.style.setProperty('--info', 'var(--light-info)');
-        }
-    };
-
-    // Function to set theme and update settings
-    const setTheme = async (newTheme) => {
-        if (newTheme === theme) return;
-
-        console.log(`Setting theme to: ${newTheme}`);
-
-        // Apply theme to DOM immediately for better UX
-        applyThemeToDOM(newTheme);
-
-        // Update state
-        setThemeState(newTheme);
-
-        try {
-            // Save to settings using the correct key 'darkmode'
-            const isDark = newTheme === 'dark';
-            await invoke('update_settings_field', { key: 'darkmode', value: isDark });
-            console.log('Theme saved to settings successfully');
-        } catch (error) {
-            console.error('Failed to save theme setting:', error);
-            // Don't revert the theme change since it's already applied and might work
-        }
-    };
-
-    // Toggle between light and dark theme
-    const toggleTheme = () => {
-        const newTheme = theme === 'light' ? 'dark' : 'light';
-        setTheme(newTheme);
-    };
-
-    // Load theme from settings on mount
     useEffect(() => {
-        const loadTheme = async () => {
-            setIsLoading(true);
-
-            try {
-                // Try to get theme from settings using the correct key 'darkmode'
-                console.log('Loading theme from settings...');
-                const isDarkMode = await invoke('get_setting_field', { key: 'darkmode' });
-
-                if (isDarkMode !== null && isDarkMode !== undefined) {
-                    const themeValue = isDarkMode ? 'dark' : 'light';
-                    console.log(`Loaded theme from settings: ${themeValue} (darkmode: ${isDarkMode})`);
-                    setThemeState(themeValue);
-                    applyThemeToDOM(themeValue);
-                } else {
-                    console.log('No saved theme found, checking system preference');
-                    // Try to match system preference
-                    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                        console.log('System prefers dark theme');
-                        setThemeState('dark');
-                        applyThemeToDOM('dark');
-                    } else {
-                        console.log('Using default light theme');
-                        setThemeState('light');
-                        applyThemeToDOM('light');
-                    }
-                }
-            } catch (error) {
-                console.warn('Could not load theme from settings:', error);
-
-                // Fallback to system preference
-                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    setThemeState('dark');
-                    applyThemeToDOM('dark');
-                } else {
-                    setThemeState('light');
-                    applyThemeToDOM('light');
-                }
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        loadTheme();
-
-        // Listen for system theme changes only if no saved theme
-        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
-        const handleSystemThemeChange = async (e) => {
-            try {
-                // Only auto-update if user hasn't explicitly set a theme
-                const savedDarkMode = await invoke('get_setting_field', { key: 'darkmode' });
-                if (savedDarkMode === null || savedDarkMode === undefined) {
-                    const newTheme = e.matches ? 'dark' : 'light';
-                    setThemeState(newTheme);
-                    applyThemeToDOM(newTheme);
-                }
-            } catch (error) {
-                // If we can't check saved theme, just update based on system
-                const newTheme = e.matches ? 'dark' : 'light';
-                setThemeState(newTheme);
-                applyThemeToDOM(newTheme);
-            }
-        };
-
-        mediaQuery.addEventListener('change', handleSystemThemeChange);
-
-        return () => {
-            mediaQuery.removeEventListener('change', handleSystemThemeChange);
-        };
+        const media = window.matchMedia('(prefers-color-scheme: dark)');
+        const changed = event => setPrefersDark(event.matches);
+        media.addEventListener('change', changed);
+        setPrefersDark(media.matches);
+        return () => media.removeEventListener('change', changed);
     }, []);
 
-    // Don't render children until theme is loaded
-    if (isLoading) {
-        return (
-            <div className="theme-loading" style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '100vh',
-                width: '100vw',
-                backgroundColor: '#ffffff',
-                flexDirection: 'column',
-                gap: '16px'
-            }}>
-                {/* Simple loading spinner */}
-                <div
-                    style={{
-                        width: '48px',
-                        height: '48px',
-                        border: '5px solid #f3f4f6',
-                        borderTopColor: '#3b82f6',
-                        borderRadius: '50%',
-                        animation: 'spin 1s linear infinite',
-                    }}
-                />
-                <div style={{
-                    color: '#6b7280',
-                    fontSize: '14px'
-                }}>
-                    Loading theme...
-                </div>
-                <style jsx global>{`
-                    @keyframes spin {
-                        to { transform: rotate(360deg); }
-                    }
-                `}</style>
-            </div>
-        );
-    }
+    useEffect(() => {
+        let alive = true;
+        invoke('get_theme_catalog').then(snapshot => {
+            if (!alive) return;
+            const valid = snapshot.themes.every(theme => validateThemeDefinition(theme).ok);
+            if (!valid) throw new Error('Invalid theme catalog');
+            setCatalog(previous => snapshot.revision > previous.revision ? snapshot : previous);
+        }).catch(() => {
+            if (alive) setCatalog(previous => ({ ...previous, issues: [{ code: 'io', file: null, id: null, reason: '' }] }));
+        }).finally(() => { if (alive) setIsLoading(false); });
+        return () => { alive = false; };
+    }, []);
+
+    useLayoutEffect(() => {
+        const target = resolveThemeId(activeThemeId, prefersDark);
+        const definition = catalog.themes.find(theme => theme.id === target);
+        if (definition) {
+            renderedRef.current = definition;
+            setRendered(definition);
+            applyThemeToDOM(definition);
+        } else if (isLoading) {
+            applyThemeToDOM(renderedRef.current);
+        }
+    }, [activeThemeId, prefersDark, catalog, isLoading]);
+
+    useEffect(() => {
+        if (isLoading || pending !== null) return;
+        const name = renderedRef.current.name;
+        const issueMessage = issue => {
+            switch (issue.code) {
+                case 'invalid': return `Invalid theme file "${issue.file}": ${issue.reason}. Keeping "${name}".`;
+                case 'duplicate': return `Duplicate theme id "${issue.id}" in "${issue.file}". File ignored.`;
+                case 'missing': return `Theme "${issue.id}" is unavailable. Keeping "${name}".`;
+                case 'watch': return `Theme hot reload is unavailable. Keeping "${name}".`;
+                default: return `Theme directory is unavailable. Keeping "${name}".`;
+            }
+        };
+        const messages = catalog.issues.map(issue => [JSON.stringify(issue), issueMessage(issue)]);
+        const target = resolveThemeId(activeThemeId, prefersDark);
+        if (!catalog.themes.some(theme => theme.id === target)) {
+            messages.push([`missing:${target}`, `Theme "${target}" is unavailable. Keeping "${name}".`]);
+        }
+        for (const [key, message] of messages) if (!notices.current.has(key)) showError(message, 5000);
+        notices.current = new Set(messages.map(([key]) => key));
+    }, [catalog, activeThemeId, prefersDark, isLoading, pending]);
+
+    const setTheme = async id => {
+        if (busy.current || isLoading || id === activeThemeId) return;
+        const previous = renderedRef.current;
+        const definition = catalog.themes.find(theme => theme.id === resolveThemeId(id, prefersDark));
+        if (id !== 'system' && !definition) {
+            showError(`Theme "${id}" is unavailable. Keeping "${previous.name}".`, 5000);
+            return;
+        }
+        busy.current = true;
+        setPending(id);
+        if (definition) {
+            renderedRef.current = definition;
+            setRendered(definition);
+            applyThemeToDOM(definition);
+        }
+        try {
+            await updateSetting('active_theme_id', id);
+        } catch (failure) {
+            renderedRef.current = previous;
+            setRendered(previous);
+            applyThemeToDOM(previous);
+            const message = failure?.code === 'unavailable'
+                ? `Theme "${id}" is unavailable. Keeping "${previous.name}".`
+                : `Could not save theme selection. Keeping "${previous.name}".`;
+            showError(message, 5000);
+        } finally {
+            busy.current = false;
+            setPending(null);
+        }
+    };
 
     return (
-        <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
-            {children}
+        <ThemeContext.Provider value={{ activeThemeId, resolvedThemeId: rendered.id, themes,
+            themeDirectory: catalog.directory, isLoading, isSaving: pending !== null, setTheme }}>
+            {isLoading ? (
+                <div className="theme-loading" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    height: '100vh', width: '100vw', backgroundColor: 'var(--background)',
+                    color: 'var(--text-secondary)', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ width: '48px', height: '48px', border: '5px solid var(--border)',
+                        borderTopColor: 'var(--focus-ring)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                    <div style={{ fontSize: '14px' }}>Loading theme...</div>
+                    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                </div>
+            ) : children}
         </ThemeContext.Provider>
     );
 }
 
-// Custom hook for using the theme context
 export const useTheme = () => useContext(ThemeContext);
