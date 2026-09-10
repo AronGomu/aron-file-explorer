@@ -161,7 +161,7 @@ const PermissionHelper = ({ isOpen, onClose, directoryPath, directoryName, onDir
                 </div>
             </div>
             
-            <style jsx>{`
+            <style>{`
                 .permission-helper {
                     text-align: center;
                     padding: 20px 0;
@@ -236,8 +236,8 @@ const PermissionHelper = ({ isOpen, onClose, directoryPath, directoryName, onDir
                 }
                 
                 .help-note {
-                    background: var(--info-bg, #e3f2fd);
-                    border: 1px solid var(--info-border, #90caf9);
+                    background: var(--info-surface);
+                    border: 1px solid var(--border-strong);
                     border-radius: 6px;
                     padding: 16px;
                     margin-top: 20px;
@@ -245,7 +245,7 @@ const PermissionHelper = ({ isOpen, onClose, directoryPath, directoryName, onDir
                 
                 .help-note p {
                     margin: 0;
-                    color: var(--info, #1565c0);
+                    color: var(--text-primary);
                     font-size: 0.9rem;
                 }
                 
@@ -254,7 +254,7 @@ const PermissionHelper = ({ isOpen, onClose, directoryPath, directoryName, onDir
                 }
                 
                 .success-message h3 {
-                    color: var(--success);
+                    color: var(--text-primary);
                 }
             `}</style>
         </Modal>

@@ -26,23 +26,25 @@ export const showNotification = (message, type = 'info', duration = 3000) => {
 
     const notification = document.createElement('div');
     notification.textContent = message;
+    notification.setAttribute('role', type === 'error' ? 'alert' : 'status');
 
     const colors = {
-        info: { bg: '#0891b2', text: 'white' },
-        success: { bg: '#16a34a', text: 'white' },
-        error: { bg: '#dc2626', text: 'white' },
-        warning: { bg: '#f59e0b', text: 'white' }
+        info: { bg: 'var(--info-surface)', decoration: 'var(--info)' },
+        success: { bg: 'var(--success-surface)', decoration: 'var(--success)' },
+        error: { bg: 'var(--error-surface)', decoration: 'var(--error)' },
+        warning: { bg: 'var(--warning-surface)', decoration: 'var(--warning)' }
     };
 
     const color = colors[type] || colors.info;
 
     notification.style.cssText = `
         background: ${color.bg};
-        color: ${color.text};
+        color: var(--text-primary);
+        border: 1px solid var(--border-strong);
         padding: 12px 20px;
         border-radius: 6px;
         margin-bottom: 10px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        box-shadow: inset 4px 0 ${color.decoration}, 0 4px 12px var(--shadow);
         font-size: 14px;
         max-width: 300px;
         word-wrap: break-word;
@@ -125,7 +127,7 @@ export const showConfirm = (message, title = 'Confirm') => {
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
+            background: var(--backdrop);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -134,19 +136,21 @@ export const showConfirm = (message, title = 'Confirm') => {
 
         const dialog = document.createElement('div');
         dialog.style.cssText = `
-            background: #ffffff;
+            background: var(--surface);
+            color: var(--text-primary);
+            outline: 1px solid var(--border-strong);
             border-radius: 8px;
             padding: 24px;
             max-width: 400px;
             width: 90%;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 10px 30px var(--shadow);
         `;
 
         const titleEl = document.createElement('h3');
         titleEl.textContent = title;
         titleEl.style.cssText = `
             margin: 0 0 16px 0;
-            color: #1a1c1e;
+            color: var(--text-primary);
             font-size: 18px;
         `;
 
@@ -154,7 +158,7 @@ export const showConfirm = (message, title = 'Confirm') => {
         messageEl.textContent = message;
         messageEl.style.cssText = `
             margin: 0 0 24px 0;
-            color: #4b5563;
+            color: var(--text-secondary);
             line-height: 1.5;
         `;
 
@@ -169,9 +173,9 @@ export const showConfirm = (message, title = 'Confirm') => {
         cancelBtn.textContent = 'Cancel';
         cancelBtn.style.cssText = `
             padding: 8px 16px;
-            border: 1px solid #e0e4e8;
+            border: 1px solid var(--border-strong);
             background: transparent;
-            color: #1a1c1e;
+            color: var(--text-primary);
             border-radius: 6px;
             cursor: pointer;
         `;
@@ -181,8 +185,8 @@ export const showConfirm = (message, title = 'Confirm') => {
         confirmBtn.style.cssText = `
             padding: 8px 16px;
             border: none;
-            background: #0672ef;
-            color: white;
+            background: var(--accent);
+            color: var(--text-on-accent);
             border-radius: 6px;
             cursor: pointer;
         `;

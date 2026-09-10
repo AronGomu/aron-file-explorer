@@ -1,0 +1,2 @@
+<script>not HTML</script>
+  exact whitespace Ω

@@ -18,7 +18,7 @@ export function PreviewModal({ payload, onClose, isLoading }) {
   return (
     <div className="preview-modal-backdrop" onClick={onClose}>
       <div className="preview-modal" onClick={(e) => e.stopPropagation()}>
-        <header className="preview-modal-header" style={{ minHeight: 32, height: 32, padding: '0 0.5rem', background: 'var(--surface, #f8f9fa)', display: 'flex', alignItems: 'center' }}>
+        <header className="preview-modal-header" style={{ minHeight: 32, height: 32, padding: '0 0.5rem', background: 'var(--surface)', display: 'flex', alignItems: 'center' }}>
           <button 
             onClick={onClose} 
             className="preview-modal-close"
@@ -28,7 +28,7 @@ export function PreviewModal({ payload, onClose, isLoading }) {
             <span className="icon icon-x"></span>
           </button>
           {payload?.name && payload?.kind !== 'Folder' && (
-            <div style={{ marginLeft: 12, fontSize: '1rem', color: 'var(--text-secondary, #666)', opacity: 0.35, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '60vw' }}>
+            <div style={{ marginLeft: 12, fontSize: '1rem', color: 'var(--text-secondary)', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '60vw' }}>
               {payload.name}
             </div>
           )}
@@ -65,22 +65,22 @@ function PreviewContent({ payload }) {
       return (
         <div className="preview-folder-container">
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '2.5rem', minHeight: 180 }}>
-            <div style={{ fontSize: '11rem', color: '#4a90e2', flexShrink: 0, marginRight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '11.5rem', width: '11.5rem' }}>
-              <Icon name="folder" size="xlarge" style={{ fontSize: '11rem', color: '#4a90e2' }} />
+            <div style={{ fontSize: '11rem', color: 'var(--folder)', flexShrink: 0, marginRight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '11.5rem', width: '11.5rem' }}>
+              <Icon name="folder" size="xlarge" style={{ fontSize: '11rem', color: 'var(--folder)' }} />
             </div>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: 8 }}>
-              <div style={{ fontWeight: 600, fontSize: '2rem', color: 'var(--text-primary, #1a1a1a)', alignSelf: 'flex-start' }}>
+              <div style={{ fontWeight: 600, fontSize: '2rem', color: 'var(--text-primary)', alignSelf: 'flex-start' }}>
                 {payload.name || 'Folder'}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '2.5rem', marginTop: 8 }}>
-                <div style={{ fontSize: '1.1rem', color: 'var(--text-secondary, #666)' }}>
+                <div style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
                   <span style={{ fontWeight: 500 }}>Size:</span> {typeof payload.size === 'number' ? formatFileSize(payload.size) : '—'}
                 </div>
-                <div style={{ fontSize: '1.1rem', color: 'var(--text-secondary, #666)' }}>
+                <div style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
                   <span style={{ fontWeight: 500 }}>Items:</span> {typeof payload.item_count === 'number' ? payload.item_count : (payload.itemCount ? payload.itemCount : (payload.entries ? payload.entries.length : '—'))}
                 </div>
               </div>
-              <div style={{ fontSize: '1.1rem', color: 'var(--text-secondary, #666)', marginTop: 8 }}>
+              <div style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', marginTop: 8 }}>
                 <span style={{ fontWeight: 500 }}>Last Modified:</span> {payload.modified ? (new Date(payload.modified)).toLocaleString() : '—'}
               </div>
             </div>
@@ -194,7 +194,7 @@ function PreviewContent({ payload }) {
 
     case 'Error':
       return (
-        <div className="preview-error">
+        <div className="preview-error" role="alert">
           <div className="preview-error-icon">⚠️</div>
           <h3>Preview Error</h3>
           <p>{payload.message}</p>

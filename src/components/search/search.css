@@ -31,7 +31,7 @@
 .search-input-field {
     width: 100%;
     padding: var(--space-sm) 40px var(--space-sm) var(--space-md); /* Extra right padding for filter button */
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-strong);
     border-radius: var(--radius-md);
     background-color: var(--background);
     color: var(--text-primary);
@@ -40,7 +40,7 @@
 }
 
 .search-input-field:focus {
-    border-color: var(--accent);
+    border-color: var(--border-strong);
     outline: none;
     box-shadow: 0 0 0 2px var(--accent-surface);
 }
@@ -140,7 +140,7 @@
 .search-controls-dropdown .clear-extensions {
     padding: var(--space-xs) var(--space-sm);
     background-color: var(--accent);
-    color: white;
+    color: var(--text-on-accent);
     border: none;
     border-radius: var(--radius-sm);
     cursor: pointer;
@@ -250,8 +250,8 @@
 
 .recent-search-item:hover {
     background-color: var(--accent-surface);
-    border-color: var(--accent);
-    color: var(--accent);
+    border-color: var(--border-strong);
+    color: var(--text-primary);
 }
 
 /* Most Accessed Paths */
@@ -276,7 +276,7 @@
 
 .accessed-path-item:hover {
     background-color: var(--accent-surface);
-    border-color: var(--accent);
+    border-color: var(--border-strong);
 }
 
 .path-name {
@@ -342,13 +342,13 @@
 
 .result-context-indicator {
     font-size: var(--font-size-xs);
-    color: var(--accent);
+    color: var(--text-primary);
     font-weight: 500;
     margin-top: var(--space-xs);
 }
 
 .context-dot {
-    color: var(--accent);
+    color: var(--text-primary);
     font-weight: bold;
     margin-right: var(--space-xs);
 }
@@ -389,15 +389,15 @@
 }
 
 .status-value.ready {
-    color: var(--success);
+    color: var(--text-primary);
 }
 
 .status-value.indexing {
-    color: var(--warning);
+    color: var(--text-primary);
 }
 
 .status-value.error {
-    color: var(--error);
+    color: var(--text-primary);
 }
 
 /* Search Options Container */
@@ -435,13 +435,13 @@
     background-color: var(--accent-surface);
     border-radius: var(--radius-sm);
     font-size: var(--font-size-sm);
-    color: var(--accent);
+    color: var(--text-primary);
 }
 
 .clear-extensions {
     padding: var(--space-xxs) var(--space-xs);
     background: transparent;
-    color: var(--accent);
+    color: var(--text-primary);
     border: 1px solid var(--accent);
     border-radius: var(--radius-sm);
     font-size: var(--font-size-xs);
@@ -451,7 +451,7 @@
 
 .clear-extensions:hover:not(:disabled) {
     background-color: var(--accent);
-    color: white;
+    color: var(--text-on-accent);
 }
 
 /* Checkbox Options */
@@ -486,7 +486,7 @@
     width: 32px;
     height: 32px;
     border: 3px solid var(--background-tertiary);
-    border-top-color: var(--accent);
+    border-top-color: var(--focus-ring);
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
@@ -601,7 +601,7 @@
 }
 
 .result-name-container:hover {
-    color: var(--accent);
+    color: var(--text-primary);
 }
 
 .result-path-container {
@@ -722,11 +722,11 @@
 
 .suggestion-item:hover {
     background-color: var(--surface-hover);
-    border-left-color: var(--accent);
+    border-left-color: var(--border-strong);
 }
 
 .suggestion-item:not(:last-child) {
-    border-bottom: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border);
 }
 
 .suggestion-item span:first-child {
@@ -737,7 +737,7 @@
 .suggestion-item span:last-child {
     font-size: 11px;
     color: var(--text-secondary);
-    opacity: 0.8;
+    opacity: 1;
 }
 
 .suggestion-item:hover span:last-child {
@@ -795,4 +795,9 @@
     .suggestion-item span:last-child {
         font-size: 10px;
     }
+}
+.global-search-content button:focus-visible,
+.global-search-content input:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
 }

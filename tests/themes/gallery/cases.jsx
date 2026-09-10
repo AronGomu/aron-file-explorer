@@ -5,9 +5,11 @@ import SettingsPanel from "../../../src/components/settings/SettingsPanel.jsx";
 import Button from "../../../src/components/common/Button.jsx";
 
 import { ExplorerCase, explorerCases } from "./explorer.jsx";
+import { PERIPHERAL_CASES, renderPeripheral } from "./peripheral.jsx";
 
 export function renderCase(caseId) {
   if (explorerCases.includes(caseId)) return <ExplorerCase caseId={caseId} />;
+  if (PERIPHERAL_CASES.includes(caseId)) return renderPeripheral(caseId);
   switch (caseId) {
     case "reload":
     case "settings":

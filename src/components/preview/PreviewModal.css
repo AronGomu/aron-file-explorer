@@ -14,11 +14,10 @@
 }
 .preview-line-number {
   user-select: none;
-  color: var(--text-tertiary, #bbb);
+  color: var(--text-tertiary);
   min-width: 2.5em;
   text-align: right;
   padding-right: 1em;
-  opacity: 0.7;
 }
 .preview-line-content {
   white-space: pre-wrap;
@@ -40,7 +39,7 @@
 .preview-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--backdrop);
   backdrop-filter: blur(4px);
   z-index: var(--z-index-modal, 1000);
   display: flex;
@@ -51,9 +50,9 @@
 
 /* Preview Modal Container */
 .preview-modal {
-  background: var(--background, #ffffff);
+  background: var(--background);
   border-radius: 12px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 20px 40px var(--shadow);
   max-width: 95vw;
   max-height: 95vh;
   min-width: 400px;
@@ -71,14 +70,14 @@
   justify-content: space-between;
   padding: 1rem 1.5rem;
   border-bottom: none;
-  background: var(--surface, #f8f9fa);
+  background: var(--surface);
   flex-shrink: 0;
 }
 
 .preview-modal-title {
   font-weight: 600;
   font-size: 1.1rem;
-  color: var(--text-primary, #1a1a1a);
+  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -95,21 +94,21 @@
   border: none;
   background: transparent;
   border-radius: 6px;
-  color: var(--text-secondary, #666);
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .preview-modal-close:hover {
-  background: var(--surface-hover, #e9ecef);
-  color: var(--text-primary, #1a1a1a);
+  background: var(--surface-hover);
+  color: var(--text-primary);
 }
 
 .preview-modal-close .icon {
   width: 18px;
   height: 18px;
-  background-size: contain;
-  background-repeat: no-repeat;
+  mask-size: contain;
+  mask-repeat: no-repeat;
 }
 
 /* Preview Modal Content */
@@ -126,7 +125,7 @@
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  color: var(--text-secondary, #666);
+  color: var(--text-secondary);
   min-height: 200px;
   min-width: 300px;
   padding: 2rem;
@@ -135,8 +134,8 @@
 .spinner {
   width: 32px;
   height: 32px;
-  border: 3px solid var(--surface-hover, #e9ecef);
-  border-top: 3px solid var(--accent, #007bff);
+  border: 3px solid var(--surface-hover);
+  border-top: 3px solid var(--accent);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -164,15 +163,16 @@
   width: auto;
   height: auto;
   object-fit: contain;
-  background: repeating-conic-gradient(#f0f0f0 0% 25%, transparent 0% 50%) 50% / 20px 20px;
+  background: repeating-conic-gradient(var(--preview-checkerboard-light) 0% 25%, var(--preview-checkerboard-dark) 0% 50%) 50% / 20px 20px;
 }
 
 .preview-image-info {
   position: absolute;
   bottom: 1rem;
   right: 1rem;
-  background: rgba(0, 0, 0, 0.7);
-  color: white;
+  background: var(--surface);
+  color: var(--text-primary);
+  outline: 1px solid var(--border-strong);
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
   font-size: 0.875rem;
@@ -199,7 +199,7 @@
   justify-content: center;
   height: 100%;
   gap: 1rem;
-  color: var(--text-secondary, #666);
+  color: var(--text-secondary);
 }
 
 /* Video Preview */
@@ -207,7 +207,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #000;
+  background: var(--background);
   min-height: 300px;
   max-height: 85vh;
   padding: 1rem;
@@ -234,10 +234,10 @@
   flex-direction: column;
   align-items: center;
   gap: 2rem;
-  background: var(--surface, #f8f9fa);
+  background: var(--surface);
   padding: 3rem;
   border-radius: 12px;
-  border: 1px solid var(--border, #e0e0e0);
+  border: 1px solid var(--border);
   min-width: 350px;
 }
 
@@ -270,15 +270,15 @@
   line-height: 1.5;
   white-space: pre-wrap;
   overflow: auto;
-  background: var(--surface, #f8f9fa);
-  color: var(--text-primary, #1a1a1a);
+  background: var(--surface);
+  color: var(--text-primary);
 }
 
 .preview-text-truncated {
-  background: var(--warning-bg, #fff3cd);
-  border-top: 1px solid var(--warning-border, #ffeaa7);
+  background: var(--warning-surface);
+  border-top: 1px solid var(--border-strong);
   padding: 1rem 1.5rem;
-  color: var(--warning-text, #856404);
+  color: var(--text-primary);
   font-size: 0.875rem;
 }
 
@@ -302,15 +302,21 @@
   opacity: 0.7;
 }
 
+.preview-error {
+  background: var(--error-surface);
+  color: var(--text-primary);
+  outline: 1px solid var(--border-strong);
+}
+
 .preview-error h3 {
   margin: 0;
-  color: var(--error, #dc3545);
+  color: var(--text-primary);
   font-size: 1.25rem;
 }
 
 .preview-error p {
   margin: 0;
-  color: var(--text-secondary, #666);
+  color: var(--text-primary);
 }
 
 /* Button Styles */
@@ -329,29 +335,31 @@
 }
 
 .btn-primary {
-  background: var(--accent, #007bff);
-  color: white;
-  border-color: var(--accent, #007bff);
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border-color: var(--accent);
 }
 
 .btn-primary:hover {
-  background: var(--accent-hover, #0056b3);
-  border-color: var(--accent-hover, #0056b3);
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
 }
 
 .btn-secondary {
-  background: var(--surface, #f8f9fa);
-  color: var(--text-primary, #1a1a1a);
-  border-color: var(--border, #e0e0e0);
+  background: var(--surface);
+  color: var(--text-primary);
+  border-color: var(--border);
 }
 
 .btn-secondary:hover {
-  background: var(--surface-hover, #e9ecef);
+  background: var(--surface-hover);
 }
 
 /* Icon Styles */
-.icon-x {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'%3E%3C/line%3E%3Cline x1='6' y1='6' x2='18' y2='18'%3E%3C/line%3E%3C/svg%3E");
+.preview-modal .icon-x {
+  background-color: currentColor;
+    background-image: none;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'%3E%3C/line%3E%3Cline x1='6' y1='6' x2='18' y2='18'%3E%3C/line%3E%3C/svg%3E");
 }
 
 /* Responsive Design */
@@ -395,4 +403,9 @@
     min-width: unset;
     min-height: 150px;
   }
+}
+
+.preview-modal button:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
 }

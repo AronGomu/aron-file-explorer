@@ -992,7 +992,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                     top: '50%', 
                                     transform: 'translateY(-50%)',
                                     fontSize: '12px',
-                                    color: '#666',
+                                    color: 'var(--text-secondary)',
                                     pointerEvents: 'none', // Prevent interference with input
                                     zIndex: 1
                                 }}>
@@ -1019,28 +1019,31 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
+                                        color: 'var(--text-tertiary)',
                                         zIndex: 2
                                     }}
                                     onMouseEnter={(e) => {
                                         const span = e.target.querySelector('span');
                                         if (span) {
-                                            span.style.backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'%3E%3C/line%3E%3Cline x1='6' y1='6' x2='18' y2='18'%3E%3C/line%3E%3C/svg%3E")`;
+                                            span.style.backgroundColor = 'var(--text-secondary)';
                                         }
                                     }}
                                     onMouseLeave={(e) => {
                                         const span = e.target.querySelector('span');
                                         if (span) {
-                                            span.style.backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'%3E%3C/line%3E%3Cline x1='6' y1='6' x2='18' y2='18'%3E%3C/line%3E%3C/svg%3E")`;
+                                            span.style.backgroundColor = 'var(--text-tertiary)';
                                         }
                                     }}
                                 >
                                     <span style={{
                                         width: '14px',
                                         height: '14px',
-                                        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'%3E%3C/line%3E%3Cline x1='6' y1='6' x2='18' y2='18'%3E%3C/line%3E%3C/svg%3E")`,
-                                        backgroundPosition: 'center',
-                                        backgroundRepeat: 'no-repeat',
-                                        backgroundSize: 'contain',
+                                        backgroundColor: 'currentColor',
+                                        backgroundImage: 'none',
+                                        maskImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'%3E%3C/line%3E%3Cline x1='6' y1='6' x2='18' y2='18'%3E%3C/line%3E%3C/svg%3E")`,
+                                        maskPosition: 'center',
+                                        maskRepeat: 'no-repeat',
+                                        maskSize: 'contain',
                                         display: 'block'
                                     }}></span>
                                 </button>
@@ -1065,7 +1068,6 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                     transform: 'translateY(-50%)',
                                     background: 'transparent',
                                     border: 'none',
-                                    outline: 'none',
                                     cursor: 'pointer',
                                     padding: '0',
                                     margin: '0',
@@ -1074,22 +1076,25 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                     justifyContent: 'center',
                                     zIndex: 2,
                                     borderRadius: '4px',
+                                    color: 'var(--text-secondary)',
                                     transition: 'background-color var(--transition-fast)'
                                 }}
                                 onMouseEnter={(e) => {
-                                    e.target.style.backgroundColor = 'var(--surface-hover)';
+                                    e.currentTarget.style.backgroundColor = 'var(--surface-hover)';
                                 }}
                                 onMouseLeave={(e) => {
-                                    e.target.style.backgroundColor = 'transparent';
+                                    e.currentTarget.style.backgroundColor = 'transparent';
                                 }}
                             >
                                 <span style={{
                                     width: '16px',
                                     height: '16px',
-                                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cpath d='m21 21-4.35-4.35'%3E%3C/path%3E%3C/svg%3E")`,
-                                    backgroundPosition: 'center',
-                                    backgroundRepeat: 'no-repeat',
-                                    backgroundSize: 'contain',
+                                    backgroundColor: 'currentColor',
+                                        backgroundImage: 'none',
+                                        maskImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cpath d='m21 21-4.35-4.35'%3E%3C/path%3E%3C/svg%3E")`,
+                                    maskPosition: 'center',
+                                    maskRepeat: 'no-repeat',
+                                    maskSize: 'contain',
                                     display: 'block'
                                 }}></span>
                             </button>
@@ -1119,24 +1124,26 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                 }}
                                 onMouseEnter={(e) => {
                                     if (!filtersExpanded) {
-                                        e.target.style.backgroundColor = 'var(--surface-hover)';
-                                        e.target.style.color = 'var(--text-primary)';
+                                        e.currentTarget.style.backgroundColor = 'var(--surface-hover)';
+                                        e.currentTarget.style.color = 'var(--text-primary)';
                                     }
                                 }}
                                 onMouseLeave={(e) => {
                                     if (!filtersExpanded) {
-                                        e.target.style.backgroundColor = 'transparent';
-                                        e.target.style.color = 'var(--text-secondary)';
+                                        e.currentTarget.style.backgroundColor = 'transparent';
+                                        e.currentTarget.style.color = 'var(--text-secondary)';
                                     }
                                 }}
                             >
                                 <span className="icon icon-filter" style={{
                                     width: '16px',
                                     height: '16px',
-                                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3'%3E%3C/polygon%3E%3C/svg%3E")`,
-                                    backgroundPosition: 'center',
-                                    backgroundRepeat: 'no-repeat',
-                                    backgroundSize: 'contain'
+                                    backgroundColor: 'currentColor',
+                                        backgroundImage: 'none',
+                                        maskImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3'%3E%3C/polygon%3E%3C/svg%3E")`,
+                                    maskPosition: 'center',
+                                    maskRepeat: 'no-repeat',
+                                    maskSize: 'contain'
                                 }}></span>
                                 {(selectedExtensions.length > 0 || showDirectoriesOnly || showHiddenFiles || sortBy !== 'relevance') && (
                                     <span style={{
@@ -1499,10 +1506,10 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                     {query.length > 0 && query.length < 3 && (
                         <div style={{ 
                             fontSize: '12px', 
-                            color: '#666', 
+                            color: 'var(--text-secondary)',
                             marginBottom: '8px',
                             padding: '4px 8px',
-                            backgroundColor: '#f0f0f0',
+                            backgroundColor: 'var(--surface)',
                             borderRadius: '4px'
                         }}>
                             Type at least 3 characters to start searching...
@@ -1600,7 +1607,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                 <div className="status-checking-indicator" style={{
                                     textAlign: 'center',
                                     padding: '20px',
-                                    color: '#666',
+                                    color: 'var(--text-secondary)',
                                     fontSize: '14px'
                                 }}>
                                     <div style={{ marginBottom: '10px' }}>
@@ -1649,7 +1656,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                 {/* Results count - inside scrollable area */}
                                 <div style={{ 
                                     fontSize: '12px', 
-                                    color: '#999', 
+                                    color: 'var(--text-tertiary)',
                                     marginTop: '0px',
                                     marginBottom: '12px',
                                     paddingLeft: '15px',

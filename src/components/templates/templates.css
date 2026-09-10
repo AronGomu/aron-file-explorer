@@ -81,7 +81,7 @@
 
 .template-item:hover {
     border-color: var(--accent);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px var(--shadow);
 }
 
 .template-icon {
@@ -93,6 +93,15 @@
     margin-right: var(--space-md);
     color: var(--accent);
 }
+
+.template-icon .icon-folder { color: var(--folder); }
+.template-icon .icon-file { color: var(--file-text); }
+.template-icon .icon-image { color: var(--file-image); }
+.template-icon .icon-video { color: var(--file-video); }
+.template-icon .icon-audio { color: var(--file-audio); }
+.template-icon .icon-code { color: var(--file-code); }
+.template-icon .icon-archive { color: var(--file-archive); }
+.template-icon .icon-pdf { color: var(--file-pdf); }
 
 .template-details {
     flex: 1;
@@ -150,8 +159,10 @@
 }
 
 /* Icon placeholders */
-.icon-x {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'%3E%3C/line%3E%3Cline x1='6' y1='6' x2='18' y2='18'%3E%3C/line%3E%3C/svg%3E");
+.template-list-container .icon-x {
+    background-color: currentColor;
+    background-image: none;
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'%3E%3C/line%3E%3Cline x1='6' y1='6' x2='18' y2='18'%3E%3C/line%3E%3C/svg%3E");
 }
 
 /* Add this to your templates.css file */
@@ -172,7 +183,7 @@
 
 .template-delete-btn:hover {
     background-color: var(--surface-hover);
-    color: var(--error);
+    color: var(--text-primary);
 }
 
 .template-delete-btn .icon {
@@ -181,11 +192,13 @@
 }
 
 /* Make sure the icon-delete class exists */
-.icon-delete {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='3 6 5 6 21 6'%3E%3C/polyline%3E%3Cpath d='M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'%3E%3C/path%3E%3C/svg%3E");
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: contain;
+.template-list-container .icon-delete {
+    background-color: currentColor;
+    background-image: none;
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='3 6 5 6 21 6'%3E%3C/polyline%3E%3Cpath d='M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'%3E%3C/path%3E%3C/svg%3E");
+    mask-position: center;
+    mask-repeat: no-repeat;
+    mask-size: contain;
 }
 
 /* Responsive adjustments */
@@ -223,4 +236,14 @@
     .template-actions {
         margin-left: 0;
     }
+}
+.template-list-error .alert-error {
+    background: var(--error-surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border-strong);
+}
+
+.template-list-container button:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
 }

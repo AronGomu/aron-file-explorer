@@ -3,6 +3,8 @@ import ReactDOM from "react-dom/client";
 import { renderCase } from "./cases.jsx";
 import { mockIPC } from "@tauri-apps/api/mocks";
 import { explorerCases, explorerIPC } from "./explorer.jsx";
+import { PERIPHERAL_CASES } from "./peripheral.jsx";
+import { peripheralIPC, preparePeripheral } from "./peripheralIPC.js";
 
 import { applyThemeToDOM, EMBEDDED_THEMES } from "../../../src/themes/applyTheme";
 import "../../../src/styles/variables.css";
@@ -24,7 +26,9 @@ if (caseId === "reload") window.themeReload = snapshot => {
   catalog = snapshot;
   for (const handler of themeListeners.values()) window.__TAURI_INTERNALS__.runCallback(handler, { payload: snapshot });
 };
+if (PERIPHERAL_CASES.includes(caseId)) preparePeripheral(caseId);
 mockIPC((command, args) => {
+  if (PERIPHERAL_CASES.includes(caseId)) return peripheralIPC(caseId, command, args, EMBEDDED_THEMES);
   if (caseId === "settings" || caseId === "reload" || explorerCases.includes(caseId)) {
     if (command === "plugin:event|listen" && args.event === "themes-changed") { themeListeners.set(args.handler, args.handler); return args.handler; }
     if (command === "plugin:event|unlisten" && args.event === "themes-changed") { themeListeners.delete(args.eventId); return; }
@@ -40,6 +44,13 @@ mockIPC((command, args) => {
   if (explorerCases.includes(caseId)) return explorerIPC(command, args);
   throw new Error(`Unknown theme gallery IPC command: ${command}`);
 });
+
+if (caseId === 'preview-video') {
+  window.__TAURI_INTERNALS__.convertFileSrc = path => {
+    if (path !== '/fixture/reference.webm') throw new Error(`Unknown fixture media: ${path}`);
+    return '/fixtures/reference.webm';
+  };
+}
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <main data-theme-case={caseId} data-theme={theme}>

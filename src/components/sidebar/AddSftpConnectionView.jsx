@@ -150,8 +150,8 @@ const AddSftpConnectionView = ({ isOpen, onClose, onAdd }) => {
 						placeholder="Password"
 					/>
 				</div>
-				{testResult && <div className="input-hint" style={{ color: 'var(--success)' }}>{testResult}</div>}
-				{error && <div className="input-hint" style={{ color: 'var(--danger)' }}>{error}</div>}
+				{testResult && <div className="input-hint" role="status" style={{ color: 'var(--text-primary)', background: 'var(--success-surface)', border: '1px solid var(--border-strong)' }}>{testResult}</div>}
+				{error && <div className="input-hint" role="alert" style={{ color: 'var(--text-primary)', background: 'var(--error-surface)', border: '1px solid var(--border-strong)' }}>{error}</div>}
 			</form>
 		</Modal>
 	);

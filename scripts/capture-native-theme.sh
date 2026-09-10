@@ -82,6 +82,8 @@ inside() {
     source /reload.sh
   elif [[ "${NATIVE_THEME_SCENARIO:-}" = explorer ]]; then
     source /explorer.sh
+  elif [[ "${NATIVE_THEME_SCENARIO:-}" = peripheral ]]; then
+    source /peripheral.sh
   fi
   find /fixture -type f -printf '%P\n' | sort > /evidence/fixture-files.txt
   test ! -e /home
@@ -103,9 +105,10 @@ elif [[ "${1:-}" = --scenario && $# = 2 ]]; then
     selection) selection=1 ;;
     reload) scenario=reload ;;
     explorer) scenario=explorer ;;
+    peripheral) scenario=peripheral ;;
     *) printf 'Unknown native theme scenario: %s\n' "$2" >&2; exit 2 ;;
   esac
-elif [[ $# != 0 ]]; then printf 'Usage: bash scripts/capture-native-theme.sh [--selection | --scenario selection|reload|explorer]\n' >&2; exit 2
+elif [[ $# != 0 ]]; then printf 'Usage: bash scripts/capture-native-theme.sh [--selection | --scenario selection|reload|explorer|peripheral]\n' >&2; exit 2
 fi
 
 repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
@@ -131,7 +134,8 @@ test -f "$THEME_VALIDATION_MESA/share/glvnd/egl_vendor.d/50_mesa.json"
 
 sandbox_path=""
 tools=(bash cat env sort find readlink mkdir sleep grep sha256sum Xvfb xwininfo magick)
-if [[ "$selection" = 1 || "$scenario" = reload || "$scenario" = explorer ]]; then tools+=(xdotool jq cp chmod cmp); fi
+if [[ "$selection" = 1 || "$scenario" = reload || "$scenario" = explorer || "$scenario" = peripheral ]]; then tools+=(xdotool jq cp chmod cmp); fi
+if [[ "$scenario" = peripheral ]]; then tools+=(gst-inspect-1.0 gst-launch-1.0); fi
 x11_library=""
 if [[ "$scenario" = reload ]]; then
   tools+=(date mv rm python3)
@@ -178,6 +182,37 @@ scenario_mount=()
 if [[ "$scenario" = explorer ]]; then
   scenario_mount=(--ro-bind "$repo/scripts/native-theme-explorer.sh" /explorer.sh)
 fi
+scenario_args=()
+if [[ "$scenario" = peripheral ]]; then
+  cp "$repo/scripts/capture-native-theme.sh" "$evidence/capture-native-theme.sh"
+  cp "$repo/scripts/native-theme-peripheral.sh" "$evidence/native-theme-peripheral.sh"
+  sha256sum "$evidence/capture-native-theme.sh" "$evidence/native-theme-peripheral.sh" > "$evidence/scenario-source.sha256"
+  : "${THEME_VALIDATION_GST_RUNTIME:?Set matching WebKit GStreamer runtime store path}"
+  : "${THEME_VALIDATION_GST_PLUGINS:?Set matching GStreamer plugin directories}"
+  [[ "$THEME_VALIDATION_GST_RUNTIME" = /nix/store/* ]]
+  scanner="$THEME_VALIDATION_GST_RUNTIME/libexec/gstreamer-1.0/gst-plugin-scanner"
+  test -x "$scanner"
+  IFS=: read -r -a plugin_dirs <<< "$THEME_VALIDATION_GST_PLUGINS"
+  for plugin_dir in "${plugin_dirs[@]}"; do
+    [[ "$plugin_dir" = /nix/store/*/lib/gstreamer-1.0 ]]
+    test -d "$plugin_dir"
+  done
+  scenario_args=(
+    --ro-bind "$repo/scripts/native-theme-peripheral.sh" /peripheral.sh
+    --ro-bind "$repo/tests/themes/gallery/public/fixtures" /media-fixtures
+    --setenv GST_PLUGIN_SYSTEM_PATH_1_0 "$THEME_VALIDATION_GST_PLUGINS"
+    --setenv GST_PLUGIN_PATH_1_0 ""
+    --setenv GST_PLUGIN_SCANNER_1_0 "$scanner"
+    --setenv GST_REGISTRY_1_0 /fixture/cache/gstreamer-registry.bin
+    --setenv GST_DEBUG "2,webkit*:6,appsink:5"
+  )
+  # Explicit fixture-only opt-in; normal capture/selection keeps WebKit defaults.
+  case "${THEME_VALIDATION_ALLOW_ASSET_PROTOCOL:-0}" in
+    0) ;;
+    1) scenario_args+=(--setenv WEBKIT_GST_ALLOWED_URI_PROTOCOLS asset) ;;
+    *) printf 'THEME_VALIDATION_ALLOW_ASSET_PROTOCOL must be 0 or 1\n' >&2; exit 2 ;;
+  esac
+fi
 args=(
   --die-with-parent --unshare-all --new-session --clearenv
   --ro-bind /nix/store /nix/store --proc /proc --dev /dev --tmpfs /tmp
@@ -192,6 +227,7 @@ args=(
   --ro-bind "$repo/scripts/native-theme-reload.sh" /reload.sh
   --setenv NATIVE_THEME_SCENARIO "$scenario"
   "${scenario_mount[@]}"
+  "${scenario_args[@]}"
   --setenv NATIVE_X11_LIBRARY "$x11_library"
   --chdir /fixture/cwd
   --setenv PATH "$sandbox_path" --setenv NATIVE_CAPTURE_SANDBOX 1

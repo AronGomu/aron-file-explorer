@@ -299,7 +299,7 @@ const TemplateList = ({ onClose }) => {
                         <p>Loading templates...</p>
                     </div>
                 ) : error ? (
-                    <div className="template-list-error">
+                    <div className="template-list-error" role="alert">
                         <div className="alert alert-error">
                             <div className="alert-content">
                                 <p>{error}</p>
