@@ -2,9 +2,11 @@
 
 ## State
 
-**IN PROGRESS.** User resolved T1 integration/publication gates. T1 fast-forwarded into local main; integration checks passed. Normal push authorized. T2–T6 not started; no Catppuccin runtime behavior implemented yet. No PR requested.
+**IN PROGRESS — 2/6 tickets merged.** T2 committed and fast-forwarded into main as `ef5a939b0cb53450d3087246b4ddc0ec66aad3aa`; tracked main clean. Independent integration/dependency reviews passed for scoped Linux acceptance. Post-merge identity/targeted themes/full npm suite/build passed; pushed main and verified remote SHA `ef5a939b0cb53450d3087246b4ddc0ec66aad3aa`. T3–T6 not started. PTY flake and affected-platform security follow-up remain explicit. No PR requested.
 
-Code commit: `eea0bd5934bacedd82729eb8e7c0a4271bc29c9f` — `test(themes): make live-theme changes reproducibly verifiable`.
+Latest T2 code commit: `ef5a939b0cb53450d3087246b4ddc0ec66aad3aa` — `feat(themes): preserve user palettes with editable Catppuccin selection`. Validated worktree: `/home/aron/projects/FileExplorer-worktrees/catppuccin-live-themes-t2-integration`.
+
+T1 code commit: `eea0bd5934bacedd82729eb8e7c0a4271bc29c9f` — `test(themes): make live-theme changes reproducibly verifiable`.
 
 Branch: `feat/catppuccin-t1`.
 Worktree: `/home/aron/projects/FileExplorer-worktrees/catppuccin-live-themes-t1`.
@@ -12,11 +14,47 @@ Worktree: `/home/aron/projects/FileExplorer-worktrees/catppuccin-live-themes-t1`
 ## Ticket State List
 
 - [x] T1. Setup + isolated test harness — IMPLEMENTED / MERGED into main. Unit, browser, build, native startup and independent implementation-review gates passed. Post-integration `git diff --exit-code main HEAD` in validated worktree, `npm test` (5+14) and `npm run build` passed. No blanket unchanged-runtime claim for dependency updates.
-- [ ] T2. Editable Catppuccin + System selection — NOT STARTED; requires T1 integration, then schema/migration/selection/native evidence.
+- [x] T2. Editable Catppuccin + System selection — IMPLEMENTED / MERGED `ef5a939`. Integrated on terminal-enabled main8a4acb3, preserving589 other tracked files. Independent integration/dependency reviews passed; Node5/Vitest139/terminalNode26, filtered Rust16+25, Playwright6, packaged native `ebwjUh` verified. Original candidate/repair evidence retained. PUSHED; remote SHA verified. Post-merge `git diff --exit-code main HEAD`, targeted theme tests, `npm test`, `npm run build` all exit0; logs in integration worktree `artifacts/theme-validation/integration/post-merge-ef5a939/`. Full Rust/platform/native exclusions and PTY flake remain below.
 - [ ] T3. Live plugin reload — NOT STARTED; requires T2, then watcher/race/disk-to-window evidence.
 - [ ] T4. Explorer + controls — NOT STARTED; requires T2, then component/contrast/native evidence.
 - [ ] T5. Peripheral surfaces — NOT STARTED; requires T2, then preview/notification/failure-state evidence.
 - [ ] T6. Integrated acceptance — NOT STARTED; requires T3/T4/T5, full suite, 46 captures and packaged Linux proof.
+
+## T2 evidence and decision history
+
+Final acceptance: independent `T2-integration-review.md` and `T2-integration-dependency-review.md` passed scoped Linux gates. Parent verified43 hashes, staged only those paths, committed/fast-forwarded main, reran post-merge checks and verified normal push. Checkpoints below are historical; current status is in State/Ticket State List.
+
+Independent dependency closure: `artifacts/theme-execution/T2-integration-dependency-review.md` — APPROVE targeted Linux delta; two lockfiles,9 insertions/9 deletions, one Rust identity/checksum and two npm package entries plus sole dialog→API requirement edge. Published manifests/archive integrities and retained locked build/audit evidence verified. Runtime downgrade changes code/features; no behavioral-equivalence or global security-clean claim. Pre-existing affected-platform advisory remains U4. Integration reviewer independently reran Node5/Vitest139/terminalNode26 and confirmed scope/hash checks. PTY retry qualification: same test/app bytes, but `RUST_BACKTRACE=1` added; no identical-environment claim. Initial timeout remains a flake risk.
+
+Dependency reviewer confirmed pre-existing medium `GHSA-7gmj-67g7-phm9` in unchanged `tauri 2.10.3`, involving Windows/Android custom-protocol origin classification; fixed in tauri>=2.11.1. Parent inspected published crate `src/webview/mod.rs:1702–1717`: vulnerable domain-prefix branch is conditional on Windows/Android, while Linux uses registered scheme lookup. Targeted compatibility delta may be approved separately; no security waiver or affected-platform deployment approval. Record security follow-up before Windows/Android deployment, without expanding Linux T2 into an unrelated upgrade. Primary advisory: https://github.com/tauri-apps/tauri/security/advisories/GHSA-7gmj-67g7-phm9 . A clean npm production audit does not cover Rust.
+
+Integrated handoff: `artifacts/theme-execution/T2-integration-worker.md`. Worker reports Node5/Vitest139/terminalNode26, Rust theme16/settings25, Playwright6 and extracted-package native checks passed. PTY private-sandbox first run10/11 timeout, unchanged retry11/11 plus command2 passed; both cleanup proofs show zero remaining namespace processes. Timeout retained as flake risk. Parent read all five accepted-candidate delta sections, directly inspected native `native-capture.ebwjUh/state-after-system.png` (two tabs, selected fixture hosts, actual shell draft), and reran whitespace/index/main-state checks: main unchanged8a4acb3, tracked clean; candidate index empty. Independent reviews pending.
+
+Final reported delta: 43 paths =41 theme paths +Cargo.lock/package-lock.json; 589 other tracked main files preserved,36 accepted effective paths identical. Package hash `daf33a801370ccb6357a3465dd6520fd7f46e586478d01f86e83056abef701f8`; packaged/extracted/running executable hash `b4b60aac8116ebb581ef173051a7f7851c58430ef7b3d4ccb18986332be75cef`. Unbundled target differs exactly3 bundle-marker bytes by current CLI patch/restore behavior; primary-source evidence retained, independent verification pending. Missing-marker warning belongs to older candidate, not this successful bundle. Old evidence remains historical.
+
+Integration package checkpoint: worker reports Rust compatibility fixed solely by `tauri-runtime 2.11.3 → 2.10.1` plus checksum, no final edge changes; filtered Rust tests passed. Packaging then rejected Rust `tauri 2.10.3` / JS API `2.6.0` and Rust dialog `2.7.3` / JS dialog `2.3.2` minor mismatches. Parent approved targeted JS API2.10.x and dialog2.7.x alignment using published versions, preferably lock-only under existing ranges; only those manifest declarations may change if required. No broad refresh/mismatch suppression. Other deps (terminal/xterm/Vitest) remain protected. Exact two-ecosystem delta/audit and fresh independent review required; packaging/native gate still pending.
+
+Integration checkpoint: worker reports Node5/Vitest139/terminalNode26/frontend build passed. Native compile failed in preserved baseline graph: `E0046 not all trait items implemented, missing: eval_script_with_callback`; `E0277 dyn Fn(Url, NewWindowFeatures) -> NewWindowResponse + Send cannot be shared between threads safely`. Parent parsed compiler messages from integration `artifacts/theme-validation/integration/rust-theme.log`; runtime2.11.3/runtime-wry2.10.1/wry0.54.2 implicated. Approved narrow Cargo.lock compatibility repair, not broad refresh/cache patch/manifest changes. Original graph and failure retained; exact dependency delta and independent review required. Native/Rust acceptance still pending.
+
+Integration scope confirmed by recovered scout: 41 effective theme paths, preserving current main Cargo/npm graphs and all terminal files. Surgical merges retain terminal registrations/window cleanup/keyboard guards/always-mounted component. Test-only sandbox gains explicit fixture shell and Settings click compatible with xterm focus; real PTY draft must survive switches without executing it. Writer `98f2df05` owns integration worktree; fresh integrated validation/review pending.
+
+Integration assumption: apply only reviewed theme delta onto new main-based worktree, without first committing stale-base candidate or rewriting history. Main already supplies Unix `libc = "0.2"`; do not import old candidate dependency pin. Initially preserved manifest/lock bytes. Integrated native compilation exposed incompatible current-main runtime graph; parent subsequently authorized targeted Cargo.lock-only compatibility repair, preserving manifest/npm/terminal code and unrelated resolutions. Source/app/native checks must run again on integrated graph; old native hashes cannot certify new terminal/dependency baseline.
+
+Repair handoff: `artifacts/theme-execution/T2-repair-worker.md`. Parent read repair diff and directly inspected final `native/native-capture.zjWOVC/selected-system.png` and `restarted-custom.png`: visible System and Custom Dusk selectors with distinct palettes. Worker reports four genuine F1 assertion Reds → Green; Windows read flag fixed, Windows unrun. Extracted debug `.deb` smoke reports sandbox exit0, not OS installation/release validation. Package SHA256 `52405ee40dadccecb1f5c3e09e1600c960cf55137abedda4fd21d7105b4a95e2`; executable SHA256 `05ed22aa6fc43611c8458626f35372c4454d70bddc5f648d900f03d064a5d7a9`; fresh review checking provenance. Earlier native evidence retained; fixed browser screenshot/results paths refreshed by repair checks, prior browser versions unavailable. Bundler warning retained: `__TAURI_BUNDLE_TYPE variable not found in binary`; updater/release behavior unverified.
+
+- [x] F1. Restore explicit supported search-key projection in `SettingsProvider.jsx:43–50`; verify real assertion Red→Green for nested theme/string/null/object and unrelated root preference collisions, snapshot/reload, preservation without fallback write.
+- [x] F2. Add Windows directory-open classification flag in `config_file.rs:83–87`; verify source/API contract and existing test remains applicable. Windows execution remains unverified.
+- [x] V1. Close T2 A5 packaged-Linux evidence gap: build/extract local package, run extracted executable only inside fixture sandbox, verify package contents/provenance and actual theme selection/restart. No system installation or installed-app claim. Prior `--debug --no-bundle` evidence alone does not satisfy packaging gate.
+
+Scoped closure evidence: `artifacts/theme-execution/T2-closure-review.md` — no unresolved F1/F2/V1 blocker. F2 is source/API repair only; V1 is extracted debug package with Nix runtime only. Candidate/native hashes all checked; earlier native evidence preserved. New-main integration still requires fresh checks.
+
+Both reviews accepted remaining examined persistence/lock/schema/root-provider paths; reports at `artifacts/theme-execution/T2-backend-review.md` and `T2-frontend-review.md`. Frontend reviewer reran tests and refreshed generated `unit/results.json`; original logs/native evidence untouched. Retained native evidence independently verified, with explicit gaps: no native OS event/reset/missing-ID, scroll/form assertion or installed package smoke.
+
+Candidate inventory: `artifacts/theme-validation/changed-files.json` in T2 worktree (43 intentional files). Exact commands/exits: `artifacts/theme-validation/commands.json`; worker handoff: parent `artifacts/theme-execution/T2-worker.md`. Counts above remain worker-reported until independent validation. Parent directly observed native failed-save toast `Could not save theme selection. Keeping "Catppuccin Mocha".` and `active_theme_id: catppuccin-mocha` in `native/native-capture.SSrG98/selected-mocha.settings.json`. Full Rust suite and other platforms remain unverified.
+
+Assumptions approved: exact schema retained; content parity limited to common decoder domain. Lone-surrogate names are accepted by JS/AJV but rejected by Rust as `invalid JSON`. For `schemaVersion: 1e400`, JS rejects with `unsupported schemaVersion`; Rust with `invalid JSON`. Fixtures must explicitly assert these differences; no universal raw JSON/AJV parity claim. Dependency final delta reported: direct unix `libc = "=0.2.172"`, one lock edge, no package/version changes; independent check pending.
+
+Red accounting corrected: initial JS one assertion failure plus two fixture-path errors (errors excluded from Red evidence); Rust two assertion failures; later dedupe two assertion failures. Not every added test claimed individually Red.
 
 ## Evidence
 
@@ -84,15 +122,24 @@ Native startup reads mounts/home and cleans shared SFTP temp files. Cwd/HOME/XDG
 
 Initial T1 writer: Luna/high, dependency integration. Repair writer: Astra/xhigh, previously failed task. Fresh read-only reviewers; parent owns final decisions, one-line final fix and Git. `ship` ends code-ready; parent committed locally under explicit request. User U3 explicitly confirmed push and integration checks. Normal append-only pushes for requested ticket workflow authorized; no force push, PR, or system apply.
 
-### A6. Scope and unverified behavior
+### A6. Pending source-edit overlap
+
+Scout classified six pre-existing main edits. Four files contain only legacy-darkmode default/doc/test changes, superseded by requested System model. Unrelated FileList selection fix and Cargo plugin modernization remain untouched and excluded from theme commits. Dirty main `cargo metadata --locked --format-version 1 --offline` failed exit101: `error: cannot update the lock file /home/aron/projects/FileExplorer/Cargo.lock because --locked was passed to prevent this`. This reflects preserved uncommitted plugin bumps, not committed main: isolated committed graph remains matched and tested. Parent rejected scout suggestion to import unrelated bumps into T2; no silent lock refresh. No authorization inferred to discard or stage unrelated source changes. Missing main-local `.agents/skills/make-glossary-aron/SKILL.md` produced `ENOENT: no such file or directory, access '/home/aron/projects/FileExplorer/.agents/skills/make-glossary-aron/SKILL.md'`; glossary expansion is outside theme scope.
+
+### A7. T2 accepted preflight amendments
+
+Fresh plan review accepted with scoped amendments: Unicode-codepoint content parity; separate bounded/no-follow filesystem tests; actual Tauri setup path; raw-map extras/trusted path preservation; atomic disk-before-memory writes; early rejection of generic theme mutations; reset/rollback/stable-provider tests; startup/loading/fatal-fallback root colors; root-only legacy writer removal. Full P1–P10 checklist added to original T2 ticket. No watcher, broad UI color migration, or production test hook in T2. Scout's callback-order prose corrected: `.setup` registration does not execute before managed state construction.
+
+### A8. Scope and unverified behavior
 
 T1 proves harness and native startup only. No Catppuccin colors/System selector/reload, full Rust suite, app-wide unchanged behavior, video or macOS/Windows acceptance claimed. Existing CSS `Unexpected "@media"`, Tauri dynamic-import warnings remain. Native `GStreamer element appsink not found. Please install it.` means T5/T6 media validation needs local runtime preparation. No unrelated source repair.
 
 ## User TODO
 
 - [x] U1. User declined backups for identified generated lockfiles. Replacements authorized; six unrelated tracked edits verified byte-identical after merge.
-- [x] U2. User accepted `GHSA-82fw-gwwq-j7x9` for local tests only. Production-only audit remains clean; no broader exposure waiver.
+- [x] U2. User accepted `GHSA-82fw-gwwq-j7x9` for local tests only. npm production-only audit remains clean; this does not cover Rust. No broader exposure waiver.
 - [x] U3. User explicitly confirmed push and integration checks. No PR requested.
+- [ ] U4. Before Windows/Android deployment, authorize and validate a Tauri update addressing `GHSA-7gmj-67g7-phm9` (fixed >=2.11.1). Existing tauri2.10.3 remains affected there; no waiver given. No user action needed for ongoing Linux-only theme integration.
 
 ## Cleanup and handoff
 
