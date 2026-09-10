@@ -25,7 +25,7 @@ PLAYWRIGHT_BROWSERS_PATH="$PWD/.tmp/theme-validation/playwright-browsers" nix de
 
 URL: `http://127.0.0.1:1422/?case=harness-button&theme=catppuccin-latte|catppuccin-mocha`.
 
-Gallery supplies actual production Button plus T2 Settings. Unknown cases throw `Unknown theme gallery case: ${caseId}`. Gallery-only `mockIPC` rejects every command with `Unknown theme gallery IPC command: ${command}`; Button needs no IPC data. Unit coverage imports actual gallery entrypoint, calls real `@tauri-apps/api/core` `invoke`. Future cases must explicitly add their own allowlisted fixtures. No production frontend entrypoint or native IPC modification.
+Gallery supplies actual production components for 23 final cases plus harness/reload probes. Unknown cases throw `Unknown theme gallery case: ${caseId}`. Gallery-only `mockIPC` rejects every command with `Unknown theme gallery IPC command: ${command}`; Button needs no IPC data. Unit coverage imports actual gallery entrypoint, calls real `@tauri-apps/api/core` `invoke`. Future cases must explicitly add their own allowlisted fixtures. No production frontend entrypoint or native IPC modification.
 
 T2 uses production JSON seeds/root activator for both query values. `settings` renders production SettingsProvider → ThemeProvider → SettingsPanel with explicit fixture-only IPC. Unknown IPC still rejects; no fixture code enters production bundle.
 
@@ -37,7 +37,7 @@ npm run test:themes -- tests/themes/harness.test.jsx
 npm run build
 ```
 
-`npm test` explicitly runs Node `tests/*.test.mjs`, then Vitest. Vitest `.test.js` files stay outside Node discovery. Unit JSON goes to `artifacts/theme-validation/unit/results.json`; visual output goes to `artifacts/theme-validation/visual/`. Gallery is absent from production `dist`. Existing CSS `Unexpected "@media"` and dynamic-import warnings remain outside T1 scope. `test:themes:audit` implementation belongs to T6; do not invoke it yet.
+`npm test` explicitly runs Node `tests/*.test.mjs`, then Vitest. Vitest `.test.js` files stay outside Node discovery. Unit JSON goes to `artifacts/theme-validation/unit/results.json`; visual output goes to `artifacts/theme-validation/visual/`. Gallery is absent from production `dist`. Build warnings must be retained in command output; do not infer a warning-free build. `npm run test:themes:audit` now scans live source with pinned PostCSS 8.5.28 / @babel/parser 8.0.4.
 
 ## Locks / native build
 
@@ -79,9 +79,9 @@ Capture rejects near-uniform images, but **exit 0 or window existence alone is n
 
 | Surface | Latte query | Mocha query | Native Linux |
 | --- | --- | --- | --- |
-| `harness-button` | T1 placeholder capture | Identical T1 capture | Not a native gallery case |
-| Production app shell | T2+ colors | T2+ colors | T1 fixture-only rendered screenshot |
-| Settings / reload / remaining surfaces | Owning follow-up ticket | Owning follow-up ticket | T6 integrated evidence |
+| `harness-button` | Harness check only | Harness check only | Not a native gallery case |
+| 23 final gallery cases | Integrated capture + rendered text | Integrated capture + rendered text | Browser fixtures are not native evidence |
+| Real packaged app | Selection/reload scenario | Selection/reload scenario | Debug `.deb`, isolated real IPC/disk/restarts |
 
 
 ## T2 selection validation
@@ -106,4 +106,78 @@ nix shell nixpkgs#bubblewrap nixpkgs#xvfb nixpkgs#xorg.xwininfo \
   --command bash scripts/capture-native-theme.sh --selection
 ```
 
-Authoring/decoder limits: [themes.md](./themes.md). Schema/JS/Rust content parity is scoped to common decoder domain; surrogate/numeric exceptions are explicit shared fixtures. Native Linux proof does not claim macOS/Windows support verification or media readiness. T3 owns live watching; T4/T5 own remaining component colors. Fresh independent review remains mandatory.
+Authoring/decoder limits: [themes.md](./themes.md). Schema/JS/Rust content parity is scoped to common decoder domain; surrogate/numeric exceptions are explicit shared fixtures. Native Linux proof does not claim macOS/Windows support verification or media readiness. T3 supplies live watching; T4/T5 supply component colors. T6 integrates their gates without changing keyboard/navigation behavior. Fresh independent review remains mandatory.
+
+## T6 integrated gate
+
+```bash
+npm test
+npm run test:themes
+npm run test:themes:audit
+npm run build
+PLAYWRIGHT_BROWSERS_PATH="$PWD/.tmp/theme-validation/playwright-browsers" \
+  nix develop --no-warn-dirty --command npm run test:themes:visual -- --workers=2
+nix develop --no-warn-dirty --command node scripts/run-isolated-rust-tests.mjs --filter theme_
+nix develop --no-warn-dirty --command node scripts/run-isolated-rust-tests.mjs --filter tests_settings
+```
+
+[`integration.test.jsx`](../tests/themes/integration.test.jsx) checks atomic 36-token root replacement, non-color preservation, alias removal, planted audit defects, System light→dark→light with open Settings/preview/confirm, custom discovery/selection/live edit/invalid/duplicate/deletion/cold fallback. Tauri command/event transport is mocked here; in-memory remount is not native persistence proof. Rust/native scripts cover disk ownership and migration.
+
+[`integration.spec.js`](../tests/themes/visual/integration.spec.js) writes `artifacts/theme-validation/visual/manifest.json`: exactly 46 unique base entries (23 case IDs × Latte/Mocha), screenshot paths, extra observed hover/focus captures, contrast artifact, `pass|fail|not-run`. These are generated output locations, not durable evidence links. Cases start with clean browser storage. Manifest rewrites per completed case; an interrupted run leaves remaining entries `not-run`. Missing files/duplicates fail validation; captures are not golden-image comparison or user signoff.
+
+| Core cases | Peripheral cases |
+| --- | --- |
+| settings, explorer-grid, explorer-list, explorer-details | search, network, sftp-form, templates |
+| sidebar-tabs, breadcrumb, context-menu, controls, this-pc | preview-image, preview-video, preview-text, preview-error |
+| — | dialogs, permissions, toasts, confirm, loading, error-fallback |
+
+Contrast receipts enumerate visible DOM text/input values with computed foreground, ancestor backgrounds, group opacity, ratio, threshold, exact disabled-element exception. Normal text ≥4.5:1; large text ≥3:1. Rendered focus outline samples ≥3:1. Existing [`explorer.spec.js`](../tests/themes/visual/explorer.spec.js) and [`peripheral.spec.js`](../tests/themes/visual/peripheral.spec.js) retain explicit border/focus/selected/disabled/empty/loading/error checks and native media pixel boundaries. Matrix `pass` means its recorded assertions passed, not that every possible interaction/focus affordance was audited. Screenshot inspection remains required. Gradients, complex overlapping paint, platform controls and arbitrary user theme AA are not exhaustively certified by DOM compositing.
+
+Disabled controls use WCAG inactive-control exception, identified per element. File-type icons retain filenames/type labels; status decoration retains readable message text; checkerboard indicates transparency without altering image pixels. These are bounded redundant-content exceptions, not blanket low-contrast exemptions.
+
+### Source audit boundary
+
+[`audit-theme-colors.mjs`](../scripts/audit-theme-colors.mjs) parses `src/**/*.css`, `src/**/*.js`, `src/**/*.jsx`; CSS declarations/selectors/media rules and JS/JSX color properties/generated style strings are inspected, not blindly replaced. It rejects literal hex/named/RGB/HSL/gradient/fallback colors, legacy names, unresolved color vars. Root semantic tokens and three derived RGB vars resolve through contract; geometry/font/spacing vars are not color aliases. Sizes, URLs/hash identifiers, ordinary content strings are not color declarations. JSON seeds/fixtures are trusted inputs outside this source scan. No arbitrary runtime dataflow claim.
+
+[`color-allowlist.json`](../tests/themes/color-allowlist.json) contains exact `{path,match,reason}` entries only; reasons: `terminal|user-content|native-control|asset`. No path globs; stale exceptions fail. Current allowlist is empty. Explicit terminal component directory boundary is excluded; shared root changes still run terminal-state native checks. Any future asset exception must identify exact declaration/string, not a whole file. `Theme color audit passed` requires zero findings; CLI exits nonzero on unapproved literals, legacy refs, unresolved color vars or malformed input.
+
+### Extracted debug package: no install
+
+Build and inspect from root; `set -euo pipefail` prevents stale/missing package selection. Fresh run-owned extraction directory prevents stale extracted resources without deleting another run's files. Local Nix `dpkg` provides extraction on hosts without `dpkg-deb`.
+
+```bash
+set -euo pipefail
+CARGO_TARGET_DIR="$PWD/target" npm run tauri -- build --debug --bundles deb -- --locked
+mkdir -p "$PWD/.tmp/theme-validation"
+export THEME_VALIDATION_PACKAGE_ROOT="$(mktemp -d "$PWD/.tmp/theme-validation/package.XXXXXX")"
+nix shell nixpkgs#dpkg --command bash -c '
+  set -euo pipefail
+  mapfile -t packages < <(find "$PWD/target/debug/bundle/deb" -maxdepth 1 -type f -name "*.deb")
+  test "${#packages[@]}" -eq 1
+  dpkg-deb --contents "${packages[0]}"
+  dpkg-deb --extract "${packages[0]}" "$THEME_VALIDATION_PACKAGE_ROOT"
+  cmp src-tauri/resources/themes/LICENSE "$THEME_VALIDATION_PACKAGE_ROOT/usr/lib/Explr/themes/LICENSE"
+  sha256sum "${packages[0]}" "$THEME_VALIDATION_PACKAGE_ROOT/usr/lib/Explr/themes/LICENSE"
+'
+export THEME_VALIDATION_FONTS="$(nix eval --raw nixpkgs#dejavu_fonts.outPath)"
+export THEME_VALIDATION_MESA="$(nix eval --raw nixpkgs#mesa.outPath)"
+export THEME_VALIDATION_X11="$(nix eval --raw nixpkgs#xorg.libX11.outPath)"
+for scenario in selection reload; do
+  nix shell nixpkgs#bubblewrap nixpkgs#xvfb nixpkgs#xorg.xwininfo \
+    nixpkgs#imagemagick nixpkgs#dejavu_fonts nixpkgs#mesa nixpkgs#xdotool \
+    nixpkgs#jq nixpkgs#python3 \
+    --command bash scripts/capture-native-theme.sh --scenario "$scenario"
+done
+```
+
+Native scripts launch extracted executable inside existing private namespace, not gallery/dev server. Selection scenario checks real IPC→settings bytes→restart for System/explicit/custom IDs, denied save rollback, migration preservation. Reload scenario checks real file writes/atomic rename→watch event→same-window pixel change, invalid-save last-good, duplicate/rename/deletion/directory recovery, cold invalid/missing fallback, PTY PID/starttime/cwd/executable preservation, graceful close. Review screenshots for selected-file marker, tab/form/terminal continuity; PTY identity alone cannot prove every UI state. Never enable asset-protocol relaxations to manufacture media success.
+
+Native result records use `{platform,build,caseId,status,command,observation,screenshot}` under `artifacts/theme-validation/native/results.json`; `build` distinguishes `dev` (including debug `.deb`) from `release`. Attach package resource listing, exact executable/hash, license comparison, settings receipts, command logs, screenshots. Script exit 0 alone is insufficient.
+
+### Strict acceptance boundaries
+
+- B1. Report `pass`, `fail`, `not-run` separately. Full npm/theme/browser/build/audit plus focused Rust/debug-package checks are current theme-only gate; no claim of complete full Rust, optimized release, OS-installed or cross-platform validation.
+- B2. T4 accepted residuals remain: real pointer-tab drag expected failure, baseline keyboard/ThisPC observation limits. Synthetic drag event success is not real pointer success. No keyboard UX changes in T6.
+- B3. T5 accepted residuals remain: native asset-video and unreachable fixture states. Browser video/PDF checks cannot promote native media to pass. No new production routes, IPC hooks or protocol exceptions.
+- B4. macOS/Windows and optimized release are `not-run` without actual environments/builds. Full Rust `--all` is `not-run` unless separately safety-audited/executed. SDK/package/browser failures must remain failures, not skipped green gates.
+- B5. Graph generation requires installed Graphify runtime; absence/failure is recorded separately. Independent review precedes conventional commit/feature-branch push. No main merge or plan cleanup inside T6 worker.
