@@ -6,6 +6,7 @@ import Button from "../../../src/components/common/Button.jsx";
 
 export function renderCase(caseId) {
   switch (caseId) {
+    case "reload":
     case "settings":
       return <SettingsProvider><ThemeProvider><SettingsPanel isOpen onClose={() => {}} /></ThemeProvider></SettingsProvider>;
     case "harness-button":

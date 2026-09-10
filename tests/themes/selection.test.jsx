@@ -11,6 +11,7 @@ import latte from '../../src-tauri/resources/themes/catppuccin-latte.theme.json'
 import mocha from '../../src-tauri/resources/themes/catppuccin-mocha.theme.json';
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }));
+vi.mock('@tauri-apps/api/event', () => ({ listen: vi.fn(async () => () => {}) }));
 vi.mock('../../src/utils/NotificationSystem', () => ({ showError: vi.fn() }));
 let root, container, theme, settings, disk, catalog, media, listeners, mounts;
 const loadError = 'Could not load settings. Defaults are temporary; existing file was not changed.';

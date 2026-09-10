@@ -5,7 +5,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::{OsStr, OsString};
 use std::io;
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
+use sha2::{Digest, Sha256};
 use tauri::Manager;
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -14,6 +15,8 @@ pub struct ThemeIssue {
     pub file: Option<String>,
     pub id: Option<String>,
     pub reason: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fingerprint: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -38,10 +41,20 @@ impl ThemeFailure {
 pub struct ThemeRegistry {
     pub catalog: ThemeCatalog,
     pub accepted: BTreeMap<OsString, ThemeDefinition>,
+    files: BTreeMap<OsString, ObservedFile>,
+    diagnostics: Vec<ThemeIssue>,
+}
+
+#[derive(Default)]
+struct ObservedFile {
+    fingerprint: Option<String>,
+    candidate: Option<ThemeDefinition>,
+    issue: Option<ThemeIssue>,
 }
 
 pub struct ThemeState {
-    pub registry: Mutex<ThemeRegistry>,
+    pub registry: Arc<Mutex<ThemeRegistry>>,
+    pub watcher: Mutex<Option<super::watcher::ThemeWatcher>>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -59,56 +72,124 @@ impl ThemeState {
     fn initialize(path: Option<PathBuf>) -> Self {
         let mut registry = ThemeRegistry {
             catalog: ThemeCatalog { revision: 1, directory: path.as_ref().map(|p| p.to_string_lossy().into_owned()).unwrap_or_default(), themes: Vec::new(), issues: Vec::new() },
-            accepted: BTreeMap::new(),
+            accepted: BTreeMap::new(), files: BTreeMap::new(), diagnostics: Vec::new(),
         };
-        let directory = path.as_ref().and_then(|path| ConfigDirectory::open(path, true).ok());
-        if let Some(directory) = directory {
-            seed(&directory, &mut registry.catalog.issues);
-            match directory.names() {
-                Ok(mut names) => {
-                    names.sort();
-                    let mut owners = BTreeSet::new();
-                    for name in names {
-                        let file = name.to_string_lossy();
-                        if !file.ends_with(".theme.json") { continue; }
-                        let parsed = match directory.read_regular(&name, Some(65536)) {
-                            Ok(bytes) => parse_theme(&bytes),
-                            Err(error) => {
-                                let reason = match error.kind() {
-                                    io::ErrorKind::InvalidInput => "theme file must be a regular file",
-                                    io::ErrorKind::InvalidData => "theme file exceeds 65536 bytes",
-                                    _ => {
-                                        registry.catalog.issues.push(issue("io", Some(&file), None, "Theme directory is unavailable"));
-                                        continue;
-                                    }
-                                };
-                                Err(reason.to_string())
-                            }
-                        };
-                        match parsed {
-                            Ok(theme) if owners.insert(theme.id.clone()) => {
-                                registry.catalog.themes.push(theme.clone());
-                                registry.accepted.insert(name, theme);
-                            }
-                            Ok(theme) => registry.catalog.issues.push(issue("duplicate", Some(&file), Some(&theme.id), "Duplicate theme id")),
-                            Err(reason) => registry.catalog.issues.push(issue("invalid", Some(&file), None, &reason)),
-                        }
-                    }
-                }
-                Err(_) => registry.catalog.issues.push(issue("io", None, None, "Theme directory is unavailable")),
-            }
-        } else {
-            registry.catalog.issues.push(issue("io", None, None, "Theme directory is unavailable"));
+        if let Some(directory) = path.as_ref().and_then(|path| ConfigDirectory::open(path, true).ok()) {
+            seed(&directory, &mut registry.diagnostics);
         }
-        Self { registry: Mutex::new(registry) }
+        if let Some(path) = path { registry.reload(&path, &BTreeSet::new(), None); }
+        else { registry.catalog.issues.push(issue("io", None, None, "Theme directory is unavailable")); }
+        registry.catalog.revision = 1;
+        Self { registry: Arc::new(Mutex::new(registry)), watcher: Mutex::new(None) }
+    }
+
+    pub fn stop_watcher(&self) {
+        // Take ownership before joining; worker never needs the lifecycle mutex.
+        let watcher = self.watcher.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).take();
+        drop(watcher);
     }
 
     #[cfg(test)]
     pub(crate) fn at(path: PathBuf) -> Self { Self::initialize(Some(path)) }
 }
 
-fn issue(code: &str, file: Option<&str>, id: Option<&str>, reason: &str) -> ThemeIssue {
-    ThemeIssue { code: code.into(), file: file.map(str::to_owned), id: id.map(str::to_owned), reason: reason.into() }
+pub(super) fn issue(code: &str, file: Option<&str>, id: Option<&str>, reason: &str) -> ThemeIssue {
+    ThemeIssue { code: code.into(), file: file.map(str::to_owned), id: id.map(str::to_owned), reason: reason.into(), fingerprint: None }
+}
+
+impl ThemeRegistry {
+    pub(crate) fn watch_issue(&mut self, reason: &str) -> bool {
+        let diagnostic = issue("watch", None, None, reason);
+        if self.diagnostics.contains(&diagnostic) { return false; }
+        self.diagnostics.push(diagnostic.clone());
+        self.catalog.issues.push(diagnostic);
+        self.catalog.revision += 1;
+        true
+    }
+
+    pub(super) fn clear_watch_issue(&mut self, reason: &str) {
+        self.diagnostics.retain(|item| item.code != "watch" || item.reason != reason);
+    }
+
+    // Pending basenames retain their old state until their own trailing deadline.
+    // Scan membership once, then arbitrate all candidates against the previous owners.
+    pub(crate) fn reload(&mut self, path: &std::path::Path, pending: &BTreeSet<OsString>, ready: Option<&BTreeSet<OsString>>) -> bool {
+        let mut issues = self.diagnostics.clone();
+        match ConfigDirectory::open(path, false) {
+            Ok(directory) => match directory.names() {
+                Ok(names) => {
+                    let names: BTreeSet<_> = names.into_iter().filter(|name| name.to_string_lossy().ends_with(".theme.json")).collect();
+                    self.files.retain(|name, _| names.contains(name) || pending.contains(name) || ready.is_some_and(|ready| !ready.contains(name)));
+                    for name in names {
+                        if pending.contains(&name) || ready.is_some_and(|ready| !ready.contains(&name)) { continue; }
+                        let file = name.to_string_lossy();
+                        let observed = self.files.entry(name.clone()).or_default();
+                        match directory.read_regular(&name, Some(65536)) {
+                            Ok(bytes) => {
+                                let fingerprint = hex::encode(Sha256::digest(&bytes));
+                                if observed.fingerprint.as_ref() == Some(&fingerprint) { continue; }
+                                observed.fingerprint = Some(fingerprint.clone());
+                                match parse_theme(&bytes) {
+                                    Ok(theme) => { observed.candidate = Some(theme); observed.issue = None; }
+                                    Err(reason) => {
+                                        if !self.accepted.contains_key(&name) { observed.candidate = None; }
+                                        let mut diagnostic = issue("invalid", Some(&file), None, &reason);
+                                        diagnostic.fingerprint = Some(fingerprint);
+                                        observed.issue = Some(diagnostic);
+                                    }
+                                }
+                            }
+                            Err(error) if error.kind() == io::ErrorKind::NotFound => { self.files.remove(&name); }
+                            Err(error) => {
+                                if !self.accepted.contains_key(&name) { observed.candidate = None; }
+                                observed.fingerprint = None;
+                                let (code, reason) = match error.kind() {
+                                    io::ErrorKind::InvalidInput => ("invalid", "theme file must be a regular file"),
+                                    io::ErrorKind::InvalidData => ("invalid", "theme file exceeds 65536 bytes"),
+                                    _ => ("io", "Theme directory is unavailable"),
+                                };
+                                observed.issue = Some(issue(code, Some(&file), None, reason));
+                            }
+                        }
+                    }
+                }
+                Err(_) => issues.push(issue("io", None, None, "Theme directory is unavailable")),
+            },
+            Err(error) => {
+                // Unreadable/symlink-swapped is not proof of deletion. Preserve last good.
+                if error.kind() == io::ErrorKind::NotFound { self.files.clear(); }
+                issues.push(issue("io", None, None, "Theme directory is unavailable"));
+            }
+        }
+        let mut owners: BTreeMap<String, OsString> = BTreeMap::new();
+        for (name, theme) in &self.accepted {
+            if self.files.get(name).and_then(|file| file.candidate.as_ref()).is_some_and(|candidate| candidate.id == theme.id) {
+                owners.insert(theme.id.clone(), name.clone());
+            }
+        }
+        for (name, file) in &self.files {
+            if let Some(theme) = &file.candidate { owners.entry(theme.id.clone()).or_insert_with(|| name.clone()); }
+        }
+        self.accepted.clear();
+        for (name, file) in &self.files {
+            if let Some(diagnostic) = &file.issue { issues.push(diagnostic.clone()); }
+            if let Some(theme) = &file.candidate {
+                if owners.get(&theme.id) == Some(name) { self.accepted.insert(name.clone(), theme.clone()); }
+                else {
+                    let mut diagnostic = issue("duplicate", Some(&name.to_string_lossy()), Some(&theme.id), "Duplicate theme id");
+                    diagnostic.fingerprint = file.fingerprint.clone();
+                    issues.push(diagnostic);
+                }
+            }
+        }
+        let mut themes: Vec<_> = self.accepted.values().cloned().collect();
+        themes.sort_by(|left, right| left.id.cmp(&right.id));
+        if self.catalog.themes == themes && self.catalog.issues == issues { return false; }
+        self.catalog.themes = themes;
+        self.catalog.issues = issues;
+        self.catalog.revision += 1;
+        true
+    }
 }
 
 fn seed(directory: &ConfigDirectory, issues: &mut Vec<ThemeIssue>) {
@@ -152,6 +233,18 @@ mod tests {
 
     fn snapshot(path: &std::path::Path) -> ThemeCatalog {
         ThemeState::at(path.to_path_buf()).registry.lock().unwrap().catalog.clone()
+    }
+    #[test]
+    fn theme_watch_add_copy() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("themes");
+        let state = ThemeState::at(path.clone());
+        let watcher = super::super::watcher::start_test(path.clone(), state.registry.clone());
+        let custom = SEEDS[0].1.replace("catppuccin-latte", "copied-theme");
+        fs::write(path.join("copy.theme.json"), custom).unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(350));
+        assert!(state.registry.lock().unwrap().catalog.themes.iter().any(|theme| theme.id == "copied-theme"));
+        drop(watcher);
     }
     #[test]
     fn theme_seed_once() {

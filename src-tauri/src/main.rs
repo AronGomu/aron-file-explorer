@@ -105,8 +105,21 @@ fn all_commands() -> fn(Invoke) -> bool {
     ]
 }
 
+struct ThemeHandleOwner(std::sync::Mutex<Option<std::sync::Arc<tauri::AppHandle>>>);
+impl Drop for ThemeHandleOwner {
+    fn drop(&mut self) {
+        // Also enforce join-before-last-handle on setup/runtime unwinding, not just normal Exit.
+        if let Some(handle) = self.0.get_mut().unwrap_or_else(|poisoned| poisoned.into_inner()).take() {
+            handle.state::<themes::catalog::ThemeState>().stop_watcher();
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() {
+    // External strong owner outlives watcher shutdown; managed state holds only a weak emitter.
+    let theme_handle = std::sync::Arc::new(ThemeHandleOwner(std::sync::Mutex::new(None)));
+    let setup_theme_handle = theme_handle.clone();
     let app = tauri::Builder::default()
         .manage(terminal_commands::Terminals::default())
         .on_window_event(|window, event| {
@@ -117,8 +130,19 @@ async fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(all_commands())
-        .setup(|app| {
+        .setup(move |app| {
             app.manage(themes::catalog::ThemeState::new(app));
+            let handle = std::sync::Arc::new(app.handle().clone());
+            let state = app.state::<themes::catalog::ThemeState>();
+            let directory = state.registry.lock().expect("theme registry initialized").catalog.directory.clone();
+            *setup_theme_handle.0.lock().expect("theme handle initialized") = Some(handle.clone());
+            match themes::watcher::start_theme_watcher(std::sync::Arc::downgrade(&handle), directory.into()) {
+                Ok(watcher) => *state.watcher.lock().expect("theme watcher initialized") = Some(watcher),
+                Err(_) => {
+                    eprintln!("Theme hot reload is unavailable");
+                    state.registry.lock().expect("theme registry initialized").watch_issue("Could not start theme watcher");
+                }
+            }
             // Safely show/focus the main window if it exists
             if let Some(window) = app.get_window("main") {
                 let _ = window.show();
@@ -139,9 +163,15 @@ async fn main() {
 
     log_info!("Starting Tauri application...");
 
-    app.run(tauri::generate_context!()).expect({
+    let app = app.build(tauri::generate_context!()).expect({
         let error_msg = "error while running tauri application";
         log_critical!(error_msg);
         &error_msg.to_string()
     });
+    app.run(|app, event| {
+        if matches!(event, tauri::RunEvent::Exit) {
+            app.state::<themes::catalog::ThemeState>().stop_watcher();
+        }
+    });
+    drop(theme_handle);
 }

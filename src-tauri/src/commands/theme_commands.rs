@@ -46,6 +46,44 @@ mod tests {
     use std::fs;
 
     #[test]
+    fn theme_switch_reload_race() {
+        use std::sync::mpsc;
+        use std::time::{Duration, Instant};
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("settings.json");
+        let directory = temp.path().join("themes");
+        let settings = Arc::new(Mutex::new(SettingsState::new_with_path(path.clone())));
+        let themes = Arc::new(ThemeState::at(directory.clone()));
+        let held_settings = settings.lock().unwrap();
+        let save = {
+            let settings = settings.clone(); let themes = themes.clone();
+            std::thread::spawn(move || set_active_theme_id_impl("catppuccin-latte".into(), &themes, &settings))
+        };
+        let deadline = Instant::now() + Duration::from_secs(2);
+        while themes.registry.try_lock().is_ok() {
+            assert!(Instant::now() < deadline, "selection must acquire registry before settings");
+            std::thread::yield_now();
+        }
+        fs::remove_file(directory.join("catppuccin-latte.theme.json")).unwrap();
+        let (done, receiver) = mpsc::channel();
+        let reload = {
+            let themes = themes.clone();
+            std::thread::spawn(move || {
+                themes.registry.lock().unwrap().reload(&directory, &Default::default(), None);
+                done.send(()).unwrap();
+            })
+        };
+        assert!(receiver.recv_timeout(Duration::from_millis(30)).is_err());
+        drop(held_settings);
+        assert_eq!(save.join().unwrap().unwrap().active_theme_id, "catppuccin-latte");
+        receiver.recv_timeout(Duration::from_secs(2)).unwrap(); reload.join().unwrap();
+        assert_eq!(serde_json::from_slice::<Value>(&fs::read(&path).unwrap()).unwrap()["active_theme_id"], "catppuccin-latte");
+        let before = fs::read(&path).unwrap();
+        assert_eq!(set_active_theme_id_impl("catppuccin-latte".into(), &themes, &settings).unwrap_err().code, "unavailable");
+        assert_eq!(fs::read(path).unwrap(), before);
+    }
+
+    #[test]
     fn theme_selection_unknown_and_generic_bypass() {
         let temp = tempfile::tempdir().unwrap();
         let path = temp.path().join("settings.json");

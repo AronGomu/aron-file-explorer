@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { useSettings } from './SettingsProvider';
 import { showError } from '../utils/NotificationSystem';
 import { resolveThemeId, validateThemeDefinition } from '../themes/themeContract';
@@ -20,9 +21,12 @@ export default function ThemeProvider({ children }) {
     const { settings, updateSetting } = useSettings();
     const [prefersDark, setPrefersDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
     const [catalog, setCatalog] = useState({ revision: 0, themes: [], issues: [], directory: '' });
+    const acceptedCatalog = useRef(catalog);
     const [isLoading, setIsLoading] = useState(true);
     const [pending, setPending] = useState(null);
     const busy = useRef(false);
+    const lifetime = useRef(0);
+    const [bridgeFailure, setBridgeFailure] = useState(null);
     const [rendered, setRendered] = useState(() => systemTheme(prefersDark));
     const renderedRef = useRef(rendered);
     const notices = useRef(new Set());
@@ -43,15 +47,57 @@ export default function ThemeProvider({ children }) {
 
     useEffect(() => {
         let alive = true;
-        invoke('get_theme_catalog').then(snapshot => {
+        let unlisten;
+        lifetime.current++;
+        const receive = snapshot => {
             if (!alive) return;
-            const valid = snapshot.themes.every(theme => validateThemeDefinition(theme).ok);
-            if (!valid) throw new Error('Invalid theme catalog');
-            setCatalog(previous => snapshot.revision > previous.revision ? snapshot : previous);
-        }).catch(() => {
-            if (alive) setCatalog(previous => ({ ...previous, issues: [{ code: 'io', file: null, id: null, reason: '' }] }));
-        }).finally(() => { if (alive) setIsLoading(false); });
-        return () => { alive = false; };
+            if (!Number.isInteger(snapshot?.revision) || snapshot.revision < 1 || snapshot.revision > 0xffffffff
+                || !Array.isArray(snapshot.themes) || !Array.isArray(snapshot.issues)
+                || typeof snapshot.directory !== 'string'
+                || !snapshot.themes.every(theme => validateThemeDefinition(theme).ok)) throw new Error('Invalid theme catalog');
+            if (snapshot.revision <= acceptedCatalog.current.revision) return;
+            // Clear resolved issues on acceptance, even while toast display is deferred
+            // or React batches a correction and recurrence into one render.
+            const outstanding = new Set(snapshot.issues.map(issue => JSON.stringify(issue)));
+            for (const issue of acceptedCatalog.current.issues) {
+                const key = JSON.stringify(issue);
+                if (!outstanding.has(key)) notices.current.delete(key);
+            }
+            acceptedCatalog.current = snapshot;
+            setCatalog(snapshot);
+        };
+        const dispose = stop => {
+            try { Promise.resolve(stop()).catch(error => console.error('Could not remove theme listener', error)); }
+            catch (error) { console.error('Could not remove theme listener', error); }
+        };
+        const connect = async () => {
+            try {
+                const stop = await listen('themes-changed', event => {
+                    try { receive(event.payload); }
+                    catch (error) {
+                        console.error('Invalid theme event', error);
+                        if (alive) setBridgeFailure('watch');
+                    }
+                });
+                if (!alive) { dispose(stop); return; }
+                unlisten = stop;
+            } catch (error) {
+                console.error('Could not subscribe to theme changes', error);
+                if (alive) setBridgeFailure('watch');
+            }
+            if (!alive) return;
+            try { receive(await invoke('get_theme_catalog')); }
+            catch (error) {
+                console.error('Could not load theme catalog', error);
+                if (alive) setBridgeFailure('io');
+            } finally { if (alive) setIsLoading(false); }
+        };
+        connect();
+        return () => {
+            alive = false;
+            lifetime.current++;
+            if (unlisten) dispose(unlisten);
+        };
     }, []);
 
     useLayoutEffect(() => {
@@ -78,14 +124,15 @@ export default function ThemeProvider({ children }) {
                 default: return `Theme directory is unavailable. Keeping "${name}".`;
             }
         };
-        const messages = catalog.issues.map(issue => [JSON.stringify(issue), issueMessage(issue)]);
+        const issues = bridgeFailure ? [...catalog.issues, { code: bridgeFailure }] : catalog.issues;
+        const messages = issues.map(issue => [JSON.stringify(issue), issueMessage(issue)]);
         const target = resolveThemeId(activeThemeId, prefersDark);
         if (!catalog.themes.some(theme => theme.id === target)) {
             messages.push([`missing:${target}`, `Theme "${target}" is unavailable. Keeping "${name}".`]);
         }
         for (const [key, message] of messages) if (!notices.current.has(key)) showError(message, 5000);
         notices.current = new Set(messages.map(([key]) => key));
-    }, [catalog, activeThemeId, prefersDark, isLoading, pending]);
+    }, [catalog, activeThemeId, prefersDark, isLoading, pending, bridgeFailure]);
 
     const setTheme = async id => {
         if (busy.current || isLoading || id === activeThemeId) return;
@@ -96,6 +143,7 @@ export default function ThemeProvider({ children }) {
             return;
         }
         busy.current = true;
+        const requestLifetime = lifetime.current;
         setPending(id);
         if (definition) {
             renderedRef.current = definition;
@@ -105,6 +153,7 @@ export default function ThemeProvider({ children }) {
         try {
             await updateSetting('active_theme_id', id);
         } catch (failure) {
+            if (requestLifetime !== lifetime.current) return;
             renderedRef.current = previous;
             setRendered(previous);
             applyThemeToDOM(previous);
@@ -113,8 +162,10 @@ export default function ThemeProvider({ children }) {
                 : `Could not save theme selection. Keeping "${previous.name}".`;
             showError(message, 5000);
         } finally {
-            busy.current = false;
-            setPending(null);
+            if (requestLifetime === lifetime.current) {
+                busy.current = false;
+                setPending(null);
+            }
         }
     };
 

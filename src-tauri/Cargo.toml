@@ -39,6 +39,7 @@ chardetng = "0.1.17"
 bumpalo = "3.14"  # Arena allocation for temporary objects
 parking_lot = "0.12"  # Better RwLock implementation
 portable-pty = "0.9"
+notify = "=8.2.0"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

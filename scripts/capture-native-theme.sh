@@ -78,6 +78,8 @@ inside() {
   printf 'alive-before-capture=yes\nstop=SIGTERM-after-capture\nvisual-review=required\n' > /evidence/app.status
   if [[ "${NATIVE_THEME_SELECTION:-0}" = 1 ]]; then
     source /selection.sh
+  elif [[ "${NATIVE_THEME_SCENARIO:-}" = reload ]]; then
+    source /reload.sh
   fi
   find /fixture -type f -printf '%P\n' | sort > /evidence/fixture-files.txt
   test ! -e /home
@@ -92,8 +94,15 @@ if [[ "${1:-}" = --inside ]]; then
   exit 0
 fi
 selection=0
+scenario=""
 if [[ "${1:-}" = --selection && $# = 1 ]]; then selection=1
-elif [[ $# != 0 ]]; then printf 'Usage: bash scripts/capture-native-theme.sh [--selection]\n' >&2; exit 2
+elif [[ "${1:-}" = --scenario && $# = 2 ]]; then
+  case "$2" in
+    selection) selection=1 ;;
+    reload) scenario=reload ;;
+    *) printf 'Unknown native theme scenario: %s\n' "$2" >&2; exit 2 ;;
+  esac
+elif [[ $# != 0 ]]; then printf 'Usage: bash scripts/capture-native-theme.sh [--selection | --scenario selection|reload]\n' >&2; exit 2
 fi
 
 repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
@@ -119,7 +128,15 @@ test -f "$THEME_VALIDATION_MESA/share/glvnd/egl_vendor.d/50_mesa.json"
 
 sandbox_path=""
 tools=(bash cat env sort find readlink mkdir sleep grep sha256sum Xvfb xwininfo magick)
-if [[ "$selection" = 1 ]]; then tools+=(xdotool jq cp chmod cmp); fi
+if [[ "$selection" = 1 || "$scenario" = reload ]]; then tools+=(xdotool jq cp chmod cmp); fi
+x11_library=""
+if [[ "$scenario" = reload ]]; then
+  tools+=(date mv rm python3)
+  : "${THEME_VALIDATION_X11:?Set THEME_VALIDATION_X11 to the nixpkgs libX11 store path}"
+  [[ "$THEME_VALIDATION_X11" = /nix/store/* ]]
+  x11_library="$THEME_VALIDATION_X11/lib/libX11.so.6"
+  test -f "$x11_library"
+fi
 for tool in "${tools[@]}"; do
   path=$(readlink -f "$(command -v "$tool")")
   [[ "$path" = /nix/store/* ]] || { printf 'Tool outside Nix store: %s\n' "$tool" >&2; exit 1; }
@@ -165,6 +182,9 @@ args=(
   --ro-bind "$repo/scripts/capture-native-theme.sh" /capture.sh
   --ro-bind "$repo/scripts/native-theme-selection.sh" /selection.sh
   --setenv NATIVE_THEME_SELECTION "$selection"
+  --ro-bind "$repo/scripts/native-theme-reload.sh" /reload.sh
+  --setenv NATIVE_THEME_SCENARIO "$scenario"
+  --setenv NATIVE_X11_LIBRARY "$x11_library"
   --chdir /fixture/cwd
   --setenv PATH "$sandbox_path" --setenv NATIVE_CAPTURE_SANDBOX 1
   --setenv SHELL /bin/sh

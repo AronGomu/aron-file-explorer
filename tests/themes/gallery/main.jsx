@@ -17,12 +17,20 @@ const definition = EMBEDDED_THEMES.find(definition => definition.id === theme);
 if (!definition) throw new Error(`Unknown theme gallery theme: ${theme}`);
 applyThemeToDOM(definition);
 let settings = { active_theme_id: theme };
+let catalog = { revision: 1, directory: "/fixture/config/com.explr.app/themes", themes: EMBEDDED_THEMES, issues: [] };
+const themeListeners = new Map();
+if (caseId === "reload") window.themeReload = snapshot => {
+  catalog = snapshot;
+  for (const handler of themeListeners.values()) window.__TAURI_INTERNALS__.runCallback(handler, { payload: snapshot });
+};
 mockIPC((command, args) => {
-  if (caseId === "settings") {
+  if (caseId === "settings" || caseId === "reload") {
+    if (command === "plugin:event|listen" && args.event === "themes-changed") { themeListeners.set(args.handler, args.handler); return args.handler; }
+    if (command === "plugin:event|unlisten" && args.event === "themes-changed") { themeListeners.delete(args.eventId); return; }
     if (command === "get_settings_snapshot") return { settings, loadError: null };
-    if (command === "get_theme_catalog") return { revision: 1, directory: "/fixture/config/com.explr.app/themes", themes: EMBEDDED_THEMES, issues: [] };
+    if (command === "get_theme_catalog") return catalog;
     if (command === "set_active_theme_id") {
-      if (args.id !== "system" && !EMBEDDED_THEMES.some(theme => theme.id === args.id)) throw { code: "unavailable", message: "Theme is unavailable" };
+      if (args.id !== "system" && !catalog.themes.some(theme => theme.id === args.id)) throw { code: "unavailable", message: "Theme is unavailable" };
       settings = { ...settings, active_theme_id: args.id };
       return { active_theme_id: args.id };
     }
