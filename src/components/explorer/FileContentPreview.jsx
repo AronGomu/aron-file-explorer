@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import { useSftp } from '../../providers/SftpProvider';
 import { getFileIconType } from '../../utils/icons';
@@ -11,6 +11,11 @@ const FileContentPreview = ({ item, viewMode }) => {
     const [result, setResult] = useState(null);
     const [playbackError, setPlaybackError] = useState(false);
     const mediaRef = useRef(null);
+    const codeRef = useRef(null);
+    const lineNumbers = useMemo(() => {
+        if (result?.text == null) return '';
+        return Array.from({ length: result.text.split(/\r\n|\r|\n/).length }, (_, index) => index + 1).join('\n');
+    }, [result?.text]);
     const isDirectory = item.isDirectory || 'sub_file_count' in item;
     const category = isDirectory ? 'folder' : getFileIconType(item.name);
     const revision = `${item.last_modified || ''}:${item.size_in_bytes ?? ''}`;
@@ -52,6 +57,37 @@ const FileContentPreview = ({ item, viewMode }) => {
         return () => { media?.pause(); };
     }, [result?.url]);
 
+    const handleTextKeyDown = (event) => {
+        if (!(event.ctrlKey || event.metaKey) || event.altKey || event.key.toLowerCase() !== 'a') return;
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(codeRef.current);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        event.preventDefault();
+        event.stopPropagation();
+    };
+
+    const handleTextCopy = (event) => {
+        const selection = window.getSelection();
+        if (!selection?.rangeCount) return;
+        const range = selection.getRangeAt(0).cloneRange();
+        if (range.collapsed || !range.intersectsNode(codeRef.current)) return;
+
+        // Restrict copied content to the code, even if selection crosses the gutter or status text.
+        const content = document.createRange();
+        content.selectNodeContents(codeRef.current);
+        if (range.compareBoundaryPoints(Range.START_TO_START, content) < 0) {
+            range.setStart(content.startContainer, content.startOffset);
+        }
+        if (range.compareBoundaryPoints(Range.END_TO_END, content) > 0) {
+            range.setEnd(content.endContainer, content.endOffset);
+        }
+        event.clipboardData.setData('text/plain', range.toString());
+        event.preventDefault();
+        event.stopPropagation();
+    };
+
     if (isDirectory) return <FolderContentsPreview path={item.path} viewMode={viewMode} />;
     if (category === 'image') {
         return <div className="preview-image">
@@ -81,11 +117,23 @@ const FileContentPreview = ({ item, viewMode }) => {
     }
     if (result.text === null) return unavailable;
     return <div className="preview-text">
-        <pre tabIndex={0} aria-label={`Contents of ${item.name}`}><code>
-            {result.highlights?.length ? result.highlights.map((segment, index) => (
-                <span key={index} data-highlight={segment.kind || undefined}>{segment.text}</span>
-            )) : result.text || 'This file is empty.'}
-        </code></pre>
+        <div className="preview-code-scroll" tabIndex={0} role="region" aria-label={`Contents of ${item.name}`}
+            onKeyDown={handleTextKeyDown} onCopy={handleTextCopy}
+            onPointerDown={(event) => {
+                if (event.button === 0) event.currentTarget.focus({ preventScroll: true });
+            }}>
+            <div className="preview-code-layout">
+                <div className="preview-line-numbers" aria-hidden="true">
+                    {lineNumbers}
+                </div>
+                <pre><code ref={codeRef}>
+                    {result.highlights?.length ? result.highlights.map((segment, index) => (
+                        <span key={index} data-highlight={segment.kind || undefined}>{segment.text}</span>
+                    )) : result.text}
+                </code></pre>
+            </div>
+        </div>
+        {result.text === '' && <p className="preview-status" role="status">This file is empty.</p>}
         {result.truncated && <p className="preview-status" role="status">Showing the first 256 KiB.</p>}
     </div>;
 };
