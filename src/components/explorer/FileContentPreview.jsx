@@ -81,7 +81,11 @@ const FileContentPreview = ({ item, viewMode }) => {
     }
     if (result.text === null) return unavailable;
     return <div className="preview-text">
-        <pre tabIndex={0} aria-label={`Contents of ${item.name}`}>{result.text || 'This file is empty.'}</pre>
+        <pre tabIndex={0} aria-label={`Contents of ${item.name}`}><code>
+            {result.highlights?.length ? result.highlights.map((segment, index) => (
+                <span key={index} data-highlight={segment.kind || undefined}>{segment.text}</span>
+            )) : result.text || 'This file is empty.'}
+        </code></pre>
         {result.truncated && <p className="preview-status" role="status">Showing the first 256 KiB.</p>}
     </div>;
 };

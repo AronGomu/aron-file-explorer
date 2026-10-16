@@ -171,6 +171,64 @@
     user-select: text;
 }
 
+.preview-text code {
+    font: inherit;
+    color: inherit;
+}
+
+.preview-text [data-highlight="comment"] {
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.preview-text [data-highlight="keyword"],
+.preview-text [data-highlight="text.title"] {
+    color: var(--accent);
+    font-weight: var(--font-weight-semibold);
+}
+
+.preview-text [data-highlight="function"],
+.preview-text [data-highlight="property"],
+.preview-text [data-highlight="text.uri"],
+.preview-text [data-highlight="text.reference"] {
+    color: var(--info);
+}
+
+.preview-text [data-highlight="string"],
+.preview-text [data-highlight="text.literal"] {
+    color: var(--success);
+}
+
+.preview-text [data-highlight="constant"],
+.preview-text [data-highlight="number"],
+.preview-text [data-highlight="escape"],
+.preview-text [data-highlight="attribute"] {
+    color: var(--warning);
+}
+
+.preview-text [data-highlight="type"],
+.preview-text [data-highlight="constructor"],
+.preview-text [data-highlight="tag"] {
+    color: var(--file-code);
+}
+
+.preview-text [data-highlight="operator"],
+.preview-text [data-highlight="punctuation"] {
+    color: var(--text-secondary);
+}
+
+.preview-text [data-highlight="text.strong"] {
+    font-weight: var(--font-weight-bold);
+}
+
+.preview-text [data-highlight="text.emphasis"] {
+    font-style: italic;
+}
+
+.preview-text [data-highlight="text.uri"] {
+    text-decoration: underline;
+}
+
 .preview-status {
     margin: var(--space-sm);
     color: var(--text-secondary);

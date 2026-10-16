@@ -120,7 +120,7 @@ pub async fn get_text_preview_sftp(
     tokio::task::spawn_blocking(move || {
         let sftp = connect_to_sftp_via_password(host, port, username, password)?;
         let file = sftp.open(Path::new(&file_path)).map_err(|error| error.to_string())?;
-        super::file_preview_commands::read_text_preview(file)
+        super::file_preview_commands::read_text_preview(file, &file_path)
     })
     .await
     .map_err(|error| error.to_string())?

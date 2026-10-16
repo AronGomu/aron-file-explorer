@@ -1,3 +1,4 @@
+use super::text_highlighting::{highlight_text, HighlightedText};
 use serde::Serialize;
 use std::io::Read;
 
@@ -7,9 +8,11 @@ const TEXT_PREVIEW_LIMIT: usize = 256 * 1024;
 pub struct TextPreview {
     pub text: Option<String>,
     pub truncated: bool,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub highlights: Vec<HighlightedText>,
 }
 
-pub(crate) fn read_text_preview(reader: impl Read) -> Result<TextPreview, String> {
+pub(crate) fn read_text_preview(reader: impl Read, path: &str) -> Result<TextPreview, String> {
     let mut bytes = Vec::new();
     reader
         .take((TEXT_PREVIEW_LIMIT + 1) as u64)
@@ -57,7 +60,15 @@ pub(crate) fn read_text_preview(reader: impl Read) -> Result<TextPreview, String
             character.is_control() && !matches!(character, '\n' | '\r' | '\t' | '\u{000c}')
         })
     });
-    Ok(TextPreview { text, truncated })
+    let highlights = text
+        .as_deref()
+        .and_then(|source| highlight_text(path, source))
+        .unwrap_or_default();
+    Ok(TextPreview {
+        text,
+        truncated,
+        highlights,
+    })
 }
 
 #[tauri::command]
@@ -67,8 +78,8 @@ pub async fn get_text_preview(path: String) -> Result<TextPreview, String> {
         if !metadata.is_file() {
             return Err("Preview is only available for regular files".to_string());
         }
-        let file = std::fs::File::open(path).map_err(|error| error.to_string())?;
-        read_text_preview(file)
+        let file = std::fs::File::open(&path).map_err(|error| error.to_string())?;
+        read_text_preview(file, &path)
     })
     .await
     .map_err(|error| error.to_string())?
