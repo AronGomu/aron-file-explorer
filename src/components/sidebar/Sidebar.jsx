@@ -19,7 +19,6 @@ const MIN_SIDEBAR_WIDTH = 160;
 const MAX_SIDEBAR_WIDTH = 480;
 const COLLAPSE_RESISTANCE = 100;
 const SIDEBAR_SHORTCUTS = [
-    { id: 'search', label: 'Search', path: 'M21 21l-4.4-4.4M19 11a8 8 0 1 1-16 0a8 8 0 0 1 16 0' },
     { id: 'favorites', label: 'Favorites', path: 'M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z' },
     { id: 'drives', label: 'Drives', path: 'M5 4h14l3 10v6H2v-6zM2 14h20M6 17h.01M10 17h.01' },
     { id: 'network', label: 'Network', path: 'M21 12a9 9 0 1 1-18 0a9 9 0 0 1 18 0M3 12h18M12 3a16 16 0 0 1 0 18a16 16 0 0 1 0-18' },
@@ -43,13 +42,12 @@ const Sidebar = ({ currentView }) => {
     const [sidebarWidth, setSidebarWidth] = usePersistedState('fileExplorerSidebarWidth', () => Math.min(240, getMaximumWidth()));
     const [isResizing, setIsResizing] = useState(false);
     const resizeStart = useRef(null);
-    const searchInputRef = useRef(null);
     const sectionRefs = useRef({});
     const [pendingFocus, setPendingFocus] = useState(null);
 
     useEffect(() => {
         if (isSidebarCollapsed || !pendingFocus) return;
-        const target = pendingFocus === 'search' ? searchInputRef.current : sectionRefs.current[pendingFocus];
+        const target = sectionRefs.current[pendingFocus];
         target?.focus({ preventScroll: true });
         target?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
         setPendingFocus(null);
@@ -244,11 +242,9 @@ const Sidebar = ({ currentView }) => {
     };
 
     const openSidebarSection = (section) => {
-        if (section !== 'search') {
-            const newSectionCollapsed = { ...sectionCollapsed, [section]: false };
-            setSectionCollapsed(newSectionCollapsed);
-            localStorage.setItem('sidebarSectionsCollapsed', JSON.stringify(newSectionCollapsed));
-        }
+        const newSectionCollapsed = { ...sectionCollapsed, [section]: false };
+        setSectionCollapsed(newSectionCollapsed);
+        localStorage.setItem('sidebarSectionsCollapsed', JSON.stringify(newSectionCollapsed));
         setIsSidebarCollapsed(false);
         setPendingFocus(section);
     };
@@ -409,7 +405,6 @@ const Sidebar = ({ currentView }) => {
                 <div className="sidebar-header">
                     {!isSidebarCollapsed && (
                         <input
-                            ref={searchInputRef}
                             type="search"
                             className="input sidebar-search"
                             placeholder="Search…"
