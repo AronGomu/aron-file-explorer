@@ -20,6 +20,19 @@ const SettingsPanel = ({ isOpen, onClose }) => {
     const [isResetting, setIsResetting] = useState(false);
     const [activeTab, setActiveTab] = useState('appearance');
     const [localError, setLocalError] = useState(null);
+    const [saveStatus, setSaveStatus] = useState('idle');
+
+    const handleSaveAndClose = async () => {
+        setSaveStatus('saving');
+        const success = await reloadSettings();
+        setSaveStatus(success ? 'complete' : 'idle');
+    };
+
+    useEffect(() => {
+        if (saveStatus !== 'complete') return;
+        setSaveStatus('idle');
+        if (!error && !localError) onClose();
+    }, [saveStatus, error, localError, onClose]);
 
     /**
      * Available tabs configuration
@@ -481,8 +494,9 @@ const SettingsPanel = ({ isOpen, onClose }) => {
                         </div>
                     )}
                     <div className="settings-footer-buttons">
-                        <Button variant="primary" onClick={reloadSettings}>
-                            Save & Apply
+                        <Button variant="primary" onClick={handleSaveAndClose}
+                            disabled={saveStatus !== 'idle' || isSaving || isResetting || isLoading}>
+                            {saveStatus === 'saving' ? 'Saving…' : 'Save & Close'}
                         </Button>
                         <Button variant="ghost" onClick={onClose}>
                             Close

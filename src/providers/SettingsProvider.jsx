@@ -78,6 +78,7 @@ export default function SettingsProvider({ children }) {
                 setSettings(flattenSettings(snapshot.settings));
                 setLoadError(snapshot.loadError);
                 if (snapshot.loadError) showError(snapshot.loadError, 5000);
+                return !snapshot.loadError;
             } catch {
                 if (generation !== loadGeneration.current) return;
                 setLoadError(LOAD_ERROR);
