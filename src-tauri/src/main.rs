@@ -29,6 +29,7 @@ fn all_commands() -> fn(Invoke) -> bool {
         file_system_operation_commands::copy_file_or_dir,
         file_system_operation_commands::zip,
         file_system_operation_commands::unzip,
+        commands::image_commands::get_image_thumbnail,
         // Command execution commands
         command_exec_commands::execute_command,
         command_exec_commands::execute_command_improved,

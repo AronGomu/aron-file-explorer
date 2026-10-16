@@ -1,6 +1,7 @@
 import React from 'react';
 import { getFileIconType } from '../../utils/icons';
 import { getFileTypeIcon } from '../../utils/fileTypeIcons';
+import ImageThumbnail from './ImageThumbnail';
 
 const documentOutline = <>
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -35,36 +36,45 @@ const categoryIcons = {
 };
 
 /** Displays one format-specific icon, with a generic category fallback. */
-const FileIcon = ({ filename, isDirectory, size = 'medium' }) => {
+const FileIcon = ({ filename, path, revision = '', isDirectory, size = 'medium' }) => {
     const formatIcon = isDirectory ? null : getFileTypeIcon(filename);
     const category = isDirectory ? 'folder' : getFileIconType(filename);
     const iconType = category === 'default' && formatIcon ? 'code' : category;
 
+    const symbol = (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill={formatIcon?.path ? 'currentColor' : 'none'}
+            stroke={formatIcon?.path ? 'none' : 'currentColor'}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            focusable="false"
+        >
+            {formatIcon?.path ? <path d={formatIcon.path} /> : formatIcon?.label ? <>
+                {documentOutline}
+                <text x="12" y="16.5" textAnchor="middle" fontSize="5.5" fontFamily="sans-serif" fontWeight="700" fill="currentColor" stroke="none">
+                    {formatIcon.label}
+                </text>
+            </> : categoryIcons[iconType] || <>
+                {documentOutline}
+                <path d="M8 13h8M8 17h8" />
+            </>}
+        </svg>
+    );
+
     return (
         <div className={`file-icon file-icon-${iconType} file-icon-${size}`}>
-            <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill={formatIcon?.path ? 'currentColor' : 'none'}
-                stroke={formatIcon?.path ? 'none' : 'currentColor'}
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-                focusable="false"
-            >
-                {formatIcon?.path ? <path d={formatIcon.path} /> : formatIcon?.label ? <>
-                    {documentOutline}
-                    <text x="12" y="16.5" textAnchor="middle" fontSize="5.5" fontFamily="sans-serif" fontWeight="700" fill="currentColor" stroke="none">
-                        {formatIcon.label}
-                    </text>
-                </> : categoryIcons[iconType] || <>
-                    {documentOutline}
-                    <path d="M8 13h8M8 17h8" />
-                </>}
-            </svg>
+            {path && category === 'image' ? (
+                <ImageThumbnail key={`${path}:${revision}:${size}`} path={path} filename={filename}
+                    revision={revision} size={size === 'large' ? 512 : 256}>
+                    {symbol}
+                </ImageThumbnail>
+            ) : symbol}
         </div>
     );
 };

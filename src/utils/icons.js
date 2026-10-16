@@ -11,7 +11,7 @@ export const getFileIconType = (filename) => {
     const extension = filename.split('.').pop().toLowerCase();
 
     // Image files
-    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'svgz', 'webp', 'tif', 'tiff', 'ico', 'avif', 'heic', 'heif', 'psd', 'ai', 'eps', 'blend'];
+    const imageExtensions = ['jpg', 'jpeg', 'jpe', 'jfif', 'pjpeg', 'pjp', 'png', 'apng', 'gif', 'bmp', 'svg', 'svgz', 'webp', 'tif', 'tiff', 'ico', 'avif', 'heic', 'heif', 'tga', 'pnm', 'pbm', 'pgm', 'ppm', 'psd', 'ai', 'eps', 'blend'];
     if (imageExtensions.includes(extension)) {
         return 'image';
     }

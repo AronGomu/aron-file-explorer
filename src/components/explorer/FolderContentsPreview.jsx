@@ -7,7 +7,7 @@ import { formatFileSize, formatDate, getFileType } from '../../utils/formatters'
 
 const FolderContentsPreview = ({ path, viewMode }) => {
     const { settings } = useSettings();
-    const { isSftpPath, parseSftpPath } = useSftp();
+    const { isSftpPath, parseSftpPath, createSftpUrl } = useSftp();
     const [result, setResult] = useState({ path: null, items: null, error: null });
 
     useEffect(() => {
@@ -17,10 +17,12 @@ const FolderContentsPreview = ({ path, viewMode }) => {
         const loadContents = async () => {
             try {
                 let data;
+                let remoteConnection = null;
                 if (isSftpPath(path)) {
                     const parsed = parseSftpPath(path);
                     if (!parsed?.connection) throw new Error('SFTP connection unavailable');
                     const { connection, remotePath } = parsed;
+                    remoteConnection = connection;
                     data = JSON.parse(await invoke('load_dir', {
                         host: connection.host,
                         port: Number.parseInt(connection.port, 10),
@@ -33,7 +35,8 @@ const FolderContentsPreview = ({ path, viewMode }) => {
                 }
 
                 const normalize = (entry, isDirectory) => typeof entry === 'string'
-                    ? { path: entry, name: entry.split('/').filter(Boolean).pop(), isDirectory }
+                    ? { path: remoteConnection ? createSftpUrl(remoteConnection, entry) : entry,
+                        name: entry.split('/').filter(Boolean).pop(), isDirectory }
                     : { ...entry, isDirectory };
                 const items = [
                     ...(data.directories || []).map(entry => normalize(entry, true)),
@@ -50,7 +53,7 @@ const FolderContentsPreview = ({ path, viewMode }) => {
 
         loadContents();
         return () => { cancelled = true; };
-    }, [path, isSftpPath, parseSftpPath]);
+    }, [path, isSftpPath, parseSftpPath, createSftpUrl]);
 
     if (result.path !== path || (!result.items && !result.error)) {
         return <p role="status">Loading folder contents…</p>;
@@ -83,7 +86,8 @@ const FolderContentsPreview = ({ path, viewMode }) => {
                             <tr key={entry.path}>
                                 <td>
                                     <div className="folder-preview-item" title={entry.name}>
-                                        <FileIcon filename={entry.name} isDirectory={entry.isDirectory} />
+                                        <FileIcon filename={entry.name} path={entry.path}
+                                            revision={`${entry.last_modified || ''}:${entry.size_in_bytes ?? ''}`} isDirectory={entry.isDirectory} />
                                         <span className="folder-preview-name truncate">{entry.name}</span>
                                     </div>
                                 </td>
@@ -103,7 +107,8 @@ const FolderContentsPreview = ({ path, viewMode }) => {
             role="list" aria-label="Folder contents">
             {items.map(entry => (
                 <div key={entry.path} className="folder-preview-item" role="listitem" title={entry.name}>
-                    <FileIcon filename={entry.name} isDirectory={entry.isDirectory} />
+                    <FileIcon filename={entry.name} path={entry.path}
+                        revision={`${entry.last_modified || ''}:${entry.size_in_bytes ?? ''}`} isDirectory={entry.isDirectory} />
                     <span className="folder-preview-name truncate">{entry.name}</span>
                 </div>
             ))}

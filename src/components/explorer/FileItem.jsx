@@ -35,6 +35,7 @@ const FileItem = ({
     const { clipboard } = useContextMenu();
 
     const isDirectory = item.isDirectory || 'sub_file_count' in item;
+    const imageRevision = `${item.last_modified || ''}:${item.size_in_bytes ?? ''}`;
     const fileType = isDirectory ? 'Folder' : getFileType(item.name);
     const size = isDirectory
         ? `${item.sub_file_count || 0} items`
@@ -145,7 +146,7 @@ const FileItem = ({
                 {viewMode === 'grid' && (
                     <div className="file-item-grid">
                         <div className="file-icon-container">
-                            <FileIcon filename={item.name} isDirectory={isDirectory} />
+                            <FileIcon filename={item.name} path={item.path} revision={imageRevision} isDirectory={isDirectory} />
                         </div>
 
                         <div className="file-name truncate" title={item.name}>
@@ -158,7 +159,7 @@ const FileItem = ({
                     <div className="file-item-list">
                         <div className="file-column column-name" role="cell">
                             <div className="file-icon-container">
-                                <FileIcon filename={item.name} isDirectory={isDirectory} />
+                                <FileIcon filename={item.name} path={item.path} revision={imageRevision} isDirectory={isDirectory} />
                             </div>
                             <div className="file-name truncate" title={item.name}>
                                 {item.name}
@@ -180,7 +181,7 @@ const FileItem = ({
                     <div className="file-item-details">
                         <div className="file-column column-name">
                             <div className="file-icon-container">
-                                <FileIcon filename={item.name} isDirectory={isDirectory} />
+                                <FileIcon filename={item.name} path={item.path} revision={imageRevision} isDirectory={isDirectory} />
                             </div>
 
                             <div className="file-name truncate" title={item.name}>

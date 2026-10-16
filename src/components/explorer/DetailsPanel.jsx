@@ -3,6 +3,7 @@ import FileIcon from './FileIcon';
 import FolderContentsPreview from './FolderContentsPreview';
 import IconButton from '../common/IconButton';
 import { formatFileSize, formatDate, getFileType } from '../../utils/formatters';
+import { getFileIconType } from '../../utils/icons';
 import './detailsPanel.css';
 
 /**
@@ -84,9 +85,11 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, viewMode 
             {collapseButton}
             <div className="details-content">
                 <div className="details-preview">
-                    <div className="details-icon">
+                    <div className={`details-icon${getFileIconType(item.name) === 'image' ? ' details-image' : ''}`}>
                         <FileIcon
                             filename={item.name}
+                            path={item.path}
+                            revision={`${item.last_modified || ''}:${item.size_in_bytes ?? ''}`}
                             isDirectory={isDirectory}
                             size="large"
                         />

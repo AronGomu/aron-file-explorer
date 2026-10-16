@@ -314,7 +314,20 @@ fn filename_from_path(path: &str) -> String {
 }
 
 #[tauri::command]
-pub fn download_and_open_sftp_file(
+pub async fn download_and_open_sftp_file(
+    host: String,
+    port: u16,
+    username: String,
+    password: String,
+    file_path: String,
+    open_file: Option<bool>,
+) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        download_sftp_file(host, port, username, password, file_path, open_file)
+    }).await.map_err(|error| error.to_string())?
+}
+
+fn download_sftp_file(
     host: String,
     port: u16,
     username: String,
@@ -333,15 +346,14 @@ pub fn download_and_open_sftp_file(
         fs::create_dir_all(&temp_dir).map_err(|e| format!("Failed to create temp directory: {}", e))?;
     }
     
-    // Create a unique temporary file path
-    let temp_file_path = temp_dir.join(&filename);
-    
     // Download the file from SFTP
     let mut remote_file = sftp.open(Path::new(&file_path)).map_err(|e| e.to_string())?;
-    let mut local_file = fs::File::create(&temp_file_path).map_err(|e| e.to_string())?;
+    let mut local_file = tempfile::Builder::new().prefix("download-").suffix(&format!("_{}", filename))
+        .tempfile_in(&temp_dir).map_err(|e| e.to_string())?;
     
     // Copy the file content
-    std::io::copy(&mut remote_file, &mut local_file).map_err(|e| e.to_string())?;
+    std::io::copy(&mut remote_file, local_file.as_file_mut()).map_err(|e| e.to_string())?;
+    let (_, temp_file_path) = local_file.keep().map_err(|e| e.to_string())?;
     
     // Only open the file if explicitly requested (default is true for backward compatibility)
     let should_open = open_file.unwrap_or(true);

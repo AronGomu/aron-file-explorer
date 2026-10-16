@@ -1675,6 +1675,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                         <div className="result-icon-container">
                                             <FileIcon 
                                                 filename={result.name} 
+                                                path={result.path}
                                                 isDirectory={result.isDirectory} 
                                                 size="small"
                                             />
