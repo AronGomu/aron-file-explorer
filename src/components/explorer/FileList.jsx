@@ -37,10 +37,11 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
     const { currentPath, getDirectoryViewState, saveDirectoryViewState } = useHistory();
     const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
     const [columnsPerRow, setColumnsPerRow] = useState(4); // Dynamic column calculation
-    const [gridZoom, setGridZoom] = useState(100);
-    const gridZoomValue = useRef(100);
-    const gridZoomTarget = useRef(100);
-    const gridZoomFrame = useRef(null);
+    const [viewZoom, setViewZoom] = useState(100);
+    const viewZoomValue = useRef(100);
+    const viewZoomTarget = useRef(100);
+    const viewZoomFrame = useRef(null);
+    const listZoom = viewMode === 'list' ? viewZoom / 100 : 1;
     const [columnWidths, setColumnWidths] = useState(() =>
         Object.fromEntries(LIST_COLUMNS.map(column => [column.key, column.width])));
     const columnResize = useRef(null);
@@ -81,14 +82,14 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
         event.preventDefault();
         event.stopPropagation();
         event.currentTarget.focus();
-        columnResize.current = { column, x: event.clientX, width: columnWidths[column.key], pointerId: event.pointerId };
+        columnResize.current = { column, x: event.clientX, width: columnWidths[column.key], zoom: listZoom, pointerId: event.pointerId };
         event.currentTarget.setPointerCapture(event.pointerId);
     };
 
     const handleColumnResizeMove = (event) => {
         const drag = columnResize.current;
         if (!drag || drag.pointerId !== event.pointerId) return;
-        const width = Math.max(drag.column.minWidth, Math.min(MAX_COLUMN_WIDTH, Math.round(drag.width + event.clientX - drag.x)));
+        const width = Math.max(drag.column.minWidth, Math.min(MAX_COLUMN_WIDTH, Math.round(drag.width + (event.clientX - drag.x) / drag.zoom)));
         setColumnWidths(widths => ({ ...widths, [drag.column.key]: width }));
     };
 
@@ -105,31 +106,31 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
         if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
         event.preventDefault();
         event.stopPropagation();
-        const delta = event.key === 'ArrowLeft' ? -10 : 10;
+        const delta = (event.key === 'ArrowLeft' ? -10 : 10) / listZoom;
         setColumnWidths(widths => ({ ...widths, [column.key]: Math.max(column.minWidth, Math.min(MAX_COLUMN_WIDTH, widths[column.key] + delta)) }));
     };
 
-    const changeGridZoom = useCallback((delta) => {
-        gridZoomTarget.current = Math.max(50, Math.min(1000, gridZoomTarget.current + delta));
-        if (gridZoomFrame.current !== null) return;
+    const changeViewZoom = useCallback((delta) => {
+        viewZoomTarget.current = Math.max(50, Math.min(1000, viewZoomTarget.current + delta));
+        if (viewZoomFrame.current !== null) return;
 
         let previousTime = performance.now();
         const animate = (time) => {
             const elapsed = Math.max(0, Math.min(64, time - previousTime));
             previousTime = time;
-            const remaining = gridZoomTarget.current - gridZoomValue.current;
+            const remaining = viewZoomTarget.current - viewZoomValue.current;
             const finished = Math.abs(remaining) < 0.02;
-            gridZoomValue.current = finished ? gridZoomTarget.current
-                : gridZoomValue.current + remaining * (1 - Math.exp(-elapsed / 65));
-            setGridZoom(gridZoomValue.current);
-            gridZoomFrame.current = finished ? null : requestAnimationFrame(animate);
+            viewZoomValue.current = finished ? viewZoomTarget.current
+                : viewZoomValue.current + remaining * (1 - Math.exp(-elapsed / 65));
+            setViewZoom(viewZoomValue.current);
+            viewZoomFrame.current = finished ? null : requestAnimationFrame(animate);
         };
-        gridZoomFrame.current = requestAnimationFrame(animate);
+        viewZoomFrame.current = requestAnimationFrame(animate);
     }, []);
 
     useEffect(() => {
         const container = containerRef.current;
-        if (viewMode !== 'grid' || !container) return;
+        if (!['grid', 'list'].includes(viewMode) || !container) return;
 
         const handleWheel = (event) => {
             if (!event.ctrlKey || event.altKey || event.deltaY === 0) return;
@@ -138,7 +139,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
             const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? container.clientHeight : 1;
             const pixels = Math.max(-100, Math.min(100, event.deltaY * unit));
             // Proportional steps give finer control at small sizes and accelerate at large sizes.
-            changeGridZoom(gridZoomTarget.current * Math.expm1(-pixels * 0.0005));
+            changeViewZoom(viewZoomTarget.current * Math.expm1(-pixels * 0.0005));
         };
         const handleZoomKey = (event) => {
             if (!event.ctrlKey || event.altKey || event.target.isContentEditable ||
@@ -149,7 +150,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
             else return;
             event.preventDefault();
             event.stopPropagation();
-            changeGridZoom(direction * 10);
+            changeViewZoom(direction * 10);
         };
 
         container.addEventListener('wheel', handleWheel, { passive: false });
@@ -157,11 +158,11 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
         return () => {
             container.removeEventListener('wheel', handleWheel);
             window.removeEventListener('keydown', handleZoomKey, true);
-            if (gridZoomFrame.current !== null) cancelAnimationFrame(gridZoomFrame.current);
-            gridZoomFrame.current = null;
-            gridZoomTarget.current = gridZoomValue.current;
+            if (viewZoomFrame.current !== null) cancelAnimationFrame(viewZoomFrame.current);
+            viewZoomFrame.current = null;
+            viewZoomTarget.current = viewZoomValue.current;
         };
-    }, [viewMode, data, isLoading, changeGridZoom]);
+    }, [viewMode, data, isLoading, changeViewZoom]);
 
     useEffect(() => {
         selectionDrag.current = null;
@@ -368,7 +369,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
     // Also recalculate when view mode changes or data changes
     useEffect(() => {
         setTimeout(calculateColumnsPerRow, 100);
-    }, [viewMode, data, gridZoom, calculateColumnsPerRow]);
+    }, [viewMode, data, viewZoom, calculateColumnsPerRow]);
 
     /**
      * Returns sorted data based on current sort configuration
@@ -839,9 +840,10 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
                 ref={containerRef}
                 className={`file-list-container view-mode-${viewMode.toLowerCase()} scrollable-content`}
                 style={{
-                    '--file-grid-zoom': gridZoom / 100,
-                    '--file-list-columns': LIST_COLUMNS.map(column => `${columnWidths[column.key]}px`).join(' '),
-                    '--file-list-table-width': `${LIST_COLUMNS.reduce((width, column) => width + columnWidths[column.key], 0)}px`,
+                    '--file-grid-zoom': viewZoom / 100,
+                    '--file-list-zoom': listZoom,
+                    '--file-list-columns': LIST_COLUMNS.map(column => `${columnWidths[column.key] * listZoom}px`).join(' '),
+                    '--file-list-table-width': `${LIST_COLUMNS.reduce((width, column) => width + columnWidths[column.key] * listZoom, 0)}px`,
                 }}
                 role={viewMode === 'list' ? 'table' : undefined}
                 aria-label={viewMode === 'list' ? 'Files' : undefined}
@@ -880,10 +882,10 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
                                     role="separator"
                                     aria-label={`Resize ${column.label} column`}
                                     aria-orientation="vertical"
-                                    aria-valuemin={column.minWidth}
-                                    aria-valuemax={MAX_COLUMN_WIDTH}
-                                    aria-valuenow={columnWidths[column.key]}
-                                    aria-valuetext={`${columnWidths[column.key]} pixels`}
+                                    aria-valuemin={Math.round(column.minWidth * listZoom)}
+                                    aria-valuemax={Math.round(MAX_COLUMN_WIDTH * listZoom)}
+                                    aria-valuenow={Math.round(columnWidths[column.key] * listZoom)}
+                                    aria-valuetext={`${Math.round(columnWidths[column.key] * listZoom)} pixels`}
                                     tabIndex={0}
                                     onPointerDown={(event) => handleColumnResizeStart(event, column)}
                                     onPointerMove={handleColumnResizeMove}
@@ -945,7 +947,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
                             key={item.path}
                             item={item}
                             viewMode={viewMode}
-                            thumbnailSize={viewMode === 'grid' ? (gridZoom > 700 ? 1024 : gridZoom > 350 ? 512 : 256) : 256}
+                            thumbnailSize={viewMode === 'grid' ? (viewZoom > 700 ? 1024 : viewZoom > 350 ? 512 : 256) : 256}
                             isSelected={selectedItems.some(selected => selected.path === item.path)}
                             isFocused={focusedItem && focusedItem.path === item.path}
                             onClick={(event) => handleItemClick(item, index, event)}

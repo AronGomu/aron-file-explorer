@@ -116,7 +116,7 @@
 .file-item.view-mode-list {
     display: grid;
     grid-template-columns: var(--file-list-columns);
-    min-height: 26px;
+    min-height: calc(26px * var(--file-list-zoom, 1));
     padding: 0;
     border-bottom: 1px solid var(--border);
     border-radius: 0;
@@ -131,26 +131,26 @@
     align-items: center;
     width: auto;
     min-width: 0;
-    padding: 2px 8px;
+    padding: calc(2px * var(--file-list-zoom, 1)) calc(8px * var(--file-list-zoom, 1));
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
-    font-size: var(--font-size-xs);
-    line-height: 20px;
+    font-size: calc(var(--font-size-xs) * var(--file-list-zoom, 1));
+    line-height: calc(20px * var(--file-list-zoom, 1));
 }
 
 .file-item.view-mode-list .file-icon-container {
     display: flex;
     align-items: center;
-    margin-right: 6px;
-    width: 16px;
-    height: 16px;
+    margin-right: calc(6px * var(--file-list-zoom, 1));
+    width: calc(16px * var(--file-list-zoom, 1));
+    height: calc(16px * var(--file-list-zoom, 1));
     flex-shrink: 0;
 }
 
 .file-item.view-mode-list .file-icon svg {
-    width: 16px;
-    height: 16px;
+    width: calc(16px * var(--file-list-zoom, 1));
+    height: calc(16px * var(--file-list-zoom, 1));
 }
 
 .file-item.view-mode-list .file-name {

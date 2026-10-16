@@ -139,12 +139,12 @@
     align-items: center;
     flex: 1;
     min-width: 0;
-    height: 28px;
-    padding: 0 8px;
+    height: calc(28px * var(--file-list-zoom, 1));
+    padding: 0 calc(8px * var(--file-list-zoom, 1));
     border: none;
     background: transparent;
     color: inherit;
-    font-size: var(--font-size-xs);
+    font-size: calc(var(--font-size-xs) * var(--file-list-zoom, 1));
     font-weight: var(--font-weight-medium);
     cursor: pointer;
 }
