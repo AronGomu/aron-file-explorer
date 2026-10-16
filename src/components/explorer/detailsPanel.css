@@ -13,10 +13,7 @@
 }
 
 .details-panel-toggle {
-    position: absolute;
-    top: 4px;
-    left: 12px;
-    z-index: 2;
+    flex-shrink: 0;
 }
 
 .details-resize-handle {
@@ -48,7 +45,20 @@
 }
 
 .details-panel-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
     flex: 0 0 36px;
+    min-width: 0;
+    padding: 0 var(--space-sm) 0 12px;
+}
+
+.details-panel-title {
+    flex: 1;
+    min-width: 0;
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
 }
 
 .details-panel-footer {

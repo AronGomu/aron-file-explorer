@@ -170,6 +170,7 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, viewMode 
                     aria-keyshortcuts="Space"
                     onClick={onCollapse}
                 />}
+                {hasItem && <span className="details-panel-title truncate" title={item.name}>{item.name}</span>}
             </div>
             {hasItem ? <>
                 <div ref={splitRef} className="details-body" style={{
