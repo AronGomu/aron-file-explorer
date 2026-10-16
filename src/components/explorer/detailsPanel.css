@@ -1,4 +1,5 @@
 .details-panel {
+    position: relative;
     width: var(--details-panel-width);
     height: 100%;
     background-color: var(--background-secondary);
@@ -8,16 +9,11 @@
     overflow: hidden;
 }
 
-.details-header {
-    padding: var(--space-md);
-    border-bottom: 1px solid var(--border);
-}
-
-.details-title {
-    margin: 0;
-    font-size: var(--font-size-md);
-    font-weight: var(--font-weight-medium);
-    color: var(--text-primary);
+.details-panel-toggle {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    z-index: 2;
 }
 
 .details-content {

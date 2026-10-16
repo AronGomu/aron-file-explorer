@@ -140,6 +140,7 @@ const FileItem = ({
                 onMouseDown={handleMouseDown}
                 onContextMenu={handleContextMenu}
                 data-path={item.path}
+                role={viewMode === 'list' ? 'row' : undefined}
             >
                 {viewMode === 'grid' && (
                     <div className="file-item-grid">
@@ -155,17 +156,22 @@ const FileItem = ({
 
                 {viewMode === 'list' && (
                     <div className="file-item-list">
-                        <div className="file-icon-container">
-                            <FileIcon filename={item.name} isDirectory={isDirectory} />
-                        </div>
-
-                        <div className="file-details">
+                        <div className="file-column column-name" role="cell">
+                            <div className="file-icon-container">
+                                <FileIcon filename={item.name} isDirectory={isDirectory} />
+                            </div>
                             <div className="file-name truncate" title={item.name}>
                                 {item.name}
                             </div>
-                            <div className="file-info truncate">
-                                {size} • {modified}
-                            </div>
+                        </div>
+                        <div className="file-column column-size" role="cell" title={isDirectory ? undefined : size}>
+                            {isDirectory ? '—' : size}
+                        </div>
+                        <div className="file-column column-type" role="cell" title={fileType}>
+                            {fileType}
+                        </div>
+                        <div className="file-column column-modified" role="cell" title={modified}>
+                            {modified}
                         </div>
                     </div>
                 )}

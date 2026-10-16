@@ -17,7 +17,8 @@
     background-color: var(--background-secondary);
     border-bottom: 1px solid var(--border);
     padding: 0;
-    min-height: 40px;
+    min-height: 26px;
+    position: relative;
     flex-shrink: 0;
     width: 100%;
 }
@@ -26,6 +27,7 @@
     display: flex;
     align-items: center;
     flex: 1;
+    min-width: 0;
     overflow-x: auto;
     scrollbar-width: none;
 }
@@ -37,9 +39,9 @@
 .tab {
     display: flex;
     align-items: center;
-    min-width: 240px;
-    max-width: 480px;
-    height: 40px;
+    min-width: 100px;
+    max-width: 180px;
+    height: 26px;
     background-color: var(--surface);
     border-right: 1px solid var(--border);
     cursor: pointer;
@@ -92,8 +94,8 @@
 .tab-content {
     display: flex;
     align-items: center;
-    gap: var(--space-sm);
-    padding: 0 var(--space-md);
+    gap: 4px;
+    padding: 0 6px;
     width: 100%;
     overflow: hidden;
     user-select: none;
@@ -104,9 +106,16 @@
 
 .tab-icon {
     flex-shrink: 0;
-    width: 16px;
-    height: 16px;
+    display: flex;
+    align-items: center;
+    width: 12px;
+    height: 12px;
     color: var(--text-secondary);
+}
+
+.tab-icon .icon {
+    width: 12px;
+    height: 12px;
 }
 
 .tab.active .tab-icon {
@@ -115,7 +124,8 @@
 
 .tab-title {
     flex: 1;
-    font-size: var(--font-size-sm);
+    font-size: var(--font-size-xs);
+    line-height: 1;
     color: var(--text-primary);
     white-space: nowrap;
     overflow: hidden;
@@ -130,8 +140,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     border-radius: var(--radius-circle);
     background: transparent;
     color: var(--text-tertiary);
@@ -172,8 +182,8 @@
 }
 
 .tab-close .icon {
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
 }
 
 .tab-actions {
@@ -187,10 +197,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 32px;
-    height: 40px;
-    padding: 0 var(--space-xs);
-    margin-left: var(--space-xs);
+    min-width: 26px;
+    height: 26px;
+    padding: 0;
+    margin-left: 0;
     flex-shrink: 0;
     user-select: none;
     -webkit-user-select: none;
@@ -212,11 +222,19 @@
     background: transparent;
 }
 
-.new-tab-button .btn {
+.new-tab-button .btn.btn-icon {
+    width: 22px;
+    height: 22px;
+    padding: 0;
     border: none;
     background: transparent !important;
     border-radius: var(--radius-sm);
     transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.new-tab-button .icon {
+    width: 12px;
+    height: 12px;
 }
 
 .new-tab-button .btn:hover:not(:disabled) {
@@ -335,7 +353,7 @@
     }
 
     .tab-content {
-        padding: 0 var(--space-sm);
+        padding: 0 4px;
     }
 
     .tab-title {

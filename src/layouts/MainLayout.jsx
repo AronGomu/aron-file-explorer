@@ -3,6 +3,7 @@ import { useFileSystem } from '../providers/FileSystemProvider';
 import { useContextMenu } from '../providers/ContextMenuProvider';
 import { useHistory } from '../providers/HistoryProvider';
 import { useSettings } from '../providers/SettingsProvider';
+import { useAppState } from '../providers/AppStateProvider';
 import { useSftp } from '../providers/SftpProvider';
 import { invoke } from '@tauri-apps/api/core';
 import { showError, showConfirm, showSuccess } from '../utils/NotificationSystem';
@@ -14,10 +15,8 @@ import NavigationButtons from '../components/explorer/NavigationButtons';
 import FileList from '../components/explorer/FileList';
 import DetailsPanel from '../components/explorer/DetailsPanel';
 import ContextMenu from '../components/contextMenu/ContextMenu';
-import ViewModes from '../components/explorer/ViewModes';
 
 // Additional Components
-import CreateFileButton from '../components/explorer/CreateFileButton';
 import RenameModal from '../components/common/RenameModal';
 import Terminal from '../components/terminal/Terminal';
 import TabManager from '../components/tabs/TabManager';
@@ -26,7 +25,6 @@ import SettingsPanel from '../components/settings/SettingsPanel';
 import ThisPCView from '../components/thisPc/ThisPCView';
 import NetworkView from '../components/network/NetworkView';
 import TemplateList from '../components/templates/TemplateList';
-import PreviewModal from '../components/preview/PreviewModal';
 
 // Hash Modals
 import HashFileModal from '../components/common/HashFileModal.jsx';
@@ -36,10 +34,8 @@ import HashDisplayModal from '../components/common/HashDisplayModal.jsx';
 // Settings Applier
 import SettingsApplier from '../utils/SettingsApplier.js';
 
-// Hooks
-import { usePreview } from '../hooks/usePreview';
-
 import '../styles/layouts/mainLayout.css';
+import '../components/explorer/viewModes.css';
 import {replaceFileName} from "../utils/pathUtils.js";
 
 /**
@@ -49,23 +45,18 @@ import {replaceFileName} from "../utils/pathUtils.js";
  * @returns {JSX.Element} The MainLayout component
  */
 const MainLayout = () => {
-    const { isLoading, currentDirData, selectedItems, loadDirectory, volumes, focusedItem, setFocusedItem, renameItem: fsRenameItem } = useFileSystem();
+    const { isLoading, currentDirData, selectedItems, loadDirectory, volumes, renameItem: fsRenameItem } = useFileSystem();
     const { isSftpPath, parseSftpPath, createSftpUrl } = useSftp();
     const { 
         isOpen: isContextMenuOpen, 
         position, 
         items, 
         closeContextMenu, 
-        clipboard,
-        copyToClipboard,
-        cutToClipboard,
-        pasteFromClipboard,
-        deleteItems,
         renameItem,
-        showProperties
     } = useContextMenu();
     const { currentPath, navigateTo } = useHistory();
-    const { settings, updateSetting } = useSettings();
+    const { settings } = useSettings();
+    const { toggleSidebar } = useAppState();
 
     // UI State - Initialize from settings
     const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(settings.show_details_panel || false);
@@ -93,125 +84,9 @@ const MainLayout = () => {
     const [isHashDisplayModalOpen, setIsHashDisplayModalOpen] = useState(false);
     const [hashModalItem, setHashModalItem] = useState(null);
     const [hashDisplayData, setHashDisplayData] = useState({ hash: '', fileName: '' });
-    const [columnsPerRow, setColumnsPerRow] = useState(4); // Track columns for preview navigation
 
     // Get terminal height for padding calculations
     const terminalHeight = settings.terminal_height || 240;
-
-    // Get sorted data the same way FileList does
-    const getSortedData = useCallback(() => {
-        const data = searchResults || currentDirData;
-        if (!data || (!data.directories?.length && !data.files?.length)) {
-            return [];
-        }
-
-        // Combine directories and files for sorting (same as FileList)
-        const combinedItems = [
-            ...(data.directories || []).map(dir => ({ ...dir, isDirectory: true })),
-            ...(data.files || []).map(file => ({ ...file, isDirectory: false }))
-        ];
-
-        // Sort by name with directories first (same as FileList default)
-        const sortedItems = [...combinedItems].sort((a, b) => {
-            // Directories always come before files
-            if (a.isDirectory && !b.isDirectory) return -1;
-            if (!a.isDirectory && b.isDirectory) return 1;
-
-            // Sort by name
-            const aName = a.name.toLowerCase();
-            const bName = b.name.toLowerCase();
-            return aName.localeCompare(bName);
-        });
-
-        return sortedItems;
-    }, [searchResults, currentDirData]);
-
-    // Initialize preview functionality
-    const getFocusedItem = () => {
-        // For search results, use the focused item from search
-        if (searchResults && searchResults.length > 0) {
-            // This would need to be implemented in search components
-            return null; // Placeholder for now
-        }
-        
-        // For regular file list, use the focused item from FileSystemProvider
-        return focusedItem;
-    };
-
-    // 2D Grid navigation functions using sorted data
-    const navigateUp = useCallback(() => {
-        const sortedItems = getSortedData();
-        if (!sortedItems.length) return;
-        
-        const currentIndex = focusedItem ? sortedItems.findIndex(item => item.path === focusedItem.path) : -1;
-        const newIndex = currentIndex - columnsPerRow;
-        
-        if (newIndex >= 0) {
-            setFocusedItem(sortedItems[newIndex]);
-        } else {
-            // Wrap to bottom row
-            const remainder = currentIndex % columnsPerRow;
-            const totalRows = Math.ceil(sortedItems.length / columnsPerRow);
-            const lastRowStartIndex = (totalRows - 1) * columnsPerRow;
-            const targetIndex = Math.min(lastRowStartIndex + remainder, sortedItems.length - 1);
-            setFocusedItem(sortedItems[targetIndex]);
-        }
-    }, [getSortedData, focusedItem, setFocusedItem, columnsPerRow]);
-
-    const navigateDown = useCallback(() => {
-        const sortedItems = getSortedData();
-        if (!sortedItems.length) return;
-        
-        const currentIndex = focusedItem ? sortedItems.findIndex(item => item.path === focusedItem.path) : -1;
-        const newIndex = currentIndex + columnsPerRow;
-        
-        if (newIndex < sortedItems.length) {
-            setFocusedItem(sortedItems[newIndex]);
-        } else {
-            // Wrap to top row
-            const remainder = currentIndex % columnsPerRow;
-            setFocusedItem(sortedItems[remainder]);
-        }
-    }, [getSortedData, focusedItem, setFocusedItem, columnsPerRow]);
-
-    const navigateLeft = useCallback(() => {
-        const sortedItems = getSortedData();
-        if (!sortedItems.length) return;
-        
-        const currentIndex = focusedItem ? sortedItems.findIndex(item => item.path === focusedItem.path) : -1;
-        
-        if (currentIndex % columnsPerRow === 0) {
-            // At leftmost column, wrap to rightmost of same row or previous row
-            const currentRow = Math.floor(currentIndex / columnsPerRow);
-            const nextRowLastIndex = Math.min((currentRow + 1) * columnsPerRow - 1, sortedItems.length - 1);
-            setFocusedItem(sortedItems[nextRowLastIndex]);
-        } else {
-            setFocusedItem(sortedItems[currentIndex - 1]);
-        }
-    }, [getSortedData, focusedItem, setFocusedItem, columnsPerRow]);
-
-    const navigateRight = useCallback(() => {
-        const sortedItems = getSortedData();
-        if (!sortedItems.length) return;
-        
-        const currentIndex = focusedItem ? sortedItems.findIndex(item => item.path === focusedItem.path) : -1;
-        
-        if ((currentIndex + 1) % columnsPerRow === 0 || currentIndex === sortedItems.length - 1) {
-            // At rightmost column or last item, wrap to leftmost of same row
-            const currentRow = Math.floor(currentIndex / columnsPerRow);
-            const rowStartIndex = currentRow * columnsPerRow;
-            setFocusedItem(sortedItems[rowStartIndex]);
-        } else {
-            setFocusedItem(sortedItems[currentIndex + 1]);
-        }
-    }, [getSortedData, focusedItem, setFocusedItem, columnsPerRow]);
-
-    const { 
-        open: isPreviewOpen, 
-        payload: previewPayload, 
-        isLoading: isPreviewLoading,
-        closePreview 
-    } = usePreview(getFocusedItem, navigateUp, navigateDown, navigateLeft, navigateRight);
 
     /**
      * Effect to update UI state when settings change
@@ -510,6 +385,13 @@ const MainLayout = () => {
          */
         const handleKeyDown = (e) => {
             if (e.target.closest?.('.enhanced-terminal')) return;
+            // Toggle sidebar: Ctrl+B
+            if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'b') {
+                e.preventDefault();
+                if (!e.repeat) toggleSidebar();
+                return;
+            }
+
             // Global search: Ctrl+Shift+F
             if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') {
                 e.preventDefault();
@@ -556,7 +438,7 @@ const MainLayout = () => {
 
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [selectedItems]);
+    }, [selectedItems, toggleSidebar]);
 
     /**
      * Copies current path to clipboard
@@ -648,16 +530,10 @@ const MainLayout = () => {
         }
     };
 
-    /**
-     * Handles view mode change with settings persistence
-     * @param {string} newMode - The new view mode
-     */
-    const handleViewModeChange = useCallback(async (newMode) => {
-        setViewMode(newMode);
-
-        // Save to settings
+    const handleViewModeChange = useCallback(async (mode) => {
+        setViewMode(mode);
         try {
-            await invoke('update_settings_field', { key: 'default_view', value: newMode });
+            await invoke('update_settings_field', { key: 'default_view', value: mode });
         } catch (error) {
             console.error('Failed to save view mode setting:', error);
         }
@@ -678,64 +554,18 @@ const MainLayout = () => {
         }
     }, [isDetailsPanelOpen]);
 
-    /**
-     * Handles hidden files visibility toggle with settings persistence
-     */
-    const handleHiddenFilesToggle = useCallback(async () => {
-        const newState = !settings.show_hidden_files_and_folders;
-        
-        try {
-            await updateSetting('show_hidden_files_and_folders', newState);
-            // Reload the current directory to reflect the change
-            if (currentPath) {
-                await loadDirectory(currentPath);
-            }
-        } catch (error) {
-            console.error('Failed to toggle hidden files setting:', error);
-        }
-    }, [settings.show_hidden_files_and_folders, updateSetting, currentPath, loadDirectory]);
+    useEffect(() => {
+        const handlePreviewToggle = (event) => {
+            if (event.defaultPrevented || event.key !== ' ' || event.ctrlKey || event.metaKey ||
+                event.altKey || event.shiftKey || event.target.isContentEditable ||
+                event.target.closest('input, textarea, select, button, a, [role="button"], [role="dialog"], .enhanced-terminal')) return;
+            event.preventDefault();
+            if (!event.repeat) handleDetailsPanelToggle();
+        };
 
-    /**
-     * File operation handlers - use the existing context menu functionality
-     */
-    const handleCut = useCallback(() => {
-        if (selectedItems.length === 0) return;
-        cutToClipboard(selectedItems);
-    }, [selectedItems, cutToClipboard]);
-
-    const handleCopy = useCallback(() => {
-        if (selectedItems.length === 0) return;
-        copyToClipboard(selectedItems);
-    }, [selectedItems, copyToClipboard]);
-
-    const handlePaste = useCallback(() => {
-        if (!clipboard.items || clipboard.items.length === 0) return;
-        pasteFromClipboard();
-    }, [clipboard.items, pasteFromClipboard]);
-
-    const handleRenameToolbar = useCallback(() => {
-        if (selectedItems.length !== 1) return;
-        // Directly dispatch the event instead of calling renameItem to avoid conflicts
-        document.dispatchEvent(new CustomEvent('open-rename-modal', {
-            detail: { item: selectedItems[0] }
-        }));
-    }, [selectedItems]);
-
-    const handleDelete = useCallback(() => {
-        if (selectedItems.length === 0) return;
-        deleteItems(selectedItems);
-    }, [selectedItems, deleteItems]);
-
-    const handleProperties = useCallback(() => {
-        if (selectedItems.length === 0) return;
-        // Toggle the details panel: close if open, open if closed
-        if (isDetailsPanelOpen) {
-            setIsDetailsPanelOpen(false);
-        } else {
-            showProperties(selectedItems[0]);
-            setIsDetailsPanelOpen(true);
-        }
-    }, [selectedItems, showProperties, isDetailsPanelOpen]);
+        document.addEventListener('keydown', handlePreviewToggle);
+        return () => document.removeEventListener('keydown', handlePreviewToggle);
+    }, [handleDetailsPanelToggle]);
 
     /**
      * Effect to clear search when changing directory
@@ -766,109 +596,14 @@ const MainLayout = () => {
             default:
                 return (
                     <div className="files-container">
-                        <div className="action-bar">
-                            <div className="action-bar-left">
-                                <CreateFileButton />
-                                
-                                <div className="action-divider"></div>
-                                
-                                <button
-                                    className="icon-button"
-                                    onClick={handleCut}
-                                    disabled={selectedItems.length === 0}
-                                    title="Cut (Ctrl+X)"
-                                    aria-label="Cut selected items"
-                                >
-                                    <span className="icon icon-cut"></span>
-                                </button>
-                                
-                                <button
-                                    className="icon-button"
-                                    onClick={handleCopy}
-                                    disabled={selectedItems.length === 0}
-                                    title="Copy (Ctrl+C)"
-                                    aria-label="Copy selected items"
-                                >
-                                    <span className="icon icon-copy"></span>
-                                </button>
-                                
-                                <button
-                                    className="icon-button"
-                                    onClick={handlePaste}
-                                    disabled={!clipboard.items || clipboard.items.length === 0}
-                                    title="Paste (Ctrl+V)"
-                                    aria-label="Paste items"
-                                >
-                                    <span className="icon icon-paste"></span>
-                                </button>
-                                
-                                <button
-                                    className="icon-button"
-                                    onClick={handleRenameToolbar}
-                                    disabled={selectedItems.length !== 1}
-                                    title="Rename (F2)"
-                                    aria-label="Rename selected item"
-                                >
-                                    <span className="icon icon-rename"></span>
-                                </button>
-                                
-                                <button
-                                    className="icon-button"
-                                    onClick={handleDelete}
-                                    disabled={selectedItems.length === 0}
-                                    title="Delete (Del)"
-                                    aria-label="Delete selected items"
-                                >
-                                    <span className="icon icon-trash"></span>
-                                </button>
-                                
-                                <button
-                                    className="icon-button"
-                                    onClick={handleProperties}
-                                    disabled={selectedItems.length === 0}
-                                    title="Properties (Alt+Enter)"
-                                    aria-label="Show properties"
-                                >
-                                    <span className="icon icon-properties"></span>
-                                </button>
-                            </div>
-
-                            <div className="action-bar-right">
-                                {currentView === 'explorer' && (
-                                    <ViewModes
-                                        currentMode={viewMode}
-                                        onChange={handleViewModeChange}
-                                    />
-                                )}
-
-                                <button
-                                    className="icon-button toggle-hidden-files"
-                                    onClick={handleHiddenFilesToggle}
-                                    title={`${settings.show_hidden_files_and_folders ? 'Hide' : 'Show'} hidden files and folders`}
-                                    aria-label="Toggle hidden files visibility"
-                                >
-                                    <span className={`icon ${settings.show_hidden_files_and_folders ? 'icon-eye' : 'icon-eye-off'}`}></span>
-                                </button>
-                                
-                                <button
-                                    className={`icon-button ${isDetailsPanelOpen ? 'active' : ''}`}
-                                    onClick={handleDetailsPanelToggle}
-                                    title="Details Panel"
-                                    aria-label="Toggle details panel"
-                                >
-                                    <span className="icon icon-panel-right"></span>
-                                </button>
-                            </div>
-                        </div>
-
                         <FileList
                             data={displayData}
                             isLoading={isLoading}
                             viewMode={viewMode}
                             isSearching={!!searchValue}
                             searchTerm={searchValue}
-                            disableArrowKeys={isPreviewOpen}
-                            onColumnsChange={setColumnsPerRow}
+                            isPreviewPanelOpen={isDetailsPanelOpen}
+                            onPreviewPanelToggle={handleDetailsPanelToggle}
                         />
                     </div>
                 );
@@ -899,6 +634,26 @@ const MainLayout = () => {
                         <div className="toolbar-center">
                         </div>
                         <div className="toolbar-right">
+                            {currentView === 'explorer' && (
+                                <div className="view-modes" role="group" aria-label="File view">
+                                    {[
+                                        { id: 'grid', label: 'Icons view', icon: 'grid' },
+                                        { id: 'list', label: 'List view', icon: 'list' },
+                                    ].map(mode => (
+                                        <button
+                                            key={mode.id}
+                                            type="button"
+                                            className={`view-mode-button ${viewMode === mode.id ? 'active' : ''}`}
+                                            onClick={() => handleViewModeChange(mode.id)}
+                                            aria-label={mode.label}
+                                            aria-pressed={viewMode === mode.id}
+                                            title={mode.label}
+                                        >
+                                            <span className={`icon icon-${mode.icon}`} aria-hidden="true"></span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                             <button
                                 className="icon-button"
                                 onClick={() => setIsGlobalSearchOpen(true)}
@@ -913,8 +668,6 @@ const MainLayout = () => {
                 <div className="layout-content">
                     {/* Sidebar */}
                     <Sidebar
-                        onTerminalToggle={() => setIsTerminalOpen(!isTerminalOpen)}
-                        isTerminalOpen={isTerminalOpen}
                         currentView={currentView}
                     />
 
@@ -934,6 +687,7 @@ const MainLayout = () => {
                                     <DetailsPanel
                                         item={selectedItems[0] || null}
                                         isMultipleSelection={selectedItems.length > 1}
+                                        onCollapse={handleDetailsPanelToggle}
                                     />
                                 </>
                             )}
@@ -1019,14 +773,6 @@ const MainLayout = () => {
                 fileName={hashDisplayData.fileName}
             />
 
-            {/* Preview Modal */}
-            {(isPreviewOpen || isPreviewLoading) && (
-                <PreviewModal
-                    payload={previewPayload}
-                    onClose={closePreview}
-                    isLoading={isPreviewLoading}
-                />
-            )}
         </div>
     );
 };

@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { useFileSystem } from './FileSystemProvider';
 import { useHistory } from './HistoryProvider';
 import { useSftp } from './SftpProvider';
@@ -122,13 +123,34 @@ export default function ContextMenuProvider({ children }) {
                 }
             }
             
-            await navigator.clipboard.writeText(pathToCopy);
+            await writeText(pathToCopy);
             showSuccess(`Path copied to clipboard: ${pathToCopy}`);
         } catch (error) {
             console.error('Failed to copy path:', error);
             showError('Failed to copy path to clipboard.');
         }
     }, [isSftpPath, parseSftpPath]);
+
+    useEffect(() => {
+        const handleCopyPathShortcut = (event) => {
+            if (event.target.isContentEditable ||
+                event.target.closest?.('input, textarea, select, .enhanced-terminal')) return;
+            if ((event.ctrlKey || event.metaKey) && event.altKey && !event.shiftKey &&
+                (event.code === 'KeyC' || event.key.toLowerCase() === 'c')) {
+                event.preventDefault();
+                event.stopPropagation();
+                if (event.repeat || isProcessing) return;
+                if (selectedItems.length !== 1) {
+                    showError('Select one file or folder to copy its path.');
+                    return;
+                }
+                copyPath(selectedItems[0]);
+            }
+        };
+
+        window.addEventListener('keydown', handleCopyPathShortcut, true);
+        return () => window.removeEventListener('keydown', handleCopyPathShortcut, true);
+    }, [copyPath, isProcessing, selectedItems]);
 
     // Add as template
     const addAsTemplate = useCallback(async (item) => {

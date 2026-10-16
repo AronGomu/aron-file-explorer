@@ -55,6 +55,7 @@
     display: flex;
     flex-direction: column;
     flex-grow: 1;
+    min-width: 0;
     height: 100%;
     overflow: hidden;
     position: relative;
@@ -73,54 +74,6 @@
     flex-grow: 1;
     height: 100%;
     overflow: hidden;
-}
-
-.action-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--space-sm) var(--space-md);
-    gap: var(--space-md);
-    background-color: var(--background-secondary);
-    border-bottom: 1px solid var(--border);
-    position: relative;
-    z-index: calc(var(--z-index-sticky) + 1);
-}
-
-.action-bar-left {
-    display: flex;
-    align-items: center;
-    gap: var(--space-md);
-}
-
-.action-bar-right {
-    display: flex;
-    align-items: center;
-    gap: var(--space-md);
-}
-
-.toggle-hidden-files {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    background-color: transparent;
-    color: var(--text-primary);
-    border: none;
-    border-radius: var(--radius-md);
-    transition: background-color var(--transition-fast);
-}
-
-.toggle-hidden-files .icon {
-    width: 20px;
-    height: 20px;
-}
-
-.action-divider {
-    width: 1px;
-    height: 24px;
-    background-color: var(--border);
 }
 
 .copy-path-button {

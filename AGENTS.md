@@ -13,6 +13,10 @@ Tauri 2 desktop file explorer: React 19/Vite frontend, Rust backend. Frontend en
 - CI reference: `.github/workflows/test-only.yml`
 - Tauri config: `src-tauri/tauri.conf.json`
 
+## UI Testing
+
+- U1. For every UI test, visual check, or local app launch, use the full native Tauri desktop application (`npm run tauri dev`, or build and launch the native Tauri artifact). Never open the app through Vite's `devUrl` in a browser preview or standalone browser webview.
+
 ## Architecture
 
 React context providers manage UI state. Tauri IPC connects providers/hooks to Rust command modules. Rust owns local/SFTP filesystem operations, search, metadata, settings, hashing, previews, permissions, volumes, templates, and shell execution. Search engine lives under `src-tauri/src/search_engine/`.

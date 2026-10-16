@@ -12,7 +12,7 @@ mod themes;
 
 use crate::commands::{
     command_exec_commands, terminal_commands, file_system_operation_commands, hash_commands, meta_data_commands,
-    search_engine_commands, settings_commands, template_commands, volume_operations_commands, sftp_file_system_operation_commands, preview_commands, permission_commands, theme_commands
+    search_engine_commands, settings_commands, template_commands, volume_operations_commands, sftp_file_system_operation_commands, permission_commands, theme_commands
 };
 use tauri::ipc::Invoke;
 use tauri::Manager;
@@ -79,9 +79,6 @@ fn all_commands() -> fn(Invoke) -> bool {
         search_engine_commands::stop_indexing,
         search_engine_commands::get_suggestions,
 
-        // Preview commands
-        preview_commands::build_preview,
-
         //sftp commands
         sftp_file_system_operation_commands::load_dir,
         sftp_file_system_operation_commands::open_file_sftp,
@@ -95,7 +92,6 @@ fn all_commands() -> fn(Invoke) -> bool {
         sftp_file_system_operation_commands::rename_directory_sftp,
         sftp_file_system_operation_commands::copy_directory_sftp,
         sftp_file_system_operation_commands::move_directory_sftp,
-        sftp_file_system_operation_commands::build_preview_sftp,
         sftp_file_system_operation_commands::download_and_open_sftp_file,
         sftp_file_system_operation_commands::cleanup_sftp_temp_files,
 
@@ -128,6 +124,7 @@ async fn main() {
             }
         })
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(all_commands())
         .setup(move |app| {

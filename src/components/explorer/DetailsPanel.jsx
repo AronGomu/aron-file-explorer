@@ -1,5 +1,6 @@
 import React from 'react';
 import FileIcon from './FileIcon';
+import IconButton from '../common/IconButton';
 import { formatFileSize, formatDate, getFileType } from '../../utils/formatters';
 import './detailsPanel.css';
 
@@ -8,21 +9,27 @@ import './detailsPanel.css';
  * @param {Object} props - Component properties
  * @param {Object} [props.item] - The selected item to display details for
  * @param {boolean} [props.isMultipleSelection=false] - Whether multiple items are selected
+ * @param {Function} [props.onCollapse] - Callback to collapse the preview panel
  * @returns {React.ReactElement} Details panel component
  */
-const DetailsPanel = ({ item, isMultipleSelection = false }) => {
+const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse }) => {
+    const collapseButton = onCollapse && (
+        <IconButton
+            icon="chevron-right"
+            className="details-panel-toggle"
+            label="Collapse preview panel"
+            title="Collapse preview panel (Space)"
+            aria-expanded={true}
+            aria-keyshortcuts="Space"
+            onClick={onCollapse}
+        />
+    );
+
     // If no item selected or multiple items are selected
     if (!item || isMultipleSelection) {
         return (
             <div className="details-panel">
-                <div className="details-header">
-                    <h3 className="details-title">
-                        {isMultipleSelection
-                            ? 'Multiple Items Selected'
-                            : 'No Item Selected'}
-                    </h3>
-                </div>
-
+                {collapseButton}
                 <div className="details-content">
                     {isMultipleSelection ? (
                         <div className="details-summary">
@@ -63,10 +70,7 @@ const DetailsPanel = ({ item, isMultipleSelection = false }) => {
 
     return (
         <div className="details-panel">
-            <div className="details-header">
-                <h3 className="details-title">Properties</h3>
-            </div>
-
+            {collapseButton}
             <div className="details-content">
                 <div className="details-preview">
                     <div className="details-icon">

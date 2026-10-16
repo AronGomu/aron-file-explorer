@@ -69,6 +69,7 @@ export const registerShortcuts = (handlers) => {
  */
 export const SHORTCUTS = {
     COPY: 'Control+c',
+    COPY_PATH: 'Control+Alt+c',
     CUT: 'Control+x',
     PASTE: 'Control+v',
     SELECT_ALL: 'Control+a',
@@ -77,9 +78,9 @@ export const SHORTCUTS = {
     SEARCH: 'Control+f',
     NEW_FOLDER: 'Control+Shift+n',
     NEW_FILE: 'Control+n',
-    REFRESH: 'F5',
-    BACK: 'Alt+ArrowLeft',
-    FORWARD: 'Alt+ArrowRight',
+    REFRESH: 'Control+r',
+    BACK: 'Backspace',
+    FORWARD: 'Shift+Backspace',
     UP_DIRECTORY: 'Alt+ArrowUp',
     HOME: 'Home',
     END: 'End',

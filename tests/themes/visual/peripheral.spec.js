@@ -1,19 +1,15 @@
 import { expect, test } from '@playwright/test';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 
-// Full Chromium provides native PDF rendering; headless-shell does not.
 test.use({ channel: 'chromium' });
 
 const themes = ['catppuccin-latte', 'catppuccin-mocha'];
-const cases = ['search', 'network', 'sftp-form', 'templates', 'preview-image', 'preview-video', 'preview-text', 'preview-error', 'dialogs', 'permissions', 'toasts', 'confirm', 'loading', 'error-fallback'];
+const cases = ['search', 'network', 'sftp-form', 'templates', 'dialogs', 'permissions', 'toasts', 'confirm', 'loading', 'error-fallback'];
 // Only T5-owned declarations; shared Modal/Button/input/Icon colors are T4's gate.
 const ownedText = {
     search: '.search-input-field, .result-name-container, .result-path-container, .suggestion-item span',
     network: '.network-view-title, .network-view-subtitle, .connection-name, .connection-address, .connect-button, .add-connection-button, .empty-connections p',
     templates: '.template-name, .template-meta span, .template-list-error p',
-    'preview-image': '.preview-file-size', 'preview-video': '.preview-modal-header div',
-    'preview-text': '.preview-line-content, .preview-line-number, .preview-text-truncated p',
-    'preview-error': '.preview-error h3, .preview-error p, .preview-loading p',
     permissions: '.permission-content h3, .permission-content p, .instructions h4, .instructions h5, .instructions li',
     toasts: '#notification-container > div', confirm: 'body > div:last-child h3, body > div:last-child p, body > div:last-child button',
     loading: 'main div[style] > div:last-of-type', 'error-fallback': 'main h1, main p, main button',
@@ -71,8 +67,6 @@ for (const theme of themes) {
     for (const caseId of cases) {
         test(`theme_peripheral_screenshots ${theme} ${caseId}`, async ({ page }) => {
             const errors = await visit(page, caseId, theme);
-            if (caseId === 'preview-image') await expect(page.locator('img.preview-image')).toHaveJSProperty('complete', true);
-            if (caseId === 'preview-video') await expect.poll(() => page.locator('video').evaluate(video => video.readyState)).toBeGreaterThanOrEqual(2);
             if (caseId === 'search') {
                 await page.locator('.search-input-field').fill('reference');
                 await page.getByRole('button', { name: 'Search (Enter)', exact: true }).click();
@@ -233,76 +227,4 @@ for (const theme of themes) {
             await expect(page.getByLabel('callback result')).toHaveText(String(action === 'Confirm'));
         }
     });
-    test(`theme_preview_pixels ${theme} rendered image video PDF text boundaries`, async ({ page }) => {
-        await visit(page, 'preview-image', theme);
-        await expect(page.locator('.preview-image')).toHaveJSProperty('naturalWidth', 128);
-        const box = await page.locator('.preview-image').boundingBox();
-        const shot = await page.screenshot();
-        const pixels = await page.evaluate(async ({ base64, box }) => {
-            const img = new Image(); img.src = `data:image/png;base64,${base64}`; await img.decode();
-            const canvas = document.createElement('canvas'); canvas.width = img.width; canvas.height = img.height;
-            const context = canvas.getContext('2d'); context.drawImage(img, 0, 0);
-            return [[32, 32], [96, 32], [32, 96], [80, 80], [90, 80]].map(([x, y]) => [...context.getImageData(box.x + x, box.y + y, 1, 1).data]);
-        }, { base64: shot.toString('base64'), box });
-        expect(pixels.slice(0, 3)).toEqual([[240, 32, 64, 255], [16, 208, 96, 255], [32, 96, 224, 255]]);
-        const tokens = JSON.parse(readFileSync(`src-tauri/resources/themes/${theme}.theme.json`, 'utf8')).tokens;
-        const checkerboard = [tokens.previewCheckerboardLight, tokens.previewCheckerboardDark].map(hex => [...hex.slice(1).match(/../g).map(value => parseInt(value, 16)), 255]);
-        expect(pixels.slice(3).sort()).toEqual(checkerboard.sort());
-        writeFileSync(`artifacts/theme-validation/visual/${theme}-image-pixels.json`, JSON.stringify({ box, pixels }, null, 2));
-        const styles = await page.locator('.preview-image').evaluate(node => {
-            const result = [];
-            for (let el = node; el; el = el.parentElement) result.push({ filter: getComputedStyle(el).filter, opacity: getComputedStyle(el).opacity, mix: getComputedStyle(el).mixBlendMode });
-            return { ancestors: result, checkerboard: getComputedStyle(node).backgroundImage };
-        });
-        for (const style of styles.ancestors) expect(style).toEqual({ filter: 'none', opacity: '1', mix: 'normal' });
-        expect(styles.checkerboard).toContain('conic-gradient');
-        await visit(page, 'preview-video', theme);
-        await expect.poll(() => page.locator('video').evaluate(video => video.readyState)).toBeGreaterThanOrEqual(2);
-        const sample = await page.locator('video').evaluate(async video => {
-            await video.play(); await new Promise(resolve => setTimeout(resolve, 250)); video.pause();
-            const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128;
-            const ctx = canvas.getContext('2d'); ctx.drawImage(video, 0, 0);
-            return { pixel: [...ctx.getImageData(32, 32, 1, 1).data], time: video.currentTime, filter: getComputedStyle(video).filter };
-        });
-        expect(sample.time).toBeGreaterThan(0); expect(sample.filter).toBe('none');
-        writeFileSync(`artifacts/theme-validation/visual/${theme}-video-pixels.json`, JSON.stringify(sample, null, 2));
-        for (const [i, expected] of [240, 32, 64].entries()) expect(Math.abs(sample.pixel[i] - expected)).toBeLessThanOrEqual(3);
-        await page.screenshot({ path: `artifacts/theme-validation/visual/${theme}-video-playing.png` });
-        await visit(page, 'preview-image', theme, '&variant=pdf');
-        const pdf = await page.locator('iframe').getAttribute('src');
-        const response = await page.request.get(pdf);
-        expect(await response.body()).toEqual(readFileSync('tests/themes/gallery/public/fixtures/reference.pdf'));
-        expect(await page.locator('iframe').evaluate(node => getComputedStyle(node).filter)).toBe('none');
-        writeFileSync(`artifacts/theme-validation/visual/${theme}-pdf-boundary.json`, JSON.stringify(await page.locator('iframe').boundingBox(), null, 2));
-        await page.screenshot({ path: `artifacts/theme-validation/visual/${theme}-pdf-platform.png` });
-        await visit(page, 'preview-text', theme);
-        expect(await page.locator('.preview-line-content').allTextContents()).toEqual(['<script>not HTML</script>', '  exact whitespace Ω', '\u00a0']);
-        await visit(page, 'loading', theme, '&state=theme');
-        await expect(page.getByText('Loading theme...', { exact: true })).toBeVisible();
-        await visit(page, 'preview-error', theme, '&state=loading');
-        await expect(page.getByText('Loading preview...', { exact: true })).toBeVisible();
-    });
 }
-
-// Full Chromium includes PDF viewer; headless-shell screenshots alone cannot prove PDF pixels.
-test.describe('theme_preview_pdf_pixels', () => {
-    for (const theme of themes) {
-        test(`${theme} document pixels remain original; platform controls excluded`, async ({ page }) => {
-            const errors = await visit(page, 'preview-image', theme, '&variant=pdf');
-            const frame = page.locator('iframe');
-            await expect(frame).toBeVisible();
-            const box = await frame.boundingBox();
-            await expect.poll(async () => {
-                const shot = await page.screenshot();
-                return page.evaluate(async ({ base64, box }) => {
-                    const image = new Image(); image.src = `data:image/png;base64,${base64}`; await image.decode();
-                    const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
-                    const ctx = canvas.getContext('2d'); ctx.drawImage(image, 0, 0);
-                    return [[160, 100], [250, 100], [160, 180], [250, 180]].map(([x, y]) => [...ctx.getImageData(box.x + x, box.y + y, 1, 1).data]);
-                }, { base64: shot.toString('base64'), box });
-            }).toEqual([[240, 32, 64, 255], [16, 208, 96, 255], [32, 96, 224, 255], [255, 255, 255, 255]]);
-            expect(errors).toEqual([]);
-            await page.screenshot({ path: `artifacts/theme-validation/visual/${theme}-pdf-rendered.png` });
-        });
-    }
-});

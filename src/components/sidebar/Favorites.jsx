@@ -84,21 +84,8 @@ const Favorites = ({
         }
     };
 
-    // If there are no favorites, display a message
     if (favorites.length === 0) {
-        if (isCollapsed) return null;
-
-        return (
-            <div className="sidebar-empty-state">
-                <div className="empty-state-icon">
-                    <span className="icon icon-star"></span>
-                </div>
-                <div className="empty-state-text">
-                    <p>No favorites added</p>
-                    <span>Right-click an item and select <br /> "Add to Favorites"</span>
-                </div>
-            </div>
-        );
+        return null;
     }
 
     return (

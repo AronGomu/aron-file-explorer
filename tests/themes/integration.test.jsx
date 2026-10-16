@@ -6,7 +6,6 @@ import { listen } from '@tauri-apps/api/event';
 import SettingsProvider from '../../src/providers/SettingsProvider';
 import ThemeProvider, { useTheme } from '../../src/providers/ThemeProvider';
 import SettingsPanel from '../../src/components/settings/SettingsPanel';
-import PreviewModal from '../../src/components/preview/PreviewModal';
 import { showConfirm } from '../../src/utils/NotificationSystem';
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }));
@@ -93,7 +92,6 @@ async function mount() {
     host = document.createElement('div'); document.body.append(host); root = createRoot(host);
     await act(async () => root.render(<SettingsProvider><ThemeProvider>
         <Draft /><SettingsPanel isOpen onClose={() => {}} />
-        <PreviewModal payload={{ kind: 'Text', name: 'reference.txt', text: '<exact> content', bytes: 15 }} />
     </ThemeProvider></SettingsProvider>));
 }
 async function publish(themes, issues = []) {
@@ -124,17 +122,14 @@ afterEach(() => {
     vi.clearAllTimers(); vi.useRealTimers();
 });
 
-test('theme_system_os_transition: Settings + preview + open confirm retain identity across light dark light', async () => {
+test('theme_system_os_transition: Settings + open confirm retain identity across light dark light', async () => {
     await mount(); const draft = host.querySelector('input[aria-label="retained draft"]'); draft.value = 'typed state';
-    const preview = document.querySelector('.preview-line-content');
     const promise = showConfirm('Preserve open dialog');
     const dialog = document.body.lastElementChild;
     for (const dark of [true, false]) {
         await os(dark);
         expect(document.documentElement.dataset.theme).toBe(dark ? 'catppuccin-mocha' : 'catppuccin-latte');
         expect(settings.active_theme_id).toBe('system');
-        expect(document.querySelector('.preview-line-content')).toBe(preview);
-        expect(preview.textContent).toBe('<exact> content');
         expect(draft.value).toBe('typed state'); expect(dialog.isConnected).toBe(true);
         expect(dialog.firstElementChild.style.background).toBe('var(--surface)');
     }

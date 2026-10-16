@@ -3,6 +3,7 @@ import {useFileSystem} from '../../providers/FileSystemProvider';
 import {useHistory} from '../../providers/HistoryProvider';
 import {useContextMenu} from '../../providers/ContextMenuProvider';
 import {useSftp} from '../../providers/SftpProvider';
+import {useAppState} from '../../providers/AppStateProvider';
 import SidebarItem from './SidebarItem';
 import Favorites from './Favorites';
 //import QuickAccess from './QuickAccess';
@@ -12,20 +13,115 @@ import AddSftpConnectionView from './AddSftpConnectionView';
 import './sidebar.css';
 import {showConfirm, showError, showSuccess} from "../../utils/NotificationSystem.js";
 
+const COLLAPSED_WIDTH = 48;
+const MIN_SIDEBAR_WIDTH = 160;
+const MAX_SIDEBAR_WIDTH = 480;
+const COLLAPSE_RESISTANCE = 100;
+const SIDEBAR_SHORTCUTS = [
+    { id: 'search', label: 'Search', path: 'M21 21l-4.4-4.4M19 11a8 8 0 1 1-16 0a8 8 0 0 1 16 0' },
+    { id: 'favorites', label: 'Favorites', path: 'M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z' },
+    { id: 'drives', label: 'Drives', path: 'M5 4h14l3 10v6H2v-6zM2 14h20M6 17h.01M10 17h.01' },
+    { id: 'network', label: 'Network', path: 'M21 12a9 9 0 1 1-18 0a9 9 0 0 1 18 0M3 12h18M12 3a16 16 0 0 1 0 18a16 16 0 0 1 0-18' },
+];
+const getMaximumWidth = () => Math.max(MIN_SIDEBAR_WIDTH,
+    Math.min(MAX_SIDEBAR_WIDTH, Math.floor(window.innerWidth * 0.6)));
+
 /**
  * Sidebar component - Provides navigation, favorites, and quick access
  *
  * @param {Object} props - Component props
- * @param {Function} props.onTerminalToggle - Callback to toggle terminal visibility
- * @param {boolean} props.isTerminalOpen - Whether the terminal is currently open
  * @param {string} props.currentView - Current view being displayed (e.g., 'this-pc')
  * @returns {React.ReactElement} Sidebar component
  */
-const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
+const Sidebar = ({ currentView }) => {
     const { volumes, loadDirectory, loadVolumes } = useFileSystem();
     const { currentPath, navigateTo } = useHistory();
     const { removeFromFavorites } = useContextMenu();
     const { navigateToSftpConnection, createSftpUrl, isSftpPath, parseSftpPath, createSftpPath } = useSftp();
+    const { isSidebarCollapsed, setIsSidebarCollapsed, toggleSidebar } = useAppState();
+    const [sidebarWidth, setSidebarWidth] = useState(() => Math.min(240, getMaximumWidth()));
+    const [isResizing, setIsResizing] = useState(false);
+    const resizeStart = useRef(null);
+    const searchInputRef = useRef(null);
+    const sectionRefs = useRef({});
+    const [pendingFocus, setPendingFocus] = useState(null);
+
+    useEffect(() => {
+        if (isSidebarCollapsed || !pendingFocus) return;
+        const target = pendingFocus === 'search' ? searchInputRef.current : sectionRefs.current[pendingFocus];
+        target?.focus({ preventScroll: true });
+        target?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        setPendingFocus(null);
+    }, [isSidebarCollapsed, pendingFocus]);
+
+    useEffect(() => {
+        const constrainWidth = () => setSidebarWidth(width => Math.min(width, getMaximumWidth()));
+        window.addEventListener('resize', constrainWidth);
+        return () => window.removeEventListener('resize', constrainWidth);
+    }, []);
+
+    const resizeSidebar = (width) => {
+        if (width < MIN_SIDEBAR_WIDTH) {
+            setIsSidebarCollapsed(true);
+        } else {
+            setSidebarWidth(Math.min(Math.round(width), getMaximumWidth()));
+            setIsSidebarCollapsed(false);
+        }
+    };
+
+    const handleResizeStart = (event) => {
+        if (event.button !== 0) return;
+        event.preventDefault();
+        event.currentTarget.focus();
+        resizeStart.current = {
+            x: event.clientX,
+            width: event.currentTarget.parentElement.getBoundingClientRect().width,
+        };
+        event.currentTarget.setPointerCapture(event.pointerId);
+        setIsResizing(true);
+    };
+
+    const handleResizeMove = (event) => {
+        if (!resizeStart.current || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
+        const width = resizeStart.current.width + event.clientX - resizeStart.current.x;
+        // Hold at the minimum until the pointer clears the resistance zone.
+        if (!isSidebarCollapsed && width < MIN_SIDEBAR_WIDTH &&
+            width > MIN_SIDEBAR_WIDTH - COLLAPSE_RESISTANCE) {
+            setSidebarWidth(MIN_SIDEBAR_WIDTH);
+            return;
+        }
+        resizeSidebar(width);
+    };
+
+    const handleResizeEnd = (event) => {
+        resizeStart.current = null;
+        setIsResizing(false);
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+    };
+
+    const handleResizeKeyDown = (event) => {
+        switch (event.key) {
+            case 'ArrowLeft':
+                resizeSidebar((isSidebarCollapsed ? COLLAPSED_WIDTH : sidebarWidth) - 10);
+                break;
+            case 'ArrowRight':
+                if (isSidebarCollapsed) setIsSidebarCollapsed(false);
+                else resizeSidebar(sidebarWidth + 10);
+                break;
+            case 'Home':
+                setIsSidebarCollapsed(true);
+                break;
+            case 'End':
+                resizeSidebar(getMaximumWidth());
+                break;
+            default:
+                return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+    };
 
     const [systemInfo, setSystemInfo] = useState(null);
     const [isAddSourceModalOpen, setIsAddSourceModalOpen] = useState(false);
@@ -98,10 +194,12 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
     // State for collapsible sections
     const [sectionCollapsed, setSectionCollapsed] = useState(() => {
         const saved = localStorage.getItem('sidebarSectionsCollapsed');
-        return saved ? JSON.parse(saved) : {
-            quickAccess: false,
-            favorites: false,
-            drives: false
+        return {
+            quickAccess: true,
+            favorites: true,
+            drives: true,
+            network: true,
+            ...(saved ? JSON.parse(saved) : {})
         };
     });
 
@@ -141,6 +239,16 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
         };
         setSectionCollapsed(newSectionCollapsed);
         localStorage.setItem('sidebarSectionsCollapsed', JSON.stringify(newSectionCollapsed));
+    };
+
+    const openSidebarSection = (section) => {
+        if (section !== 'search') {
+            const newSectionCollapsed = { ...sectionCollapsed, [section]: false };
+            setSectionCollapsed(newSectionCollapsed);
+            localStorage.setItem('sidebarSectionsCollapsed', JSON.stringify(newSectionCollapsed));
+        }
+        setIsSidebarCollapsed(false);
+        setPendingFocus(section);
     };
 
     /**
@@ -290,8 +398,58 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
 
     return (
         <>
-            <aside className="sidebar">
-                <div className="sidebar-content">
+            <aside
+                id="explorer-sidebar"
+                className={`sidebar${isSidebarCollapsed ? ' sidebar-collapsed' : ''}${isResizing ? ' sidebar-resizing' : ''}`}
+                style={{ '--sidebar-width': `${sidebarWidth}px` }}
+                aria-label="Sidebar"
+            >
+                <div className="sidebar-header">
+                    {!isSidebarCollapsed && (
+                        <input
+                            ref={searchInputRef}
+                            type="search"
+                            className="input sidebar-search"
+                            placeholder="Search…"
+                            aria-label="Search sidebar"
+                            value=""
+                            readOnly
+                            aria-disabled="true"
+                        />
+                    )}
+                    <button
+                        type="button"
+                        className="sidebar-toggle"
+                        onClick={toggleSidebar}
+                        aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                        aria-expanded={!isSidebarCollapsed}
+                        aria-controls="explorer-sidebar-content"
+                        aria-keyshortcuts="Control+b Meta+b"
+                        title={`${isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} (Ctrl+B)`}
+                    >
+                        <span className={`icon icon-chevron-${isSidebarCollapsed ? 'right' : 'left'}`} aria-hidden="true"></span>
+                    </button>
+                </div>
+                {isSidebarCollapsed && (
+                    <nav className="sidebar-rail" aria-label="Sidebar sections">
+                        {SIDEBAR_SHORTCUTS.map(shortcut => (
+                            <button
+                                key={shortcut.id}
+                                type="button"
+                                className="sidebar-toggle"
+                                onClick={() => openSidebarSection(shortcut.id)}
+                                aria-label={`Open ${shortcut.label}`}
+                                aria-controls="explorer-sidebar-content"
+                                title={shortcut.label}
+                            >
+                                <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                    <path d={shortcut.path} />
+                                </svg>
+                            </button>
+                        ))}
+                    </nav>
+                )}
+                <div id="explorer-sidebar-content" className="sidebar-content" hidden={isSidebarCollapsed}>
                     {/* Quick Access section */}
                     {/*
                     <section className="sidebar-section">
@@ -318,7 +476,7 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                     {/* Favorites section */}
                     <section className="sidebar-section">
                         <div className="sidebar-section-header">
-                            <h3 className="sidebar-section-title">Favorites</h3>
+                            <h3 className="sidebar-section-title" tabIndex={-1} ref={(element) => { sectionRefs.current.favorites = element; }}>Favorites</h3>
                             <div className="sidebar-section-actions">
                                 <button
                                     className="section-add-button"
@@ -338,6 +496,7 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                         </div>
                         {!sectionCollapsed.favorites && (
                             <Favorites
+                                isCollapsed={isSidebarCollapsed}
                                 onItemClick={handleItemClick}
                                 onRemove={handleRemoveFromFavorites}
                                 onAdd={addToFavorites}
@@ -350,7 +509,7 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                     {/* Drives/Volumes section */}
                     <section className="sidebar-section">
                         <div className="sidebar-section-header">
-                            <h3 className="sidebar-section-title">Drives</h3>
+                            <h3 className="sidebar-section-title" tabIndex={-1} ref={(element) => { sectionRefs.current.drives = element; }}>Drives</h3>
                             <button
                                 className="section-collapse-button"
                                 onClick={() => toggleSectionCollapse('drives')}
@@ -367,6 +526,7 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                                         icon={volume.is_removable ? 'usb' : 'drive'}
                                         name={volume.volume_name || volume.mount_point}
                                         path={volume.mount_point}
+                                        isCollapsed={isSidebarCollapsed}
                                         isActive={currentView === 'explorer' && currentPath === volume.mount_point}
                                         onClick={() => handleItemClick(volume.mount_point)}
                                         info={`${(volume.available_space / 1024 / 1024 / 1024).toFixed(1)}GB free of ${(volume.size / 1024 / 1024 / 1024).toFixed(1)}GB`}
@@ -430,9 +590,9 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                         )}
                     </section>
                     {/* Network section */}
-                    <section>
+                    <section className="sidebar-section">
                         <div className="sidebar-section-header">
-                            <h3 className="sidebar-section-title">Network</h3>
+                            <h3 className="sidebar-section-title" tabIndex={-1} ref={(element) => { sectionRefs.current.network = element; }}>Network</h3>
                             <div className="sidebar-section-actions">
                                 <button
                                     className="section-add-button"
@@ -469,6 +629,7 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                                             icon="network"
                                             name={conn.name}
                                             path={`sftp://${conn.username}@${conn.host}:${conn.port}`}
+                                            isCollapsed={isSidebarCollapsed}
                                             isActive={currentView === 'network' && currentPath === conn.name}
                                             onClick={async () => {
                                                 // Navigate to SFTP connection using the new provider
@@ -494,64 +655,34 @@ const Sidebar = ({ onTerminalToggle, isTerminalOpen, currentView }) => {
                             </ul>
                         )}
                     </section>
+                </div>
+
+                <div
+                    className="sidebar-resize-handle"
+                    role="separator"
+                    aria-label="Resize sidebar"
+                    aria-orientation="vertical"
+                    aria-controls="explorer-sidebar"
+                    aria-valuemin={COLLAPSED_WIDTH}
+                    aria-valuemax={getMaximumWidth()}
+                    aria-valuenow={isSidebarCollapsed ? COLLAPSED_WIDTH : sidebarWidth}
+                    aria-valuetext={isSidebarCollapsed ? 'Collapsed' : `${sidebarWidth} pixels`}
+                    tabIndex={0}
+                    onPointerDown={handleResizeStart}
+                    onPointerMove={handleResizeMove}
+                    onPointerUp={handleResizeEnd}
+                    onPointerCancel={handleResizeEnd}
+                    onLostPointerCapture={handleResizeEnd}
+                    onKeyDown={handleResizeKeyDown}
+                />
+            </aside>
+
             {/* Modal for adding SFTP connection */}
             <AddSftpConnectionView
                 isOpen={isAddSftpModalOpen}
                 onClose={() => setIsAddSftpModalOpen(false)}
                 onAdd={addSftpConnection}
             />
-
-                </div>
-
-                {/* Bottom actions */}
-                <div className="sidebar-footer">
-                    <button
-                        className={`sidebar-action-button ${isTerminalOpen ? 'active' : ''}`}
-                        onClick={onTerminalToggle}
-                        aria-label="Toggle Terminal"
-                        title="Toggle Terminal (Ctrl+`)"
-                    >
-                        <span className="icon icon-terminal"></span>
-                        <span>Terminal</span>
-                    </button>
-
-                    <button
-                        className="sidebar-action-button"
-                        onClick={() => {
-                            navigateTo(null); // Clear explorer path
-                            document.dispatchEvent(new CustomEvent('open-settings'));
-                        }}
-                        aria-label="Settings"
-                        title="Settings"
-                    >
-                        <span className="icon icon-settings"></span>
-                        <span>Settings</span>
-                    </button>
-
-                    <button
-                        className="sidebar-action-button"
-                        onClick={() => {
-                            navigateTo(null); // Clear explorer path
-                            document.dispatchEvent(new CustomEvent('open-templates'));
-                        }}
-                        aria-label="Templates"
-                        title="Templates"
-                    >
-                        <span className="icon icon-template"></span>
-                        <span>Templates</span>
-                    </button>
-
-                    <button
-                        className="sidebar-action-button"
-                        aria-label="Add Datasource"
-                        title="Add Datasource"
-                        onClick={handleAddSource}
-                    >
-                        <span className="icon icon-plus"></span>
-                        <span>Add Source</span>
-                    </button>
-                </div>
-            </aside>
 
             {/* Modal for adding data source */}
             <Modal

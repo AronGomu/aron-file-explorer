@@ -3,7 +3,6 @@ import { createRoot } from 'react-dom/client';
 import { readFileSync, readdirSync } from 'node:fs';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { applyThemeToDOM, EMBEDDED_THEMES } from '../../src/themes/applyTheme';
-import PreviewModal from '../../src/components/preview/PreviewModal.jsx';
 import App from '../../src/App.jsx';
 import SettingsProvider from '../../src/providers/SettingsProvider.jsx';
 import ThemeProvider from '../../src/providers/ThemeProvider.jsx';
@@ -69,21 +68,6 @@ for (const theme of EMBEDDED_THEMES) {
             expect(overlay.isConnected).toBe(false);
         }
     });
-    test(`theme_preview_pixels: ${theme.id} payload bytes/paths unchanged`, () => {
-        applyThemeToDOM(theme);
-        const image = 'data:image/png;base64,iVBORw0KGgo=';
-        act(() => root.render(<PreviewModal payload={{ kind: 'Image', name: 'reference.png', data_uri: image, bytes: 8 }} />));
-        expect(host.querySelector('img').getAttribute('src')).toBe(image);
-        act(() => root.render(<PreviewModal payload={{ kind: 'Pdf', name: 'reference.pdf', data_uri: 'data:application/pdf;base64,JVBERi0=', bytes: 5 }} />));
-        expect(host.querySelector('iframe').getAttribute('src')).toBe('data:application/pdf;base64,JVBERi0=');
-        act(() => root.render(<PreviewModal payload={{ kind: 'Video', name: 'reference.webm', path: '/fixture/reference.webm' }} />));
-        expect(host.querySelector('video').getAttribute('src')).toBe('asset:/fixture/reference.webm');
-        expect(host.querySelector('video').controls).toBe(true);
-        const text = '<script>not HTML</script>\n  exact whitespace Ω';
-        act(() => root.render(<PreviewModal payload={{ kind: 'Text', name: 'reference.txt', text }} />));
-        expect([...host.querySelectorAll('.preview-line-content')].map(node => node.textContent).join('\n')).toBe(text);
-        expect(host.querySelector('script')).toBeNull();
-    });
     test(`theme_loading_fallback: ${theme.id} real provider delays + App render error`, async () => {
         applyThemeToDOM(theme);
         invoke.mockImplementation(() => new Promise(() => {}));
@@ -127,14 +111,13 @@ test('theme_template_file_types: owned icon tints use semantic file tokens', () 
 
 test('theme_peripheral_owned_sources: no literal/fallback/legacy color consumers or content filters', () => {
     const paths = ['src/utils/NotificationSystem.js', 'src/components/sidebar/AddSftpConnectionView.jsx', 'src/components/common/PermissionHelper.jsx',
-        ...['search', 'network', 'templates', 'preview'].flatMap(dir => readdirSync(`src/components/${dir}`).filter(name => /\.(css|jsx)$/.test(name)).map(name => `src/components/${dir}/${name}`))];
+        ...['search', 'network', 'templates'].flatMap(dir => readdirSync(`src/components/${dir}`).filter(name => /\.(css|jsx)$/.test(name)).map(name => `src/components/${dir}/${name}`))];
     const violations = [];
     for (const path of paths) {
         const source = readFileSync(path, 'utf8');
         for (const [index, line] of source.split('\n').entries()) {
             if (/#[\da-f]{3,8}\b|%23[\da-f]{3,8}\b|rgba?\(\s*\d|(?:color|background):\s*['"]?(?:white|black)\b|var\(--(?:danger|info-bg|info-border|warning-bg|warning-border|warning-text|success-hover|border-subtle)(?:[,)]|\b)/i.test(line)) violations.push(`${path}:${index + 1}: ${line.trim()}`);
         }
-        if (path.includes('/preview/')) expect(source).not.toMatch(/(?:^|[;{\s])filter\s*:\s*(?:invert|brightness|contrast|hue-rotate|sepia)/m);
     }
     expect(violations).toEqual([]);
 });

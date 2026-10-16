@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useHistory } from '../../providers/HistoryProvider';
-import { useFileSystem } from '../../providers/FileSystemProvider';
 import { useSftp } from '../../providers/SftpProvider';
+import { readExplorerSession, EXPLORER_SESSION_KEY } from '../../utils/explorerSession';
 import IconButton from '../common/IconButton';
 import './tabs.css';
 
@@ -13,10 +13,11 @@ import './tabs.css';
  * @returns {React.ReactElement} TabManager component
  */
 const TabManager = ({ children }) => {
-    const [tabs, setTabs] = useState([]);
-    const [activeTabId, setActiveTabId] = useState(null);
-    const { currentPath } = useHistory();
-    const { loadDirectory } = useFileSystem();
+    const [initialSession] = useState(readExplorerSession);
+    const [tabs, setTabs] = useState(initialSession.tabs);
+    const [activeTabId, setActiveTabId] = useState(initialSession.activeTabId);
+    const { currentPath, navigateTo } = useHistory();
+    const previousPath = useRef(currentPath);
     const { isSftpPath, parseSftpPath } = useSftp();
 
     /**
@@ -39,7 +40,10 @@ const TabManager = ({ children }) => {
      * Update active tab when path changes
      */
     useEffect(() => {
-        if (currentPath && activeTabId) {
+        // Changing tabs alone must never overwrite its saved folder with the old path.
+        const pathChanged = previousPath.current !== currentPath;
+        previousPath.current = currentPath;
+        if (pathChanged && currentPath && activeTabId) {
             setTabs(prevTabs =>
                 prevTabs.map(tab =>
                     tab.id === activeTabId
@@ -49,6 +53,18 @@ const TabManager = ({ children }) => {
             );
         }
     }, [currentPath, activeTabId]);
+
+    useEffect(() => {
+        if (!tabs.length || !tabs.some(tab => tab.id === activeTabId)) return;
+        try {
+            localStorage.setItem(EXPLORER_SESSION_KEY, JSON.stringify({
+                tabs: tabs.map(({ id, path }) => ({ id, path })),
+                activeTabId
+            }));
+        } catch (error) {
+            console.error('Failed to save explorer session:', error);
+        }
+    }, [tabs, activeTabId]);
 
     /**
      * Generates a unique ID for a new tab
@@ -113,15 +129,19 @@ const TabManager = ({ children }) => {
      * Creates a new tab with the current path
      */
     const createNewTab = () => {
+        const path = currentPath || tabs.find(tab => tab.id === activeTabId)?.path;
+        if (!path) return;
+
         const newTab = {
             id: generateTabId(),
-            title: getTabTitle(currentPath),
-            path: currentPath,
+            title: getTabTitle(path),
+            path,
             isActive: false
         };
 
         setTabs(prevTabs => [...prevTabs, newTab]);
-        switchToTab(newTab.id);
+        setActiveTabId(newTab.id);
+        if (path !== currentPath) navigateTo(path);
     };
 
     /**
@@ -154,22 +174,16 @@ const TabManager = ({ children }) => {
     /**
      * Switches to a different tab and loads its directory
      * @param {string} tabId - ID of the tab to switch to
-     * @async
      */
-    const switchToTab = async (tabId) => {
+    const switchToTab = (tabId) => {
         const tab = tabs.find(t => t.id === tabId);
         if (!tab) return;
 
         setActiveTabId(tabId);
 
-        // Load the directory for this tab
+        // Navigation triggers directory loading through FileSystemProvider.
         if (tab.path !== currentPath) {
-            try {
-                await loadDirectory(tab.path);
-            } catch (error) {
-                console.error('Failed to load directory for tab:', error);
-                // Optionally show an error or close the tab
-            }
+            navigateTo(tab.path);
         }
     };
 
@@ -193,7 +207,8 @@ const TabManager = ({ children }) => {
         newTabs.splice(tabIndex + 1, 0, duplicatedTab);
 
         setTabs(newTabs);
-        switchToTab(duplicatedTab.id);
+        setActiveTabId(duplicatedTab.id);
+        if (duplicatedTab.path !== currentPath) navigateTo(duplicatedTab.path);
     };
 
     /**
@@ -290,7 +305,7 @@ const TabManager = ({ children }) => {
                                     <span className="icon icon-folder"></span>
                                 </span>
                                 <span className="tab-title" title={getFullPathForTooltip(tab.path)}>
-                                    {tab.title}
+                                    {getTabTitle(tab.path)}
                                 </span>
                                 {tabs.length > 1 && (
                                     <button

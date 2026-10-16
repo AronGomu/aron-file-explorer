@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useHistory } from '../../providers/HistoryProvider';
 import { useFileSystem } from '../../providers/FileSystemProvider';
 import './navigationButtons.css';
@@ -16,7 +16,7 @@ const NavigationButtons = () => {
      * Reloads the current directory and displays notification feedback
      * @async
      */
-    const handleRefresh = async () => {
+    const handleRefresh = useCallback(async () => {
         if (currentPath) {
             try {
                 // Refresh volumes (disks, space, etc.)
@@ -120,7 +120,31 @@ const NavigationButtons = () => {
                 }, 3000);
             }
         }
-    };
+    }, [currentPath, loadDirectory, loadVolumes]);
+
+    useEffect(() => {
+        const handleKeyDown = (event) => {
+            if (event.target.closest?.('.enhanced-terminal')) return;
+            if ((event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'r') {
+                event.preventDefault();
+                if (!event.repeat) handleRefresh();
+            }
+            if (event.defaultPrevented || event.key !== 'Backspace' || event.ctrlKey || event.metaKey ||
+                event.altKey || event.isComposing || event.target.isContentEditable ||
+                event.target.closest?.('input, textarea, select, [role="textbox"], [role="dialog"]')) return;
+
+            event.preventDefault();
+            if (event.repeat) return;
+            if (event.shiftKey) {
+                if (canGoForward) goForward();
+            } else if (canGoBack) {
+                goBack();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [handleRefresh, canGoBack, goBack, canGoForward, goForward]);
 
     return (
         <div className="navigation-buttons">
@@ -129,7 +153,8 @@ const NavigationButtons = () => {
                 onClick={goBack}
                 disabled={!canGoBack}
                 aria-label="Go back"
-                title="Go back"
+                aria-keyshortcuts="Backspace"
+                title="Go back (Backspace)"
             >
                 <span className="icon icon-arrow-left"></span>
             </button>
@@ -139,7 +164,8 @@ const NavigationButtons = () => {
                 onClick={goForward}
                 disabled={!canGoForward}
                 aria-label="Go forward"
-                title="Go forward"
+                aria-keyshortcuts="Shift+Backspace"
+                title="Go forward (Shift+Backspace)"
             >
                 <span className="icon icon-arrow-right"></span>
             </button>
@@ -148,7 +174,8 @@ const NavigationButtons = () => {
                 className="nav-button"
                 onClick={handleRefresh}
                 aria-label="Refresh"
-                title="Refresh current directory"
+                aria-keyshortcuts="Control+r Meta+r"
+                title="Refresh current directory (Ctrl+R)"
             >
                 <span className="icon icon-refresh"></span>
             </button>

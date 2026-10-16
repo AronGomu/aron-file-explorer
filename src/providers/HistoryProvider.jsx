@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { readExplorerSession, LAST_LOCATION_KEY } from '../utils/explorerSession';
 
 // Create history context
 const HistoryContext = createContext({
@@ -14,36 +15,48 @@ const HistoryContext = createContext({
 
 export default function HistoryProvider({ children }) {
     // State for navigation history
-    const [history, setHistory] = useState([]);
-    const [currentIndex, setCurrentIndex] = useState(-1);
+    const [initialHistory] = useState(() => {
+        const { tabs, activeTabId } = readExplorerSession();
+        const activePath = tabs.find(tab => tab.id === activeTabId)?.path;
+        if (activePath) return { history: [activePath], currentIndex: 0 };
+
+        try {
+            const lastPath = localStorage.getItem(LAST_LOCATION_KEY);
+            if (lastPath) return { history: [lastPath], currentIndex: 0 };
+
+            const saved = JSON.parse(sessionStorage.getItem('fileExplorerHistory') || '[]');
+            const history = Array.isArray(saved)
+                ? saved.filter(path => typeof path === 'string' && path.trim()) : [];
+            const index = Number.parseInt(sessionStorage.getItem('fileExplorerHistoryIndex'), 10);
+            return {
+                history,
+                currentIndex: history.length ? Math.max(0, Math.min(index || 0, history.length - 1)) : -1
+            };
+        } catch (error) {
+            console.error('Failed to load navigation history:', error);
+            return { history: [], currentIndex: -1 };
+        }
+    });
+    const [history, setHistory] = useState(initialHistory.history);
+    const [currentIndex, setCurrentIndex] = useState(initialHistory.currentIndex);
 
     // Derived state
     const currentPath = history[currentIndex] || null;
     const canGoBack = currentIndex > 0;
     const canGoForward = currentIndex < history.length - 1;
 
-    // Load history from session storage on mount
-    useEffect(() => {
-        try {
-            const savedHistory = JSON.parse(sessionStorage.getItem('fileExplorerHistory') || '[]');
-            const savedIndex = parseInt(sessionStorage.getItem('fileExplorerHistoryIndex') || '-1');
-
-            if (savedHistory.length) {
-                setHistory(savedHistory);
-                setCurrentIndex(savedIndex >= 0 ? savedIndex : 0);
-            }
-        } catch (error) {
-            console.error('Failed to load navigation history:', error);
-        }
-    }, []);
-
     // Save history to session storage when it changes
     useEffect(() => {
         if (history.length) {
-            sessionStorage.setItem('fileExplorerHistory', JSON.stringify(history));
-            sessionStorage.setItem('fileExplorerHistoryIndex', currentIndex.toString());
+            try {
+                sessionStorage.setItem('fileExplorerHistory', JSON.stringify(history));
+                sessionStorage.setItem('fileExplorerHistoryIndex', currentIndex.toString());
+                if (currentPath) localStorage.setItem(LAST_LOCATION_KEY, currentPath);
+            } catch (error) {
+                console.error('Failed to save navigation history:', error);
+            }
         }
-    }, [history, currentIndex]);
+    }, [history, currentIndex, currentPath]);
 
     // Navigate to a specific path
     const navigateTo = useCallback((path) => {

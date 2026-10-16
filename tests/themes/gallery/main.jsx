@@ -45,13 +45,6 @@ mockIPC((command, args) => {
   throw new Error(`Unknown theme gallery IPC command: ${command}`);
 });
 
-if (caseId === 'preview-video') {
-  window.__TAURI_INTERNALS__.convertFileSrc = path => {
-    if (path !== '/fixture/reference.webm') throw new Error(`Unknown fixture media: ${path}`);
-    return '/fixtures/reference.webm';
-  };
-}
-
 ReactDOM.createRoot(document.getElementById("root")).render(
   <main data-theme-case={caseId} data-theme={theme}>
     {renderCase(caseId)}

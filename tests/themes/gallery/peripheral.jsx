@@ -8,7 +8,6 @@ import GlobalSearch from '../../../src/components/search/GlobalSearch.jsx';
 import NetworkView from '../../../src/components/network/NetworkView.jsx';
 import AddSftpConnectionView from '../../../src/components/sidebar/AddSftpConnectionView.jsx';
 import TemplateList from '../../../src/components/templates/TemplateList.jsx';
-import PreviewModal from '../../../src/components/preview/PreviewModal.jsx';
 import HashCompareModal from '../../../src/components/common/HashCompareModal.jsx';
 import HashDisplayModal from '../../../src/components/common/HashDisplayModal.jsx';
 import HashFileModal from '../../../src/components/common/HashFileModal.jsx';
@@ -16,8 +15,7 @@ import RenameModal from '../../../src/components/common/RenameModal.jsx';
 import PermissionHelper from '../../../src/components/common/PermissionHelper.jsx';
 import { showNotification, showConfirm } from '../../../src/utils/NotificationSystem.js';
 
-export const PERIPHERAL_CASES = ['search', 'network', 'sftp-form', 'templates', 'preview-image', 'preview-video', 'preview-text', 'preview-error', 'dialogs', 'permissions', 'toasts', 'confirm', 'loading', 'error-fallback'];
-export const REFERENCE_TEXT = '<script>not HTML</script>\n  exact whitespace Ω\n';
+export const PERIPHERAL_CASES = ['search', 'network', 'sftp-form', 'templates', 'dialogs', 'permissions', 'toasts', 'confirm', 'loading', 'error-fallback'];
 const item = { name: 'reference.txt', path: '/fixture/reference.txt', isDirectory: false };
 const noop = () => {};
 
@@ -53,12 +51,6 @@ export function renderPeripheral(caseId) {
         case 'network': return <HistoryProvider><SftpProvider><NetworkView /></SftpProvider></HistoryProvider>;
         case 'sftp-form': return <AddSftpConnectionView isOpen onClose={close} onAdd={connection => { window.__peripheralResult = { ...connection, password: '[fixture omitted]' }; }} />;
         case 'templates': return <HistoryProvider><TemplateList onClose={close} /></HistoryProvider>;
-        case 'preview-image': return <PreviewModal onClose={close} payload={variant === 'pdf'
-            ? { kind: 'Pdf', name: 'reference.pdf', data_uri: '/fixtures/reference.pdf', bytes: 1 }
-            : { kind: 'Image', name: 'reference.png', data_uri: '/fixtures/reference.png', bytes: 1 }} />;
-        case 'preview-video': return <PreviewModal onClose={close} payload={{ kind: 'Video', name: 'reference.webm', path: '/fixture/reference.webm' }} />;
-        case 'preview-text': return <PreviewModal onClose={close} payload={{ kind: 'Text', name: 'reference.txt', text: REFERENCE_TEXT, truncated: true }} />;
-        case 'preview-error': return <PreviewModal onClose={close} isLoading={state === 'loading'} payload={{ kind: 'Error', message: 'Fixture preview failed' }} />;
         case 'dialogs': return <HistoryProvider><Dialogs variant={variant} /></HistoryProvider>;
         case 'permissions': return <PermissionHelper isOpen onClose={close} directoryPath="/fixture/protected" directoryName="Fixture" onDirectorySelected={close} />;
         case 'toasts': return <Notifications />;

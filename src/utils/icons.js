@@ -11,19 +11,19 @@ export const getFileIconType = (filename) => {
     const extension = filename.split('.').pop().toLowerCase();
 
     // Image files
-    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp', 'tiff', 'ico'];
+    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'svgz', 'webp', 'tif', 'tiff', 'ico', 'avif', 'heic', 'heif', 'psd', 'ai', 'eps', 'blend'];
     if (imageExtensions.includes(extension)) {
         return 'image';
     }
 
     // Audio files
-    const audioExtensions = ['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac'];
+    const audioExtensions = ['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac', 'opus', 'aiff', 'aif', 'wma', 'midi', 'mid'];
     if (audioExtensions.includes(extension)) {
         return 'audio';
     }
 
     // Video files
-    const videoExtensions = ['mp4', 'avi', 'mov', 'wmv', 'mkv', 'webm', 'flv', '3gp'];
+    const videoExtensions = ['mp4', 'avi', 'mov', 'wmv', 'mkv', 'webm', 'flv', '3gp', 'm4v', 'mpeg', 'mpg'];
     if (videoExtensions.includes(extension)) {
         return 'video';
     }
@@ -39,7 +39,7 @@ export const getFileIconType = (filename) => {
     }
 
     // Archive files
-    const archiveExtensions = ['zip', 'rar', '7z', 'tar', 'gz', 'bz2'];
+    const archiveExtensions = ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'zst', 'lz4', 'tgz', 'tbz', 'tbz2', 'txz', 'cab'];
     if (archiveExtensions.includes(extension)) {
         return 'archive';
     }
@@ -52,7 +52,8 @@ export const getFileIconType = (filename) => {
     // Text and document files
     const textExtensions = [
         'txt', 'md', 'rtf', 'doc', 'docx', 'odt', 'xls', 'xlsx', 'ods',
-        'ppt', 'pptx', 'odp', 'csv'
+        'ppt', 'pptx', 'odp', 'csv', 'tsv', 'markdown', 'mdown', 'mkd', 'mdx',
+        'log', 'ics', 'ttf', 'otf', 'woff', 'woff2'
     ];
     if (textExtensions.includes(extension)) {
         return 'text';

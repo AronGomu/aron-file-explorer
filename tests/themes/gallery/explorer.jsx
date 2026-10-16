@@ -57,7 +57,6 @@ function ExplorerSurface({ caseId }) {
                         <ViewModes currentMode={mode} onChange={setMode} />
                         <IconButton icon="settings" label="Fixture Settings" onClick={() => setSettingsOpen(true)} />
                     </div>
-                    <div className="action-bar"><CreateFileButton /></div>
                     {caseId === 'this-pc' ? <ThisPCView /> : <FileList data={currentDirData} isLoading={isLoading} viewMode={mode} />}
                 </div>
             </div>

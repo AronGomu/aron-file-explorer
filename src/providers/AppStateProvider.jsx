@@ -9,6 +9,7 @@ const AppStateContext = createContext({
     setIsSearching: () => {},
     toggleTemplateView: () => {},
     toggleSidebar: () => {},
+    setIsSidebarCollapsed: () => {},
     setCurrentView: () => {},
 });
 
@@ -43,6 +44,7 @@ export default function AppStateProvider({ children }) {
         setIsSearching,
         toggleTemplateView,
         toggleSidebar,
+        setIsSidebarCollapsed,
         setCurrentView,
     };
 

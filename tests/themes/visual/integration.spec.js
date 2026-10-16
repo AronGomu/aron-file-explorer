@@ -4,7 +4,7 @@ import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
 // Chromium fixture evidence only. Native disk/watch/restart use isolated packaged scripts.
 test.use({ channel: 'chromium' });
 const directory = 'artifacts/theme-validation/visual/integration';
-const cases = ['settings', 'explorer-grid', 'explorer-list', 'explorer-details', 'sidebar-tabs', 'breadcrumb', 'context-menu', 'controls', 'this-pc', 'search', 'network', 'sftp-form', 'templates', 'preview-image', 'preview-video', 'preview-text', 'preview-error', 'dialogs', 'permissions', 'toasts', 'confirm', 'loading', 'error-fallback'];
+const cases = ['settings', 'explorer-grid', 'explorer-list', 'explorer-details', 'sidebar-tabs', 'breadcrumb', 'context-menu', 'controls', 'this-pc', 'search', 'network', 'sftp-form', 'templates', 'dialogs', 'permissions', 'toasts', 'confirm', 'loading', 'error-fallback'];
 const themes = ['catppuccin-latte', 'catppuccin-mocha'];
 
 async function readings(page) {
@@ -57,7 +57,7 @@ async function readings(page) {
     });
 }
 
-test('theme_full_surface_matrix / theme_aa_composited: 23 cases × 2 palettes', async ({ page }) => {
+test('theme_full_surface_matrix / theme_aa_composited: 19 cases × 2 palettes', async ({ page }) => {
     test.setTimeout(240_000);
     mkdirSync(directory, { recursive: true });
     // Each fixture starts clean; peripheral history must not leak into explorer cases.
@@ -78,8 +78,6 @@ test('theme_full_surface_matrix / theme_aa_composited: 23 cases × 2 palettes', 
             await page.addStyleTag({ content: '*, *::before, *::after { animation: none !important; transition: none !important; }' });
             await expect(page.locator('main')).toHaveAttribute('data-theme-case', entry.caseId);
             await expect(page.locator('html')).toHaveAttribute('data-theme', entry.themeId);
-            if (entry.caseId === 'preview-image') await expect(page.locator('.preview-image')).toHaveJSProperty('naturalWidth', 128);
-            if (entry.caseId === 'preview-video') await expect.poll(() => page.locator('video').evaluate(video => video.readyState)).toBeGreaterThanOrEqual(2);
             if (entry.caseId === 'search') {
                 await page.locator('.search-input-field').fill('reference');
                 await page.getByRole('button', { name: 'Search (Enter)', exact: true }).click();
