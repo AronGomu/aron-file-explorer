@@ -1,8 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { convertFileSrc, invoke } from '@tauri-apps/api/core';
+import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { useSftp } from '../../providers/SftpProvider';
 import { getFileIconType } from '../../utils/icons';
 import { getPreviewFilePath } from '../../utils/imageThumbnails';
+import { showError } from '../../utils/NotificationSystem';
 import FileIcon from './FileIcon';
 import FolderContentsPreview from './FolderContentsPreview';
 
@@ -68,11 +70,11 @@ const FileContentPreview = ({ item, viewMode }) => {
         event.stopPropagation();
     };
 
-    const handleTextCopy = (event) => {
+    const getSelectedText = useCallback(() => {
         const selection = window.getSelection();
-        if (!selection?.rangeCount) return;
+        if (!selection?.rangeCount || !codeRef.current) return '';
         const range = selection.getRangeAt(0).cloneRange();
-        if (range.collapsed || !range.intersectsNode(codeRef.current)) return;
+        if (range.collapsed || !range.intersectsNode(codeRef.current)) return '';
 
         // Restrict copied content to the code, even if selection crosses the gutter or status text.
         const content = document.createRange();
@@ -83,7 +85,41 @@ const FileContentPreview = ({ item, viewMode }) => {
         if (range.compareBoundaryPoints(Range.END_TO_END, content) > 0) {
             range.setEnd(content.endContainer, content.endOffset);
         }
-        event.clipboardData.setData('text/plain', range.toString());
+        return range.toString();
+    }, []);
+
+    useEffect(() => {
+        if (typeof result?.text !== 'string') return;
+        let timer;
+        let cancelled = false;
+        let copyQueue = Promise.resolve();
+        const handleSelectionChange = () => {
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+                const selection = window.getSelection();
+                const code = codeRef.current;
+                if (!code || (!code.contains(selection?.anchorNode) && !code.contains(selection?.focusNode))) return;
+                const text = getSelectedText();
+                if (!text) return;
+                copyQueue = copyQueue.then(() => {
+                    if (!cancelled && getSelectedText() === text) return writeText(text);
+                }).catch(() => {
+                    if (!cancelled) showError('Failed to copy selected text to clipboard.');
+                });
+            }, 200);
+        };
+        document.addEventListener('selectionchange', handleSelectionChange);
+        return () => {
+            cancelled = true;
+            clearTimeout(timer);
+            document.removeEventListener('selectionchange', handleSelectionChange);
+        };
+    }, [result?.text, getSelectedText]);
+
+    const handleTextCopy = (event) => {
+        const text = getSelectedText();
+        if (!text) return;
+        event.clipboardData.setData('text/plain', text);
         event.preventDefault();
         event.stopPropagation();
     };
