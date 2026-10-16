@@ -9,7 +9,6 @@
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
-    transition: width var(--transition-normal);
     overflow: hidden;
     user-select: none;
     -webkit-user-select: none;
@@ -92,10 +91,6 @@
 .sidebar-resize-handle:focus-visible,
 .sidebar-resizing .sidebar-resize-handle {
     background-color: var(--border-strong);
-}
-
-.sidebar-resizing {
-    transition: none;
 }
 
 .sidebar-collapsed .sidebar-header {
@@ -249,7 +244,6 @@
     flex-direction: column;
     flex-grow: 1;
     min-width: 0;
-    transition: opacity var(--transition-normal);
 }
 
 .sidebar-collapsed .sidebar-item-content {
