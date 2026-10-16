@@ -4,6 +4,7 @@ import App from "./App.jsx";
 import { bootstrapTheme } from "./themes/applyTheme";
 // Wichtig: Hier Tauri API importieren, wenn es irgendwo in der App verwendet wird
 import { invoke } from "@tauri-apps/api/core";
+import { readExplorerSession, EXPLORER_SESSION_KEY } from "./utils/explorerSession";
 
 // Import CSS in the correct order
 // 1. Variables first (design tokens)
@@ -29,9 +30,32 @@ window.__TAURI_INVOKE__ = invoke;
 
 bootstrapTheme();
 
-// Initialize the application
-ReactDOM.createRoot(document.getElementById("root")).render(
-    <React.StrictMode>
-        <App />
-    </React.StrictMode>
-);
+// Resolve desktop folder arguments before providers restore their initial tabs.
+async function initialize() {
+    try {
+        const paths = await invoke('get_launch_directories');
+        if (paths.length) {
+            const session = readExplorerSession();
+            for (const path of paths) {
+                let tab = session.tabs.find(tab => tab.path === path);
+                if (!tab) {
+                    tab = { id: crypto.randomUUID(), path };
+                    session.tabs.push(tab);
+                }
+                session.activeTabId = tab.id;
+            }
+            localStorage.setItem(EXPLORER_SESSION_KEY, JSON.stringify(session));
+        }
+    } catch (error) {
+        console.error('Failed to read launch directories:', error);
+    }
+
+    // Initialize the application
+    ReactDOM.createRoot(document.getElementById("root")).render(
+        <React.StrictMode>
+            <App />
+        </React.StrictMode>
+    );
+}
+
+initialize();

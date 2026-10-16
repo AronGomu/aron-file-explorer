@@ -16,8 +16,22 @@ use crate::commands::{
 use tauri::ipc::Invoke;
 use tauri::Manager;
 
+#[tauri::command]
+fn get_launch_directories() -> Vec<String> {
+    std::env::args_os().skip(1).filter_map(|argument| {
+        let path = if argument.to_string_lossy().starts_with("file:") {
+            tauri::Url::parse(&argument.to_string_lossy()).ok()?.to_file_path().ok()?
+        } else {
+            std::path::PathBuf::from(argument)
+        };
+        let path = path.canonicalize().ok()?;
+        path.is_dir().then(|| path.to_string_lossy().into_owned())
+    }).collect()
+}
+
 fn all_commands() -> fn(Invoke) -> bool {
     tauri::generate_handler![
+        get_launch_directories,
         // Filesystem commands
         //file_system_operation_commands::open_file,
         file_system_operation_commands::open_directory,
