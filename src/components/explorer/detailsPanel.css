@@ -50,20 +50,143 @@
     background-color: var(--background-secondary);
 }
 
-.with-details-toggle .details-content {
-    padding-bottom: 44px;
+.details-panel-header {
+    flex: 0 0 36px;
 }
 
-.details-content {
-    flex-grow: 1;
-    overflow-y: auto;
-    padding: var(--space-md);
+.details-panel-footer {
+    flex: 0 0 40px;
 }
 
-.folder-preview-content {
+.details-body {
+    display: grid;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    margin-left: 12px;
+}
+
+.details-preview-area,
+.details-information {
+    min-width: 0;
     min-height: 0;
     overflow: auto;
-    padding: 40px var(--space-sm) var(--space-sm);
+}
+
+.details-preview-area {
+    padding: 2px;
+}
+
+.details-information {
+    padding: var(--space-sm);
+}
+
+.details-split-handle {
+    position: relative;
+    cursor: row-resize;
+    touch-action: none;
+}
+
+.details-split-handle::after {
+    content: '';
+    position: absolute;
+    top: 5px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background-color: var(--border);
+}
+
+.details-split-handle:hover,
+.details-split-handle:focus-visible,
+.details-splitting .details-split-handle {
+    background-color: var(--border-strong);
+}
+
+.details-splitting,
+.details-splitting * {
+    cursor: row-resize;
+    user-select: none;
+}
+
+.preview-image,
+.preview-image .file-icon-large,
+.preview-document {
+    width: 100%;
+    height: 100%;
+}
+
+.preview-document {
+    display: block;
+    border: 0;
+}
+
+.preview-media {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 0;
+}
+
+.preview-media video {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    object-fit: contain;
+}
+
+.preview-media audio {
+    width: 100%;
+}
+
+.preview-text {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+.preview-text pre {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    margin: 0;
+    padding: var(--space-sm);
+    white-space: pre;
+    font-family: monospace;
+    font-size: var(--font-size-sm);
+    line-height: 1.5;
+    color: var(--text-primary);
+    user-select: text;
+}
+
+.preview-status {
+    margin: var(--space-sm);
+    color: var(--text-secondary);
+    font-size: var(--font-size-xs);
+}
+
+.preview-unavailable {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    height: 100%;
+    padding: var(--space-sm);
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.preview-unavailable .file-icon-large {
+    flex-shrink: 0;
+}
+
+.preview-unavailable .truncate {
+    max-width: 100%;
 }
 
 .folder-preview-table {
@@ -184,69 +307,20 @@
     height: calc(100% - 2px);
 }
 
-.details-preview {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: var(--space-lg) 0;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: var(--space-lg);
-}
-
-.details-icon {
-    width: 64px;
-    height: 64px;
-    margin-bottom: var(--space-md);
-}
-
-.details-icon.details-image {
-    width: 100%;
-    height: 200px;
-}
-
-.details-image .file-icon-large {
-    width: 100%;
-    height: 100%;
-}
-
-.image-preview-content {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 0;
-    min-height: 0;
-    overflow: hidden;
-    padding: 36px 1px 44px 12px;
-}
-
-.image-preview-only {
-    position: relative;
-    flex: 1;
-    min-height: 0;
-    padding: 0;
-    margin: 0;
-    border: 0;
-}
-
-.image-preview-only .details-image {
-    position: absolute;
-    inset: 0;
-    min-height: 0;
-    height: 100%;
-    margin: 0;
-}
-
 .details-name {
     font-size: var(--font-size-md);
     font-weight: var(--font-weight-medium);
     color: var(--text-primary);
     text-align: center;
     max-width: 100%;
+    overflow-wrap: anywhere;
 }
 
 .details-type {
     font-size: var(--font-size-sm);
     color: var(--text-secondary);
-    margin-top: var(--space-xs);
+    margin: var(--space-xs) 0 var(--space-md);
+    text-align: center;
 }
 
 .details-section {
@@ -285,12 +359,13 @@
     color: var(--text-tertiary);
 }
 
-.details-empty, .details-summary {
+.details-empty {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 100%;
+    flex: 1;
+    min-height: 0;
     text-align: center;
     color: var(--text-secondary);
     padding: var(--space-xl);

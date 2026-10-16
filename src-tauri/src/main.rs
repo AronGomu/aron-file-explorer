@@ -30,6 +30,7 @@ fn all_commands() -> fn(Invoke) -> bool {
         file_system_operation_commands::zip,
         file_system_operation_commands::unzip,
         commands::image_commands::get_image_thumbnail,
+        commands::file_preview_commands::get_text_preview,
         // Command execution commands
         command_exec_commands::execute_command,
         command_exec_commands::execute_command_improved,
@@ -76,6 +77,7 @@ fn all_commands() -> fn(Invoke) -> bool {
         //sftp commands
         sftp_file_system_operation_commands::load_dir,
         sftp_file_system_operation_commands::open_file_sftp,
+        sftp_file_system_operation_commands::get_text_preview_sftp,
         sftp_file_system_operation_commands::create_file_sftp,
         sftp_file_system_operation_commands::delete_file_sftp,
         sftp_file_system_operation_commands::rename_file_sftp,

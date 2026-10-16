@@ -1,10 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import usePersistedState from '../../hooks/usePersistedState';
-import FileIcon from './FileIcon';
-import FolderContentsPreview from './FolderContentsPreview';
+import FileContentPreview from './FileContentPreview';
+import FileDetails from './FileDetails';
 import IconButton from '../common/IconButton';
-import { formatFileSize, formatDate, getFileType } from '../../utils/formatters';
-import { getFileIconType } from '../../utils/icons';
 import './detailsPanel.css';
 
 const MIN_PREVIEW_WIDTH = 200;
@@ -21,7 +19,12 @@ const getMaximumPreviewWidth = (panel) => Math.max(MIN_PREVIEW_WIDTH,
  * @returns {React.ReactElement} Details panel component
  */
 const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, viewMode = 'grid' }) => {
-    const [detailsPath, setDetailsPath] = useState(null);
+    const [showInformation, setShowInformation] = usePersistedState('fileExplorerDetailsVisible', false);
+    const [splitRatio, setSplitRatio] = usePersistedState('fileExplorerPreviewSplit', 0.6);
+    const [isSplitting, setIsSplitting] = useState(false);
+    const splitRef = useRef(null);
+    const splitStart = useRef(null);
+    const previewFraction = Math.max(0.15, Math.min(0.85, splitRatio));
     const [panelWidth, setPanelWidth] = usePersistedState('fileExplorerDetailsPanelWidth', 300);
     const [maximumWidth, setMaximumWidth] = useState(() => getMaximumPreviewWidth());
     const [isResizing, setIsResizing] = useState(false);
@@ -96,183 +99,102 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, viewMode 
             onKeyDown={handleResizeKeyDown}
         />
     );
-    const panelClassName = `details-panel${isResizing ? ' details-resizing' : ''}`;
-    const panelStyle = { '--details-panel-width': `${panelWidth}px` };
-    const collapseButton = onCollapse && (
-        <IconButton
-            icon="chevron-right"
-            className="details-panel-toggle"
-            label="Collapse preview panel"
-            title="Collapse preview panel (Space)"
-            aria-expanded={true}
-            aria-keyshortcuts="Space"
-            onClick={onCollapse}
-        />
-    );
+    const resizeSplit = (ratio) => setSplitRatio(Math.max(0.15, Math.min(0.85, ratio)));
 
-    // If no item selected or multiple items are selected
-    if (!item || isMultipleSelection) {
-        return (
-            <div id="explorer-preview-panel" ref={panelRef} className={panelClassName} style={panelStyle}>
-                {resizeHandle}
-                {collapseButton}
-                <div className="details-content">
-                    {isMultipleSelection ? (
-                        <div className="details-summary">
-                            {/* In a real implementation, this would show the count of files and folders,
-              total size, etc. */}
-                            <p>Multiple items selected. Select a single item to view details.</p>
-                        </div>
-                    ) : (
-                        <div className="details-empty">
-                            <p>Select an item to view its details.</p>
-                        </div>
-                    )}
-                </div>
-            </div>
-        );
-    }
+    const handleSplitStart = (event) => {
+        if (event.button !== 0) return;
+        event.preventDefault();
+        event.stopPropagation();
+        event.currentTarget.focus();
+        splitStart.current = {
+            y: event.clientY, ratio: previewFraction,
+            height: Math.max(1, splitRef.current.clientHeight - event.currentTarget.offsetHeight)
+        };
+        event.currentTarget.setPointerCapture(event.pointerId);
+        setIsSplitting(true);
+    };
 
-    // Determine if item is a directory or file
-    const isDirectory = item.isDirectory || 'sub_file_count' in item;
-    const isImage = !isDirectory && getFileIconType(item.name) === 'image';
-    const canToggleDetails = isDirectory || isImage;
-    const showDetails = !canToggleDetails || detailsPath === item.path;
+    const handleSplitMove = (event) => {
+        const drag = splitStart.current;
+        if (!drag || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
+        resizeSplit(drag.ratio + (event.clientY - drag.y) / drag.height);
+    };
 
-    // Format size
-    const size = item.size_in_bytes != null ? formatFileSize(item.size_in_bytes) : 'Unknown';
+    const handleSplitEnd = (event) => {
+        if (event.type === 'pointerup') handleSplitMove(event);
+        splitStart.current = null;
+        setIsSplitting(false);
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+    };
 
-    // Get file type
-    const fileType = isDirectory ? 'Folder' : getFileType(item.name);
+    const handleSplitKeyDown = (event) => {
+        if (event.key === 'ArrowUp') resizeSplit(previewFraction - 0.02);
+        else if (event.key === 'ArrowDown') resizeSplit(previewFraction + 0.02);
+        else if (event.key === 'Home') resizeSplit(0.15);
+        else if (event.key === 'End') resizeSplit(0.85);
+        else return;
+        event.preventDefault();
+        event.stopPropagation();
+    };
 
-    // Get extension (for files)
-    const extension = !isDirectory && item.name.includes('.')
-        ? item.name.split('.').pop().toUpperCase()
-        : '';
-
-    // Format dates
-    const created = formatDate(item.created, true);
-    const modified = formatDate(item.last_modified, true);
-    const accessed = formatDate(item.accessed, true);
+    const panelClassName = `details-panel${isResizing ? ' details-resizing' : ''}${isSplitting ? ' details-splitting' : ''}`;
+    const hasItem = item && !isMultipleSelection;
+    const revision = item ? `${item.last_modified || ''}:${item.size_in_bytes ?? ''}` : '';
 
     return (
-        <div id="explorer-preview-panel" ref={panelRef} className={`${panelClassName}${canToggleDetails ? ' with-details-toggle' : ''}`} style={panelStyle}>
+        <div id="explorer-preview-panel" ref={panelRef} className={panelClassName}
+            style={{ '--details-panel-width': `${panelWidth}px` }}>
             {resizeHandle}
-            {collapseButton}
-            <div className={`details-content${isDirectory && !showDetails ? ' folder-preview-content' : ''}${isImage && !showDetails ? ' image-preview-content' : ''}`}>
-                {isDirectory && !showDetails ? (
-                    <FolderContentsPreview path={item.path} viewMode={viewMode} />
-                ) : <>
-                    <div className={`details-preview${isImage && !showDetails ? ' image-preview-only' : ''}`}>
-                        <div className={`details-icon${isImage ? ' details-image' : ''}`}>
-                            <FileIcon
-                                filename={item.name}
-                                path={item.path}
-                                revision={`${item.last_modified || ''}:${item.size_in_bytes ?? ''}`}
-                                isDirectory={isDirectory}
-                                size="large"
-                                thumbnailSize={isImage && !showDetails ? 1024 : 512}
-                            />
-                        </div>
-
-                        {showDetails && <>
-                            <div className="details-name truncate" title={item.name}>
-                                {item.name}
-                            </div>
-
-                            <div className="details-type">
-                                {fileType}{extension ? ` (${extension})` : ''}
-                            </div>
-                        </>}
-                    </div>
-
-                    {showDetails && <>
-                        <div className="details-section">
-                            <h4 className="details-section-title">General</h4>
-
-                            <div className="details-row">
-                                <span className="details-label">Location:</span>
-                                <span className="details-value truncate" title={item.path}>
-                                  {item.path.replace(`/${item.name}`, '')}
-                                </span>
-                            </div>
-
-                            {isDirectory ? (
-                                <div className="details-row">
-                                    <span className="details-label">Contents:</span>
-                                    <span className="details-value">
-                                        {item.sub_file_count ?? 'Unknown'} files, {item.sub_dir_count ?? 'Unknown'} folders
-                                    </span>
-                                </div>
-                            ) : <div className="details-row">
-                                <span className="details-label">Size:</span>
-                                <span className="details-value">
-                                  {size}
-                                    {item.size_in_bytes != null && (
-                                        <span className="details-value-secondary"> ({item.size_in_bytes.toLocaleString()} bytes)</span>
-                                    )}
-                                </span>
-                            </div>}
-
-                            <div className="details-row">
-                                <span className="details-label">Type:</span>
-                                <span className="details-value">{fileType}</span>
-                            </div>
-                        </div>
-
-                        <div className="details-section">
-                            <h4 className="details-section-title">Dates</h4>
-
-                            <div className="details-row">
-                                <span className="details-label">Created:</span>
-                                <span className="details-value">{created}</span>
-                            </div>
-
-                            <div className="details-row">
-                                <span className="details-label">Modified:</span>
-                                <span className="details-value">{modified}</span>
-                            </div>
-
-                            <div className="details-row">
-                                <span className="details-label">Accessed:</span>
-                                <span className="details-value">{accessed}</span>
-                            </div>
-                        </div>
-
-                        <div className="details-section">
-                            <h4 className="details-section-title">Permissions</h4>
-
-                            <div className="details-row">
-                                <span className="details-label">Access rights:</span>
-                                <span className="details-value">{item.access_rights_as_string}</span>
-                            </div>
-
-                            <div className="details-row">
-                                <span className="details-label">Octal:</span>
-                                <span className="details-value">{item.access_rights_as_number}</span>
-                            </div>
-
-                            <div className="details-row">
-                                <span className="details-label">Symlink:</span>
-                                <span className="details-value">{item.is_symlink ? 'Yes' : 'No'}</span>
-                            </div>
-                        </div>
-                    </>}
-                </>}
+            <div className="details-panel-header">
+                {onCollapse && <IconButton
+                    icon="chevron-right"
+                    className="details-panel-toggle"
+                    label="Collapse preview panel"
+                    title="Collapse preview panel (Space)"
+                    aria-expanded={true}
+                    aria-keyshortcuts="Space"
+                    onClick={onCollapse}
+                />}
             </div>
-            {canToggleDetails && (
-                <IconButton
-                    icon={showDetails ? 'eye' : 'info'}
-                    className="details-info-toggle"
-                    label={showDetails ? 'Show preview' : 'Show details'}
-                    title={showDetails ? 'Show preview' : 'Show details'}
-                    aria-pressed={showDetails}
-                    onClick={() => setDetailsPath(showDetails ? null : item.path)}
-                />
-            )}
+            {hasItem ? <>
+                <div ref={splitRef} className="details-body" style={{
+                    gridTemplateRows: showInformation
+                        ? `minmax(0, ${previewFraction}fr) 12px minmax(0, ${1 - previewFraction}fr)`
+                        : 'minmax(0, 1fr)'
+                }}>
+                    <section id="explorer-file-preview" className="details-preview-area" aria-label="File preview">
+                        <FileContentPreview key={`${item.path}:${revision}`} item={item} viewMode={viewMode} />
+                    </section>
+                    {showInformation && <>
+                        <div className="details-split-handle" role="separator"
+                            aria-label="Resize preview and information sections" aria-orientation="horizontal"
+                            aria-controls="explorer-file-preview explorer-file-information"
+                            aria-valuemin={15} aria-valuemax={85} aria-valuenow={Math.round(previewFraction * 100)}
+                            aria-valuetext={`${Math.round(previewFraction * 100)}% preview`}
+                            tabIndex={0} onPointerDown={handleSplitStart} onPointerMove={handleSplitMove}
+                            onPointerUp={handleSplitEnd} onPointerCancel={handleSplitEnd}
+                            onLostPointerCapture={handleSplitEnd} onKeyDown={handleSplitKeyDown} />
+                        <section id="explorer-file-information" className="details-information" aria-label="File information">
+                            <FileDetails item={item} />
+                        </section>
+                    </>}
+                </div>
+                <div className="details-panel-footer">
+                    <IconButton icon="info" className="details-info-toggle"
+                        label={showInformation ? 'Hide information' : 'Show information'}
+                        title={showInformation ? 'Hide information' : 'Show information'}
+                        aria-expanded={showInformation} aria-controls="explorer-file-information"
+                        onClick={() => setShowInformation(visible => !visible)} />
+                </div>
+            </> : <div className="details-empty">
+                <p>{isMultipleSelection
+                    ? 'Multiple items selected. Select a single item to view its preview.'
+                    : 'Select an item to view its preview.'}</p>
+            </div>}
         </div>
     );
 };
 
 export default DetailsPanel;
-

@@ -21,21 +21,23 @@ function cache(map, key, load) {
     return promise;
 }
 
+export function getPreviewFilePath(path, revision, remote) {
+    if (!remote) return Promise.resolve(path);
+    return cache(remoteFiles, JSON.stringify([path, revision]), () => {
+        const { connection, remotePath } = remote;
+        return invoke('download_and_open_sftp_file', {
+            host: connection.host, port: Number.parseInt(connection.port, 10),
+            username: connection.username, password: connection.password,
+            filePath: remotePath, openFile: false
+        });
+    });
+}
+
 export function getImageThumbnail(path, revision, size, remote) {
     const key = JSON.stringify([path, revision, size]);
     return cache(thumbnails, key, () => new Promise((resolve, reject) => {
         pending.push({ resolve, reject, load: async () => {
-            let localPath = path;
-            if (remote) {
-                localPath = await cache(remoteFiles, JSON.stringify([path, revision]), () => {
-                    const { connection, remotePath } = remote;
-                    return invoke('download_and_open_sftp_file', {
-                        host: connection.host, port: Number.parseInt(connection.port, 10),
-                        username: connection.username, password: connection.password,
-                        filePath: remotePath, openFile: false
-                    });
-                });
-            }
+            const localPath = await getPreviewFilePath(path, revision, remote);
             const extension = path.split('.').pop().toLowerCase();
             let imagePath = localPath;
             if (!['svg', 'svgz', 'avif'].includes(extension) && !(['gif', 'apng'].includes(extension) && size >= 512)) {

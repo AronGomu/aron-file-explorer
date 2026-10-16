@@ -142,7 +142,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
         };
         const handleZoomKey = (event) => {
             if (!event.ctrlKey || event.altKey || event.target.isContentEditable ||
-                event.target.closest?.('input, textarea, select, [role="dialog"], .modal-overlay')) return;
+                event.target.closest?.('input, textarea, select, [role="dialog"], .modal-overlay, #explorer-preview-panel')) return;
             let direction;
             if (event.key === '+' || event.key === '=') direction = 1;
             else if (event.key === '-' || event.key === '_') direction = -1;
@@ -467,6 +467,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
             if (e.target instanceof HTMLInputElement || 
                 e.target instanceof HTMLTextAreaElement || 
                 e.target.isContentEditable ||
+                e.target.closest?.('#explorer-preview-panel') ||
                 disableArrowKeys) {
                 return;
             }

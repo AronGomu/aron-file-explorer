@@ -110,6 +110,23 @@ pub fn open_file_sftp(
 }
 
 #[tauri::command]
+pub async fn get_text_preview_sftp(
+    host: String,
+    port: u16,
+    username: String,
+    password: String,
+    file_path: String,
+) -> Result<super::file_preview_commands::TextPreview, String> {
+    tokio::task::spawn_blocking(move || {
+        let sftp = connect_to_sftp_via_password(host, port, username, password)?;
+        let file = sftp.open(Path::new(&file_path)).map_err(|error| error.to_string())?;
+        super::file_preview_commands::read_text_preview(file)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
 pub fn create_file_sftp(
     host: String,
     port: u16,

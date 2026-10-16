@@ -415,7 +415,7 @@ const MainLayout = () => {
             }
 
             // Escape to clear selection
-            if (e.key === 'Escape') {
+            if (e.key === 'Escape' && !e.target.closest?.('video, audio, object')) {
                 document.dispatchEvent(new CustomEvent('clear-selection'));
             }
         };
@@ -542,7 +542,7 @@ const MainLayout = () => {
         const handlePreviewToggle = (event) => {
             if (event.defaultPrevented || event.key !== ' ' || event.ctrlKey || event.metaKey ||
                 event.altKey || event.shiftKey || event.target.isContentEditable ||
-                event.target.closest('input, textarea, select, button, a, [role="button"], [role="dialog"]')) return;
+                event.target.closest('input, textarea, select, button, a, [role="button"], [role="dialog"], #explorer-preview-panel')) return;
             event.preventDefault();
             if (!event.repeat) handleDetailsPanelToggle();
         };
