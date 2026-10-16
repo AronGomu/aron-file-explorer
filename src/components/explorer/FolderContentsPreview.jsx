@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { useSettings } from '../../providers/SettingsProvider';
 import { useSftp } from '../../providers/SftpProvider';
 import FileIcon from './FileIcon';
+import { formatFileSize, formatDate, getFileType } from '../../utils/formatters';
 
 const FolderContentsPreview = ({ path, viewMode }) => {
     const { settings } = useSettings();
@@ -60,8 +61,45 @@ const FolderContentsPreview = ({ path, viewMode }) => {
         ? result.items : result.items.filter(entry => !entry.name.startsWith('.'));
     if (!items.length) return <p role="status">This folder is empty.</p>;
 
+    if (viewMode !== 'grid') {
+        return (
+            <table className="folder-preview-table" aria-label="Folder contents">
+                <colgroup>
+                    <col className="preview-column-name" />
+                    <col className="preview-column-size" />
+                    <col className="preview-column-type" />
+                    <col className="preview-column-modified" />
+                </colgroup>
+                <thead>
+                    <tr><th scope="col">Name</th><th scope="col">Size</th><th scope="col">Type</th><th scope="col">Modified</th></tr>
+                </thead>
+                <tbody>
+                    {items.map(entry => {
+                        const size = !entry.isDirectory && Number.isFinite(entry.size_in_bytes)
+                            ? formatFileSize(entry.size_in_bytes) : '—';
+                        const type = entry.isDirectory ? 'Folder' : getFileType(entry.name);
+                        const modified = entry.last_modified ? formatDate(entry.last_modified) : '—';
+                        return (
+                            <tr key={entry.path}>
+                                <td>
+                                    <div className="folder-preview-item" title={entry.name}>
+                                        <FileIcon filename={entry.name} isDirectory={entry.isDirectory} />
+                                        <span className="folder-preview-name truncate">{entry.name}</span>
+                                    </div>
+                                </td>
+                                <td className="folder-preview-size" title={size}>{size}</td>
+                                <td title={type}>{type}</td>
+                                <td title={modified}>{modified}</td>
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
+        );
+    }
+
     return (
-        <div className={`folder-preview-items view-mode-${viewMode === 'grid' ? 'grid' : 'list'}`}
+        <div className="folder-preview-items view-mode-grid"
             role="list" aria-label="Folder contents">
             {items.map(entry => (
                 <div key={entry.path} className="folder-preview-item" role="listitem" title={entry.name}>

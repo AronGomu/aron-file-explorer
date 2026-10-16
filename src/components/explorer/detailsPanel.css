@@ -24,7 +24,48 @@
 
 .folder-preview-content {
     min-height: 0;
+    overflow: auto;
     padding: 40px var(--space-sm) var(--space-sm);
+}
+
+.folder-preview-table {
+    width: 100%;
+    min-width: 592px;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-size: var(--font-size-xs);
+    color: var(--text-primary);
+}
+
+.folder-preview-table .preview-column-name { width: 200px; }
+.folder-preview-table .preview-column-size { width: 96px; }
+.folder-preview-table .preview-column-type { width: 128px; }
+.folder-preview-table .preview-column-modified { width: 168px; }
+
+.folder-preview-table th,
+.folder-preview-table td {
+    height: 26px;
+    padding: 2px 8px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.folder-preview-table th {
+    background-color: var(--background-secondary);
+    color: var(--text-secondary);
+    font-weight: var(--font-weight-medium);
+}
+
+.folder-preview-table .folder-preview-size {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.folder-preview-table .folder-preview-item {
+    padding: 0;
 }
 
 .folder-preview-items {
