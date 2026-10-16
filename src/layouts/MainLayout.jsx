@@ -641,6 +641,15 @@ const MainLayout = () => {
                             >
                                 <span className="icon icon-search-global"></span>
                             </button>
+                            <button
+                                type="button"
+                                className="icon-button"
+                                onClick={() => setIsSettingsOpen(true)}
+                                title="Settings (Ctrl+,)"
+                                aria-label="Settings"
+                            >
+                                <span className="icon icon-settings" aria-hidden="true"></span>
+                            </button>
                         </div>
                 </div>
 
