@@ -4,6 +4,7 @@ import {useHistory} from '../../providers/HistoryProvider';
 import {useContextMenu} from '../../providers/ContextMenuProvider';
 import {useSftp} from '../../providers/SftpProvider';
 import {useAppState} from '../../providers/AppStateProvider';
+import usePersistedState from '../../hooks/usePersistedState';
 import SidebarItem from './SidebarItem';
 import Favorites from './Favorites';
 //import QuickAccess from './QuickAccess';
@@ -39,7 +40,7 @@ const Sidebar = ({ currentView }) => {
     const { removeFromFavorites } = useContextMenu();
     const { navigateToSftpConnection, createSftpUrl, isSftpPath, parseSftpPath, createSftpPath } = useSftp();
     const { isSidebarCollapsed, setIsSidebarCollapsed, toggleSidebar } = useAppState();
-    const [sidebarWidth, setSidebarWidth] = useState(() => Math.min(240, getMaximumWidth()));
+    const [sidebarWidth, setSidebarWidth] = usePersistedState('fileExplorerSidebarWidth', () => Math.min(240, getMaximumWidth()));
     const [isResizing, setIsResizing] = useState(false);
     const resizeStart = useRef(null);
     const searchInputRef = useRef(null);
@@ -55,7 +56,8 @@ const Sidebar = ({ currentView }) => {
     }, [isSidebarCollapsed, pendingFocus]);
 
     useEffect(() => {
-        const constrainWidth = () => setSidebarWidth(width => Math.min(width, getMaximumWidth()));
+        const constrainWidth = () => setSidebarWidth(width => Math.max(MIN_SIDEBAR_WIDTH, Math.min(width, getMaximumWidth())));
+        constrainWidth();
         window.addEventListener('resize', constrainWidth);
         return () => window.removeEventListener('resize', constrainWidth);
     }, []);

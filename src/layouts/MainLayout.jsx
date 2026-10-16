@@ -1,4 +1,5 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import usePersistedState from '../hooks/usePersistedState';
 import { useFileSystem } from '../providers/FileSystemProvider';
 import { useContextMenu } from '../providers/ContextMenuProvider';
 import { useHistory } from '../providers/HistoryProvider';
@@ -58,7 +59,8 @@ const MainLayout = () => {
     const { toggleSidebar } = useAppState();
 
     // UI State - Initialize from settings
-    const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(settings.show_details_panel || false);
+    const [isDetailsPanelOpen, setIsDetailsPanelOpen] = usePersistedState('fileExplorerDetailsPanelOpen', () => settings.show_details_panel || false);
+    const previousDetailsPreference = useRef(settings.show_details_panel);
     const [viewMode, setViewMode] = useState(settings.default_view || 'grid');
     const [searchValue, setSearchValue] = useState('');
     const [searchResults, setSearchResults] = useState(null);
@@ -87,9 +89,12 @@ const MainLayout = () => {
      * Effect to update UI state when settings change
      */
     useEffect(() => {
-        if (settings.show_details_panel !== undefined) {
+        // Restore the last panel state first; apply later changes made in Settings.
+        if (settings.show_details_panel !== previousDetailsPreference.current &&
+            settings.show_details_panel !== undefined) {
             setIsDetailsPanelOpen(settings.show_details_panel);
         }
+        previousDetailsPreference.current = settings.show_details_panel;
     }, [settings.show_details_panel]);
 
     /**

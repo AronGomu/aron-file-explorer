@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
+import usePersistedState from '../hooks/usePersistedState';
 
 // Create context
 const AppStateContext = createContext({
@@ -17,7 +18,7 @@ const AppStateContext = createContext({
 export default function AppStateProvider({ children }) {
     const [isSearching, setIsSearching] = useState(false);
     const [isTemplateViewOpen, setIsTemplateViewOpen] = useState(false);
-    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = usePersistedState('fileExplorerSidebarCollapsed', false);
     const [currentView, setCurrentView] = useState('explorer');
 
     // Toggle template view
