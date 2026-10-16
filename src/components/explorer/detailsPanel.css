@@ -46,6 +46,8 @@
 .folder-preview-item .file-icon {
     display: flex;
     flex-shrink: 0;
+    width: 16px;
+    height: 16px;
 }
 
 .folder-preview-item .file-icon svg {
@@ -54,8 +56,10 @@
 }
 
 .folder-preview-name {
+    display: block;
     min-width: 0;
     max-width: 100%;
+    color: var(--text-primary);
 }
 
 .folder-preview-items.view-mode-grid {
@@ -77,6 +81,16 @@
 .folder-preview-items.view-mode-grid .file-icon svg {
     width: 24px;
     height: 24px;
+}
+
+.folder-preview-items.view-mode-grid .file-icon {
+    width: 40px;
+    height: 40px;
+}
+
+.folder-preview-items.view-mode-grid .folder-preview-name {
+    flex-shrink: 0;
+    width: 100%;
 }
 
 .details-preview {
