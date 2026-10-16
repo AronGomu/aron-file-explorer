@@ -137,7 +137,8 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
             event.stopPropagation();
             const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? container.clientHeight : 1;
             const pixels = Math.max(-100, Math.min(100, event.deltaY * unit));
-            changeGridZoom(-pixels * 0.1);
+            // Proportional steps give finer control at small sizes and accelerate at large sizes.
+            changeGridZoom(gridZoomTarget.current * Math.expm1(-pixels * 0.0005));
         };
         const handleZoomKey = (event) => {
             if (!event.ctrlKey || event.altKey || event.target.isContentEditable ||
