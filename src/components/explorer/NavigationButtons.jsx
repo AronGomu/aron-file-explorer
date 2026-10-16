@@ -124,7 +124,6 @@ const NavigationButtons = () => {
 
     useEffect(() => {
         const handleKeyDown = (event) => {
-            if (event.target.closest?.('.enhanced-terminal')) return;
             if ((event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'r') {
                 event.preventDefault();
                 if (!event.repeat) handleRefresh();

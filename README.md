@@ -56,7 +56,6 @@ This is a Tauri-based application with a **Rust backend** and **React frontend**
 
 - Real-time file watching with caching service
 - Search/caching progress indicators
-- Enhanced terminal integration
 
 # 🛠️ Installation
 
@@ -181,8 +180,6 @@ Available feature combinations:
 <img src="assets/screenshot_details.png" width="700px"/>
 
 <img src="assets/screenshot_overview.png" width="700px"/>
-
-<img src="assets/screenshot_terminal.png" width="700px"/>
 
 <img src="assets/screenshot_settings.png" width="700px"/>
 </div>

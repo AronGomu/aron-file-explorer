@@ -28,7 +28,6 @@ The current settings consist of the following fields. A nearer explanation of ea
    "sort_by":"Name",
    "double_click":"OpenFilesAndFolders",
    "show_file_extensions":true,
-   "terminal_height":240,
    "enable_animations_and_transitions":true,
    "enable_virtual_scroll_for_large_directories":false,
    "abs_file_path_buf":"/tmp/.tmpBX63JY",

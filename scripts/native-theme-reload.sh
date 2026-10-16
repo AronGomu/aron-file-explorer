@@ -16,7 +16,7 @@ focus_app() {
 }
 open_settings() {
   focus_app
-  # Inert Favorites heading blurs xterm. Sidebar Settings itself clears navigation.
+  # Focus the Favorites heading; Sidebar Settings itself clears navigation.
   xdotool mousemove 65 101 click 1
   xdotool key --clearmodifiers ctrl+comma
   sleep 0.5
@@ -27,21 +27,10 @@ close_settings() {
   sleep 0.4
 }
 state_capture() {
-  local name=$1 command pid="" args fields
+  local name=$1
   magick import -window root "/evidence/$name.png"
   cp "$settings" "/evidence/$name.settings.json"
-  for command in /proc/[0-9]*/cmdline; do
-    mapfile -d '' -t args < "$command"
-    if [[ "${args[0]:-}" = /bin/sh && "${args[1]:-}" = -i ]]; then
-      test -z "$pid"
-      pid=${command#/proc/}; pid=${pid%/cmdline}
-    fi
-  done
-  [[ "$pid" =~ ^[0-9]+$ ]]
-  read -r -a fields < "/proc/$pid/stat"
-  printf 'pid=%s starttime=%s cwd=%s exe=%s\n' "$pid" "${fields[21]}" "$(readlink "/proc/$pid/cwd")" "$(readlink "/proc/$pid/exe")" > "/evidence/$name.pty.txt"
   if [[ "$name" != state-before ]]; then
-    cmp /evidence/state-before.pty.txt "/evidence/$name.pty.txt"
     cmp /evidence/state-before.settings.json "/evidence/$name.settings.json"
   fi
 }
@@ -88,10 +77,6 @@ focus_app
 xdotool mousemove 270 20 click 1
 sleep 0.4
 xdotool mousemove 646 220 click 1
-xdotool key --clearmodifiers ctrl+grave
-sleep 0.6
-xdotool type --clearmodifiers 'reload-draft-kept'
-sleep 0.5
 state_capture state-before
 assert_pixel EFF1F5
 printf 'scenario,rename_before_ms,rename_after_ms,pixel_detected_ms,upper_bound_ms\n' > /evidence/reload-timing.csv
@@ -274,6 +259,6 @@ jq -e '.active_theme_id == "catppuccin-latte"' "$settings"
 test ! -e "$themes/catppuccin-mocha.theme.json"
 assert_pixel EFF1F5
 magick import -window root /evidence/cold-invalid.png
-printf 'boundary=extracted-debug-deb-not-OS-installed\ntrigger=real-local-JSON-save\nstate=PTY-pid-starttime-cwd-exe-and-settings-identical\nui=screenshots-require-independent-review\nrecovery=no-live-reseed\n' > /evidence/reload-result.txt
+printf 'boundary=extracted-debug-deb-not-OS-installed\ntrigger=real-local-JSON-save\nstate=settings-identical\nui=screenshots-require-independent-review\nrecovery=no-live-reseed\n' > /evidence/reload-result.txt
 printf 'shutdown=%s\ncold-invalid=bytes-settings-preserved-embedded-latte-no-reseed\n' "$shutdown" >> /evidence/reload-result.txt
 trap - ERR

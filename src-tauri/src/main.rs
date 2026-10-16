@@ -7,11 +7,10 @@ mod filesystem;
 pub mod models;
 mod search_engine;
 mod state;
-mod terminal;
 mod themes;
 
 use crate::commands::{
-    command_exec_commands, terminal_commands, file_system_operation_commands, hash_commands, meta_data_commands,
+    command_exec_commands, file_system_operation_commands, hash_commands, meta_data_commands,
     search_engine_commands, settings_commands, template_commands, volume_operations_commands, sftp_file_system_operation_commands, permission_commands, theme_commands
 };
 use tauri::ipc::Invoke;
@@ -34,12 +33,6 @@ fn all_commands() -> fn(Invoke) -> bool {
         command_exec_commands::execute_command,
         command_exec_commands::execute_command_improved,
         command_exec_commands::execute_command_with_timeout,
-        terminal_commands::terminal_create,
-        terminal_commands::terminal_write,
-        terminal_commands::terminal_interrupt,
-        terminal_commands::terminal_resize,
-        terminal_commands::terminal_ack,
-        terminal_commands::terminal_close,
         // Metadata commands
         meta_data_commands::get_meta_data_as_json,
         meta_data_commands::update_meta_data,
@@ -117,12 +110,6 @@ async fn main() {
     let theme_handle = std::sync::Arc::new(ThemeHandleOwner(std::sync::Mutex::new(None)));
     let setup_theme_handle = theme_handle.clone();
     let app = tauri::Builder::default()
-        .manage(terminal_commands::Terminals::default())
-        .on_window_event(|window, event| {
-            if matches!(event, tauri::WindowEvent::Destroyed) {
-                window.state::<terminal_commands::Terminals>().close_window(window.label());
-            }
-        })
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_shell::init())

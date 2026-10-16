@@ -21,7 +21,6 @@ const defaultSettings = {
     show_file_extensions: true,
 
     // Interface settings
-    terminal_height: 240,
     enable_animations_and_transitions: true,
     enable_virtual_scroll_for_large_directories: false,
 

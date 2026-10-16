@@ -134,7 +134,7 @@ export default function ContextMenuProvider({ children }) {
     useEffect(() => {
         const handleCopyPathShortcut = (event) => {
             if (event.target.isContentEditable ||
-                event.target.closest?.('input, textarea, select, .enhanced-terminal')) return;
+                event.target.closest?.('input, textarea, select')) return;
             if ((event.ctrlKey || event.metaKey) && event.altKey && !event.shiftKey &&
                 (event.code === 'KeyC' || event.key.toLowerCase() === 'c')) {
                 event.preventDefault();

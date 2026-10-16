@@ -89,8 +89,6 @@ pub struct Settings {
     pub double_click: DoubleClick,
     /// Whether to display file extensions
     pub show_file_extensions: bool,
-    /// Height of the terminal panel in pixels
-    pub terminal_height: u32,
     /// Whether to enable UI animations and transitions
     pub enable_animations_and_transitions: bool,
     /// Whether to use virtual scrolling for large directories
@@ -126,7 +124,6 @@ impl Default for Settings {
             sort_by: SortBy::Name,
             double_click: DoubleClick::OpenFilesAndFolders,
             show_file_extensions: true,
-            terminal_height: 240,
             enable_animations_and_transitions: true,
             enable_virtual_scroll_for_large_directories: false,
             enable_suggestions: true, //implement?
@@ -171,7 +168,7 @@ fn merge_values(target: &mut Value, source: Value) {
 
 fn migrate(map: &mut serde_json::Map<String, Value>) -> bool {
     let mut changed = false;
-    for key in ["darkmode", "custom_themes", "default_theme", "default_themes_path", "accent_color"] {
+    for key in ["darkmode", "custom_themes", "default_theme", "default_themes_path", "accent_color", "terminal_height"] {
         changed |= map.remove(key).is_some();
     }
     if !map.contains_key("active_theme_id") {

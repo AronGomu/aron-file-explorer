@@ -36,7 +36,6 @@ test('retains sidebar shell and navigation', () => {
   assert.ok(headings.every(({ index }) => index >= 0));
   assert.ok(headings[0].index < headings[1].index);
   assert.ok(headings[1].index < headings[2].index);
-  assert.match(sidebar, /aria-label="Toggle Terminal"/);
   assert.match(sidebar, />Settings<\/span>/);
   assert.match(sidebar, />Templates<\/span>/);
   assert.match(sidebar, />Add Source<\/span>/);

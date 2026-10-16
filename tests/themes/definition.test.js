@@ -42,7 +42,7 @@ test('theme_dom_preserves_geometry', () => {
     const root = document.documentElement;
     root.style.setProperty('--font-size-md', '19px');
     root.style.setProperty('--space-lg', '17px');
-    root.style.setProperty('--terminal-height', '321px');
+    root.style.setProperty('--file-grid-zoom', '1.5');
     root.classList.add('reduce-motion', 'font-size-large');
     for (const theme of [mocha, latte]) {
         applyThemeToDOM(theme);
@@ -53,7 +53,7 @@ test('theme_dom_preserves_geometry', () => {
         expect(root.style.colorScheme).toBe(theme.appearance);
         expect(root.style.getPropertyValue('--font-size-md')).toBe('19px');
         expect(root.style.getPropertyValue('--space-lg')).toBe('17px');
-        expect(root.style.getPropertyValue('--terminal-height')).toBe('321px');
+        expect(root.style.getPropertyValue('--file-grid-zoom')).toBe('1.5');
         expect(root.classList.contains('reduce-motion')).toBe(true);
         expect(document.body.style.getPropertyValue('--background')).toBe('');
     }

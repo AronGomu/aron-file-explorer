@@ -9,26 +9,7 @@ capture_step() {
   magick import -window root "/evidence/$1.png"
   cp "$settings" "/evidence/$1.settings.json"
   printf '%s\n' "$1" >> /evidence/selection-steps.txt
-  if [[ "$1" = state-* ]]; then
-    local command pid="" args
-    for command in /proc/[0-9]*/cmdline; do
-      mapfile -d '' -t args < "$command"
-      if [[ "${args[0]:-}" = /bin/sh && "${args[1]:-}" = -i ]]; then
-        test -z "$pid"
-        pid=${command#/proc/}
-        pid=${pid%/cmdline}
-      fi
-    done
-    [[ "$pid" =~ ^[0-9]+$ ]]
-    printf '%s\n' "$pid" > "/evidence/$1.pty-pid"
-    readlink "/proc/$pid/cwd" > "/evidence/$1.pty-cwd"
-    readlink "/proc/$pid/exe" > "/evidence/$1.pty-exe"
-    cat "/proc/$pid/stat" > "/evidence/$1.pty-stat"
-    if [[ "$1" != state-before ]]; then
-      cmp /evidence/state-before.pty-pid "/evidence/$1.pty-pid"
-      cmp /evidence/state-before.pty-cwd "/evidence/$1.pty-cwd"
-    fi
-  fi
+
 }
 focus_app() {
   local windows
@@ -39,7 +20,7 @@ focus_app() {
 }
 open_settings() {
   focus_app
-  # Actual sidebar Settings control; focused xterm consumes Ctrl+Comma.
+  # Actual sidebar Settings control.
   xdotool mousemove 75 706 click 1
   sleep 1
 }
@@ -88,11 +69,6 @@ focus_app
 xdotool mousemove 270 20 click 1
 sleep 1
 xdotool mousemove 646 220 click 1
-xdotool key --clearmodifiers ctrl+grave
-sleep 1
-xdotool type --clearmodifiers 'theme-state-kept'
-# PTY echo reaches xterm asynchronously; capture only after rendered draft settles.
-sleep 1
 capture_step state-before
 open_settings
 capture_step fresh-system

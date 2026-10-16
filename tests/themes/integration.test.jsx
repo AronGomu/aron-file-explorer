@@ -77,12 +77,11 @@ test('theme_no_legacy_colors: unresolved token, legacy setting, precise allowlis
     expect(() => auditSources({}, [{ ...entry, path: 'src/**' }])).toThrow('Invalid theme color allowlist entry');
 });
 
-test('theme_no_legacy_colors: noncolor sizes, URLs, hash names, content, terminal stay excluded', () => {
+test('theme_no_legacy_colors: noncolor sizes, URLs, hash names, content stay excluded', () => {
     expect(auditSources({
         'src/probe.css': '.probe { width: 12px; font-family: var(--font-mono, monospace); background: url("icon.svg#fff"), rgba(var(--background-rgb), .5); color: var(--text-primary); }',
         'src/probe.jsx': 'const title = "red"; const hash = "#abcdef"; const label = "Remove darkmode from config"; const url = "/assets/darkmode.svg"; const view = <div id="red" title="darkmode">black</div>;',
         'src/url.css': '.probe { background-image: url("/assets/darkmode.svg"); }',
-        'src/components/terminal/Terminal.jsx': 'const theme = { background: "#123456" };',
     })).toEqual([]);
 });
 

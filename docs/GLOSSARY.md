@@ -13,7 +13,6 @@
 | panel | file-explorer UI region | `src/components/`, `src/layouts/` |
 | keymap | target scoped keyboard command registry | `src/utils/keyboard.js`, `docs/PRODUCT_VISION.md` |
 | preview | in-app media and metadata viewer | `src/hooks/usePreview.js`, `PreviewModal` |
-| terminal | embedded command console | `src/components/terminal/Terminal.jsx` |
 
 ## Backend
 

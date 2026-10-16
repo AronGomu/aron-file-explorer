@@ -30,7 +30,7 @@ focus_explorer() {
 }
 settings_palette() {
   focus_explorer
-  # Focus existing active view control: xterm owns Ctrl+Comma; Sidebar Settings clears currentPath.
+  # Focus existing active view control; Sidebar Settings clears currentPath.
   # Clicking the already-active mode neither navigates nor reloads the directory.
   case "$(jq -r '.default_view' "$settings")" in
     grid) xdotool mousemove 1004 111 click 1 ;;
@@ -51,26 +51,6 @@ settings_palette() {
   xdotool mousemove 984 81 click 1
   sleep 1
 }
-pty_identity() {
-  local command pid="" args stat
-  for command in /proc/[0-9]*/cmdline; do
-    mapfile -d '' -t args < "$command"
-    if [[ "${args[0]:-}" = /bin/sh && "${args[1]:-}" = -i ]]; then
-      test -z "$pid"
-      pid=${command#/proc/}; pid=${pid%/cmdline}
-    fi
-  done
-  [[ "$pid" =~ ^[0-9]+$ ]]
-  printf '%s\n' "$pid" > "/evidence/$1.pty-pid"
-  readlink "/proc/$pid/cwd" > "/evidence/$1.pty-cwd"
-  read -ra stat < "/proc/$pid/stat"
-  printf '%s\n' "${stat[21]}" > "/evidence/$1.pty-starttime"
-  cat "/proc/$pid/stat" > "/evidence/$1.pty-stat"
-  if [[ "$1" != state-before ]]; then
-    for field in pid cwd starttime; do cmp "/evidence/state-before.pty-$field" "/evidence/$1.pty-$field"; done
-  fi
-}
-
 focus_explorer
 # Actual breadcrumb editing, synthetic path only.
 xdotool mousemove 800 62 click 1
@@ -128,32 +108,25 @@ for palette in catppuccin-latte catppuccin-mocha; do
   capture_explorer "$palette-keyboard-focus"
 done
 
-# Real file selection + nonzero wheel scroll + unsubmitted real PTY draft.
+# Real file selection + nonzero wheel scroll.
 xdotool mousemove 1042 111 click 1
 sleep 0.5
-xdotool key --clearmodifiers ctrl+grave
-sleep 1
-xdotool type --clearmodifiers 't4-draft-kept'
-sleep 1
 capture_explorer scroll-before
 xdotool mousemove 650 380 click --repeat 8 --delay 80 5
 sleep 1
 xdotool mousemove 470 230 click 1
 capture_explorer state-before
-pty_identity state-before
 for palette in catppuccin-latte catppuccin-mocha; do
   index=1
   if [[ "$palette" = catppuccin-mocha ]]; then index=2; fi
   settings_palette "$index" "$palette"
   capture_explorer "state-after-$palette"
-  pty_identity "state-after-$palette"
 done
 printf '%s\n' \
   'native=extracted-debug-deb; no OS install' \
   'grid/list/details=actual controls + settings.default_view assertions' \
   'tabs/breadcrumb/menu/focus=actual UI; screenshots require review' \
-  'selection/scroll/draft=screenshot and OCR/pixel verification required, not inferred from exit' \
-  'PTY=PID/starttime/cwd byte-equal across both palettes' \
+  'selection/scroll=screenshot and OCR/pixel verification required, not inferred from exit' \
   'ThisPC=unverified; no production UI dispatch for open-this-pc' \
   'mouse-only-tab/menu/ThisPC-item-keyboard-focus=unreachable without out-of-scope UX change' \
   > /evidence/explorer-result.txt

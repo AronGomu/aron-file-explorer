@@ -95,7 +95,7 @@ npm run test:themes -- tests/themes/definition.test.js tests/themes/selection.te
 PLAYWRIGHT_BROWSERS_PATH="$PWD/.tmp/theme-validation/playwright-browsers" nix develop --no-warn-dirty --command npm run test:themes:visual -- tests/themes/visual/settings.spec.js --repeat-each 3
 ```
 
-Native UI selection automation extends original sandbox; no app test hooks. At fixed 1200x800 viewport, real X11 actions select System/Latte/Mocha, verify persisted JSON, deny saves via fixture directory permissions, restart, edit seeded JSON, restart again, migrate legacy settings. Screenshots plus before/after settings/seed files retained. Tab/file/terminal-input screenshots require visual inspection; no claim based solely on window existence.
+Native UI selection automation extends original sandbox; no app test hooks. At fixed 1200x800 viewport, real X11 actions select System/Latte/Mocha, verify persisted JSON, deny saves via fixture directory permissions, restart, edit seeded JSON, restart again, migrate legacy settings. Screenshots plus before/after settings/seed files retained. Tab/file screenshots require visual inspection; no claim based solely on window existence.
 
 ```bash
 CARGO_TARGET_DIR="$PWD/target" npm run tauri -- build --debug --no-bundle -- --locked
@@ -139,7 +139,7 @@ Disabled controls use WCAG inactive-control exception, identified per element. F
 
 [`audit-theme-colors.mjs`](../scripts/audit-theme-colors.mjs) parses `src/**/*.css`, `src/**/*.js`, `src/**/*.jsx`; CSS declarations/selectors/media rules and JS/JSX color properties/generated style strings are inspected, not blindly replaced. It rejects literal hex/named/RGB/HSL/gradient/fallback colors, legacy names, unresolved color vars. Root semantic tokens and three derived RGB vars resolve through contract; geometry/font/spacing vars are not color aliases. Sizes, URLs/hash identifiers, ordinary content strings are not color declarations. JSON seeds/fixtures are trusted inputs outside this source scan. No arbitrary runtime dataflow claim.
 
-[`color-allowlist.json`](../tests/themes/color-allowlist.json) contains exact `{path,match,reason}` entries only; reasons: `terminal|user-content|native-control|asset`. No path globs; stale exceptions fail. Current allowlist is empty. Explicit terminal component directory boundary is excluded; shared root changes still run terminal-state native checks. Any future asset exception must identify exact declaration/string, not a whole file. `Theme color audit passed` requires zero findings; CLI exits nonzero on unapproved literals, legacy refs, unresolved color vars or malformed input.
+[`color-allowlist.json`](../tests/themes/color-allowlist.json) contains exact `{path,match,reason}` entries only; reasons: `user-content|native-control|asset`. No path globs; stale exceptions fail. Current allowlist is empty. Any future asset exception must identify exact declaration/string, not a whole file. `Theme color audit passed` requires zero findings; CLI exits nonzero on unapproved literals, legacy refs, unresolved color vars or malformed input.
 
 ### Extracted debug package: no install
 
@@ -170,7 +170,7 @@ for scenario in selection reload; do
 done
 ```
 
-Native scripts launch extracted executable inside existing private namespace, not gallery/dev server. Selection scenario checks real IPC→settings bytes→restart for System/explicit/custom IDs, denied save rollback, migration preservation. Reload scenario checks real file writes/atomic rename→watch event→same-window pixel change, invalid-save last-good, duplicate/rename/deletion/directory recovery, cold invalid/missing fallback, PTY PID/starttime/cwd/executable preservation, graceful close. Review screenshots for selected-file marker, tab/form/terminal continuity; PTY identity alone cannot prove every UI state. Never enable asset-protocol relaxations to manufacture media success.
+Native scripts launch extracted executable inside existing private namespace, not gallery/dev server. Selection scenario checks real IPC→settings bytes→restart for System/explicit/custom IDs, denied save rollback, migration preservation. Reload scenario checks real file writes/atomic rename→watch event→same-window pixel change, invalid-save last-good, duplicate/rename/deletion/directory recovery, cold invalid/missing fallback, graceful close. Review screenshots for selected-file marker, tab/form continuity. Never enable asset-protocol relaxations to manufacture media success.
 
 Native result records use `{platform,build,caseId,status,command,observation,screenshot}` under `artifacts/theme-validation/native/results.json`; `build` distinguishes `dev` (including debug `.deb`) from `release`. Attach package resource listing, exact executable/hash, license comparison, settings receipts, command logs, screenshots. Script exit 0 alone is insufficient.
 

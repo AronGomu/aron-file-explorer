@@ -26,10 +26,9 @@ export function auditSources(sources, allowlist = []) {
     const defined = new Set([...Object.values(TOKEN_TO_CSS), '--background-rgb', '--border-rgb', '--accent-rgb']);
     const usedExceptions = new Set();
     for (const entry of allowlist) {
-        if (!entry || !['terminal', 'user-content', 'native-control', 'asset'].includes(entry.reason) || typeof entry.path !== 'string' || typeof entry.match !== 'string' || !entry.match || /[*?]/.test(entry.path)) throw new Error('Invalid theme color allowlist entry');
+        if (!entry || !['user-content', 'native-control', 'asset'].includes(entry.reason) || typeof entry.path !== 'string' || typeof entry.match !== 'string' || !entry.match || /[*?]/.test(entry.path)) throw new Error('Invalid theme color allowlist entry');
     }
     for (const [path, source] of Object.entries(sources)) {
-        if (path.startsWith('src/components/terminal/')) continue;
         const report = (kind, offset, snippet) => {
             const line = source.slice(0, offset).split('\n').length;
             if (kind === 'Unapproved color literal') {

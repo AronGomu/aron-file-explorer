@@ -94,7 +94,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
         };
         const handleZoomKey = (event) => {
             if (!event.ctrlKey || event.altKey || event.target.isContentEditable ||
-                event.target.closest?.('input, textarea, select, [role="dialog"], .modal-overlay, .enhanced-terminal')) return;
+                event.target.closest?.('input, textarea, select, [role="dialog"], .modal-overlay')) return;
             let direction;
             if (event.key === '+' || event.key === '=') direction = 1;
             else if (event.key === '-' || event.key === '_') direction = -1;
@@ -411,8 +411,6 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
      */
     useEffect(() => {
         const handleKeyDown = (e) => {
-            if (e.target.closest?.('.enhanced-terminal')) return;
-
             // Don't handle arrow keys if user is typing in an input or textarea
             if (e.target instanceof HTMLInputElement || 
                 e.target instanceof HTMLTextAreaElement || 

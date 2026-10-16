@@ -17,7 +17,7 @@ let root, container, theme, settings, disk, catalog, media, listeners, mounts;
 const loadError = 'Could not load settings. Defaults are temporary; existing file was not changed.';
 function Probe({ renderPanel }) {
     theme = useTheme(); settings = useSettings();
-    const [state, setState] = useState(() => { mounts++; return 'tab/file/form/terminal'; });
+    const [state, setState] = useState(() => { mounts++; return 'tab/file/form'; });
     return <><input aria-label="preserved state" value={state} onChange={event => setState(event.target.value)} />
         <output>{String(theme.activeThemeId)}/{theme.resolvedThemeId}</output>{renderPanel && <SettingsPanel isOpen onClose={() => {}} />}</>;
 }
@@ -66,9 +66,9 @@ test.each([
     ['string', latte.id], ['null', null], ['object', { unexpected: true }],
 ])('theme_settings_root_authority: nested %s theme extra never overrides snapshot/reload prefs', async (_, nestedTheme) => {
     const preferences = { active_theme_id: mocha.id, font_size: 'Large',
-        enable_animations_and_transitions: false, terminal_height: 321, default_view: 'details' };
+        enable_animations_and_transitions: false, default_view: 'details' };
     const extras = { active_theme_id: nestedTheme, font_size: 'Small',
-        enable_animations_and_transitions: true, terminal_height: 1, default_view: 'grid' };
+        enable_animations_and_transitions: true, default_view: 'grid' };
     disk = { ...preferences, backend_settings: { search_engine_config: extras } };
     const original = structuredClone(disk);
     await mount(false, false);
@@ -157,7 +157,7 @@ test('theme_reset_isolated: real reset syncs System without remount; reload pres
     expect(theme.activeThemeId).toBe('system');
     await act(async () => settings.reloadSettings());
     expect(container.querySelector('input[aria-label="preserved state"]')).toBe(input);
-    expect(input.value).toBe('tab/file/form/terminal'); expect(mounts).toBe(childMounts);
+    expect(input.value).toBe('tab/file/form'); expect(mounts).toBe(childMounts);
 });
 
 test('theme_reset_failure: preserves settings/root; queued reset cannot race selection response', async () => {

@@ -108,7 +108,6 @@ const MOCK_SETTINGS = {
     sortBy: 'name',
     sortDirection: 'asc',
     showDetailsPanel: false,
-    terminalHeight: 240,
 };
 
 // Mock templates
@@ -186,7 +185,6 @@ export const mockInvoke = async (command, params) => {
                 sortBy: 'name',
                 sortDirection: 'asc',
                 showDetailsPanel: false,
-                terminalHeight: 240,
             });
             return;
 

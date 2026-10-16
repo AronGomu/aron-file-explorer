@@ -18,7 +18,6 @@ import ContextMenu from '../components/contextMenu/ContextMenu';
 
 // Additional Components
 import RenameModal from '../components/common/RenameModal';
-import Terminal from '../components/terminal/Terminal';
 import TabManager from '../components/tabs/TabManager';
 import GlobalSearch from '../components/search/GlobalSearch';
 import SettingsPanel from '../components/settings/SettingsPanel';
@@ -60,7 +59,6 @@ const MainLayout = () => {
 
     // UI State - Initialize from settings
     const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(settings.show_details_panel || false);
-    const [isTerminalOpen, setIsTerminalOpen] = useState(false);
     const [viewMode, setViewMode] = useState(settings.default_view || 'grid');
     const [searchValue, setSearchValue] = useState('');
     const [searchResults, setSearchResults] = useState(null);
@@ -84,9 +82,6 @@ const MainLayout = () => {
     const [isHashDisplayModalOpen, setIsHashDisplayModalOpen] = useState(false);
     const [hashModalItem, setHashModalItem] = useState(null);
     const [hashDisplayData, setHashDisplayData] = useState({ hash: '', fileName: '' });
-
-    // Get terminal height for padding calculations
-    const terminalHeight = settings.terminal_height || 240;
 
     /**
      * Effect to update UI state when settings change
@@ -224,13 +219,6 @@ const MainLayout = () => {
         };
 
         /**
-         * Handler for toggling terminal visibility
-         */
-        const handleToggleTerminal = () => {
-            setIsTerminalOpen(prev => !prev);
-        };
-
-        /**
          * Handler for opening rename modal
          * @param {CustomEvent} e - Event with item details
          */
@@ -310,7 +298,6 @@ const MainLayout = () => {
     document.addEventListener('open-this-pc', handleOpenThisPC);
     document.addEventListener('open-network', handleOpenNetwork);
     document.addEventListener('open-settings', handleOpenSettings);
-    document.addEventListener('toggle-terminal', handleToggleTerminal);
     document.addEventListener('open-rename-modal', handleOpenRenameModal);
     document.addEventListener('open-hash-file-modal', handleOpenHashFileModal);
     document.addEventListener('open-hash-compare-modal', handleOpenHashCompareModal);
@@ -326,7 +313,6 @@ const MainLayout = () => {
             document.removeEventListener('open-this-pc', handleOpenThisPC);
             document.removeEventListener('open-network', handleOpenNetwork);
             document.removeEventListener('open-settings', handleOpenSettings);
-            document.removeEventListener('toggle-terminal', handleToggleTerminal);
             document.removeEventListener('open-rename-modal', handleOpenRenameModal);
             document.removeEventListener('open-hash-file-modal', handleOpenHashFileModal);
             document.removeEventListener('open-hash-compare-modal', handleOpenHashCompareModal);
@@ -384,7 +370,6 @@ const MainLayout = () => {
          * @param {KeyboardEvent} e - The keyboard event
          */
         const handleKeyDown = (e) => {
-            if (e.target.closest?.('.enhanced-terminal')) return;
             // Toggle sidebar: Ctrl+B
             if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'b') {
                 e.preventDefault();
@@ -422,12 +407,6 @@ const MainLayout = () => {
                 document.dispatchEvent(new CustomEvent('open-rename-modal', {
                     detail: { item: selectedItems[0] }
                 }));
-            }
-
-            // Toggle terminal: Ctrl+`
-            if ((e.ctrlKey || e.metaKey) && e.key === '`') {
-                e.preventDefault();
-                setIsTerminalOpen(prev => !prev);
             }
 
             // Escape to clear selection
@@ -558,7 +537,7 @@ const MainLayout = () => {
         const handlePreviewToggle = (event) => {
             if (event.defaultPrevented || event.key !== ' ' || event.ctrlKey || event.metaKey ||
                 event.altKey || event.shiftKey || event.target.isContentEditable ||
-                event.target.closest('input, textarea, select, button, a, [role="button"], [role="dialog"], .enhanced-terminal')) return;
+                event.target.closest('input, textarea, select, button, a, [role="button"], [role="dialog"]')) return;
             event.preventDefault();
             if (!event.repeat) handleDetailsPanelToggle();
         };
@@ -615,7 +594,7 @@ const MainLayout = () => {
     // Removed renderSftpFileList - now handled seamlessly by the regular explorer view
 
     return (
-        <div className={`main-layout ${isTerminalOpen ? 'with-terminal' : ''}`}>
+        <div className="main-layout">
             {/* Settings Applier - applies settings to DOM */}
             <SettingsApplier />
 
@@ -674,10 +653,7 @@ const MainLayout = () => {
                     {/* Main content area */}
                     <div className="content-area">
                         {/* Main content with file list and optional details panel */}
-                        <div
-                            className="main-content"
-                            style={isTerminalOpen ? { paddingBottom: `${terminalHeight}px` } : {}}
-                        >
+                        <div className="main-content">
                             {renderMainContent()}
 
                             {/* Details panel (when selected) */}
@@ -693,23 +669,6 @@ const MainLayout = () => {
                             )}
                         </div>
 
-                        {/* Terminal positioned absolutely at the bottom */}
-                        <div 
-                            className="terminal-wrapper"
-                            style={{
-                                position: isTerminalOpen ? 'absolute' : 'static',
-                                bottom: isTerminalOpen ? 0 : 'auto',
-                                left: isTerminalOpen ? 0 : 'auto',
-                                right: isTerminalOpen ? 0 : 'auto',
-                                height: isTerminalOpen ? `${terminalHeight}px` : 0,
-                                overflow: isTerminalOpen ? 'visible' : 'hidden'
-                            }}
-                        >
-                            <Terminal
-                                isOpen={isTerminalOpen}
-                                onToggle={() => setIsTerminalOpen(prev => !prev)}
-                            />
-                        </div>
                     </div>
                 </div>
             </TabManager>

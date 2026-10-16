@@ -26,32 +26,7 @@ peripheral_capture() {
   magick import -window root "/evidence/$1.png"
   cp "$settings" "/evidence/$1.settings.json"
   printf '%s\n' "$1" >> /evidence/peripheral-steps.txt
-  if [[ "$1" = state-* ]]; then
-    local command pid="" args
-    for command in /proc/[0-9]*/cmdline; do
-      mapfile -d '' -t args < "$command"
-      if [[ "${args[0]:-}" = /bin/sh && "${args[1]:-}" = -i ]]; then
-        test -z "$pid"
-        pid=${command#/proc/}
-        pid=${pid%/cmdline}
-      fi
-    done
-    [[ "$pid" =~ ^[0-9]+$ ]]
-    printf '%s\n' "$pid" > "/evidence/$1.pty-pid"
-    readlink "/proc/$pid/cwd" > "/evidence/$1.pty-cwd"
-    cat "/proc/$pid/stat" > "/evidence/$1.pty-stat"
-    readlink "/proc/$pid/exe" > "/evidence/$1.pty-exe"
-    sha256sum "/proc/$pid/exe" > "/evidence/$1.pty-exe.sha256"
-    local stat fields
-    stat=$(< "/proc/$pid/stat")
-    read -r -a fields <<< "${stat##*) }"
-    printf '%s\n' "${fields[19]}" > "/evidence/$1.pty-starttime"
-    if [[ "$1" != state-before ]]; then
-      for field in pty-pid pty-cwd pty-starttime pty-exe pty-exe.sha256; do
-        cmp "/evidence/state-before.$field" "/evidence/$1.$field"
-      done
-    fi
-  fi
+
 }
 peripheral_focus() {
   local windows
@@ -238,16 +213,12 @@ done
 printf 'name=Theme draft kept\nhost=127.0.0.1\nport=22\nusername=fixture-draft\npassword=empty\nsubmitted=no\nmethod=modal-header-blur+CtrlComma;Settings-close-button\nresult=UNVERIFIED-inspect-field-screenshots\n' > /evidence/form-draft-attempt.txt
 xdotool mousemove 775 159 click 1
 sleep 0.5
-# Actual navigation/tabs/selection/PTY retention; no production inspection hook.
+# Actual navigation/tabs/selection retention; no production inspection hook.
 xdotool mousemove 270 20 click 1
 sleep 0.5
 peripheral_path /fixture/home/media/text
 xdotool mousemove 1100 700 click 1
 xdotool mousemove 334 186 click 1
-xdotool key --clearmodifiers ctrl+grave
-sleep 1
-xdotool type --clearmodifiers 'theme-state-kept'
-sleep 1
 peripheral_capture state-before
 peripheral_theme 1 catppuccin-latte
 peripheral_capture state-after-latte

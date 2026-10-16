@@ -29,18 +29,12 @@ const SettingsApplier = () => {
             document.documentElement.classList.remove('reduce-motion');
         }
 
-        // Apply terminal height
-        if (settings.terminal_height) {
-            document.documentElement.style.setProperty('--terminal-height', `${settings.terminal_height}px`);
-        }
-
         console.log('Settings applied to DOM:', {
             font_size: settings.font_size,
-            enable_animations_and_transitions: settings.enable_animations_and_transitions,
-            terminal_height: settings.terminal_height
+            enable_animations_and_transitions: settings.enable_animations_and_transitions
         });
 
-    }, [settings.font_size, settings.enable_animations_and_transitions, settings.terminal_height]);
+    }, [settings.font_size, settings.enable_animations_and_transitions]);
 
     // This component doesn't render anything
     return null;

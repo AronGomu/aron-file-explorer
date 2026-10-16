@@ -383,18 +383,6 @@ const SettingsPanel = ({ isOpen, onClose }) => {
         <div className="settings-tab-content">
             <div className="settings-section">
                 <h3>Performance</h3>
-                <div className="form-group">
-                    <label>Terminal height (pixels):</label>
-                    <input
-                        type="number"
-                        min="200"
-                        max="600"
-                        value={settings.terminal_height || 240}
-                        onChange={(e) => updateSetting('terminal_height', parseInt(e.target.value))}
-                        className="settings-input"
-                    />
-                </div>
-
                 <label className="checkbox-option">
                     <input
                         type="checkbox"
