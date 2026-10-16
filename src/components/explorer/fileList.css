@@ -81,8 +81,8 @@
 /* View modes */
 .file-list.view-mode-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, max(56px, calc(72px * var(--file-grid-zoom, 1)))), 1fr));
-    gap: 2px;
+    grid-template-columns: repeat(auto-fill, min(100%, max(56px, calc(72px * var(--file-grid-zoom, 1)))));
+    gap: 6px;
     padding-bottom: var(--space-sm);
 }
 
@@ -277,8 +277,8 @@
     }
 
     .file-list.view-mode-grid {
-        grid-template-columns: repeat(auto-fill, minmax(min(100%, max(56px, calc(72px * var(--file-grid-zoom, 1)))), 1fr));
-        gap: 2px;
+        grid-template-columns: repeat(auto-fill, min(100%, max(56px, calc(72px * var(--file-grid-zoom, 1)))));
+        gap: 6px;
     }
 
     .file-list-header {

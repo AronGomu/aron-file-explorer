@@ -38,6 +38,9 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
     const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
     const [columnsPerRow, setColumnsPerRow] = useState(4); // Dynamic column calculation
     const [gridZoom, setGridZoom] = useState(100);
+    const gridZoomValue = useRef(100);
+    const gridZoomTarget = useRef(100);
+    const gridZoomFrame = useRef(null);
     const [columnWidths, setColumnWidths] = useState(() =>
         Object.fromEntries(LIST_COLUMNS.map(column => [column.key, column.width])));
     const columnResize = useRef(null);
@@ -106,8 +109,22 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
         setColumnWidths(widths => ({ ...widths, [column.key]: Math.max(column.minWidth, Math.min(MAX_COLUMN_WIDTH, widths[column.key] + delta)) }));
     };
 
-    const changeGridZoom = useCallback((direction) => {
-        setGridZoom(zoom => Math.max(50, Math.min(1000, zoom + direction * 10)));
+    const changeGridZoom = useCallback((delta) => {
+        gridZoomTarget.current = Math.max(50, Math.min(1000, gridZoomTarget.current + delta));
+        if (gridZoomFrame.current !== null) return;
+
+        let previousTime = performance.now();
+        const animate = (time) => {
+            const elapsed = Math.max(0, Math.min(64, time - previousTime));
+            previousTime = time;
+            const remaining = gridZoomTarget.current - gridZoomValue.current;
+            const finished = Math.abs(remaining) < 0.02;
+            gridZoomValue.current = finished ? gridZoomTarget.current
+                : gridZoomValue.current + remaining * (1 - Math.exp(-elapsed / 65));
+            setGridZoom(gridZoomValue.current);
+            gridZoomFrame.current = finished ? null : requestAnimationFrame(animate);
+        };
+        gridZoomFrame.current = requestAnimationFrame(animate);
     }, []);
 
     useEffect(() => {
@@ -118,7 +135,9 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
             if (!event.ctrlKey || event.altKey || event.deltaY === 0) return;
             event.preventDefault();
             event.stopPropagation();
-            changeGridZoom(event.deltaY < 0 ? 1 : -1);
+            const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? container.clientHeight : 1;
+            const pixels = Math.max(-100, Math.min(100, event.deltaY * unit));
+            changeGridZoom(-pixels * 0.1);
         };
         const handleZoomKey = (event) => {
             if (!event.ctrlKey || event.altKey || event.target.isContentEditable ||
@@ -129,7 +148,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
             else return;
             event.preventDefault();
             event.stopPropagation();
-            changeGridZoom(direction);
+            changeGridZoom(direction * 10);
         };
 
         container.addEventListener('wheel', handleWheel, { passive: false });
@@ -137,6 +156,9 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
         return () => {
             container.removeEventListener('wheel', handleWheel);
             window.removeEventListener('keydown', handleZoomKey, true);
+            if (gridZoomFrame.current !== null) cancelAnimationFrame(gridZoomFrame.current);
+            gridZoomFrame.current = null;
+            gridZoomTarget.current = gridZoomValue.current;
         };
     }, [viewMode, data, isLoading, changeGridZoom]);
 
