@@ -4,7 +4,7 @@ import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { useSftp } from '../../providers/SftpProvider';
 import { getFileIconType } from '../../utils/icons';
 import { getPreviewFilePath } from '../../utils/imageThumbnails';
-import { showError } from '../../utils/NotificationSystem';
+import { showError, showSuccess } from '../../utils/NotificationSystem';
 import FileIcon from './FileIcon';
 import FolderContentsPreview from './FolderContentsPreview';
 
@@ -101,8 +101,10 @@ const FileContentPreview = ({ item, viewMode }) => {
                 if (!code || (!code.contains(selection?.anchorNode) && !code.contains(selection?.focusNode))) return;
                 const text = getSelectedText();
                 if (!text) return;
-                copyQueue = copyQueue.then(() => {
-                    if (!cancelled && getSelectedText() === text) return writeText(text);
+                copyQueue = copyQueue.then(async () => {
+                    if (cancelled || getSelectedText() !== text) return;
+                    await writeText(text);
+                    if (!cancelled) showSuccess('Text copied to clipboard.', 1500);
                 }).catch(() => {
                     if (!cancelled) showError('Failed to copy selected text to clipboard.');
                 });
