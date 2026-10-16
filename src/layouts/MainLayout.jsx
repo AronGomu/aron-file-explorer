@@ -639,14 +639,6 @@ const MainLayout = () => {
                                 </div>
                             )}
                             <button
-                                className="icon-button"
-                                onClick={() => setIsGlobalSearchOpen(true)}
-                                title="Global Search (Ctrl+Shift+F)"
-                                aria-label="Global Search"
-                            >
-                                <span className="icon icon-search-global"></span>
-                            </button>
-                            <button
                                 type="button"
                                 className="icon-button"
                                 onClick={() => setIsSettingsOpen(true)}
@@ -678,6 +670,7 @@ const MainLayout = () => {
                                         item={selectedItems[0] || null}
                                         isMultipleSelection={selectedItems.length > 1}
                                         onCollapse={handleDetailsPanelToggle}
+                                        viewMode={viewMode}
                                     />
                                 </>
                             )}

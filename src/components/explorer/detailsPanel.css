@@ -22,6 +22,63 @@
     padding: var(--space-md);
 }
 
+.folder-preview-content {
+    min-height: 0;
+    padding: 40px var(--space-sm) var(--space-sm);
+}
+
+.folder-preview-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.folder-preview-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    min-height: 26px;
+    padding: 2px 4px;
+    font-size: var(--font-size-xs);
+}
+
+.folder-preview-item .file-icon {
+    display: flex;
+    flex-shrink: 0;
+}
+
+.folder-preview-item .file-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.folder-preview-name {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.folder-preview-items.view-mode-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 72px), 1fr));
+    gap: 2px;
+}
+
+.folder-preview-items.view-mode-grid .folder-preview-item {
+    flex-direction: column;
+    justify-content: center;
+    aspect-ratio: 1;
+    gap: 2px;
+    padding: 2px;
+    font-size: var(--font-size-sm);
+    text-align: center;
+}
+
+.folder-preview-items.view-mode-grid .file-icon svg {
+    width: 24px;
+    height: 24px;
+}
+
 .details-preview {
     display: flex;
     flex-direction: column;

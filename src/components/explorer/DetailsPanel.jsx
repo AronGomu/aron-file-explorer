@@ -1,5 +1,6 @@
 import React from 'react';
 import FileIcon from './FileIcon';
+import FolderContentsPreview from './FolderContentsPreview';
 import IconButton from '../common/IconButton';
 import { formatFileSize, formatDate, getFileType } from '../../utils/formatters';
 import './detailsPanel.css';
@@ -10,9 +11,10 @@ import './detailsPanel.css';
  * @param {Object} [props.item] - The selected item to display details for
  * @param {boolean} [props.isMultipleSelection=false] - Whether multiple items are selected
  * @param {Function} [props.onCollapse] - Callback to collapse the preview panel
+ * @param {string} [props.viewMode='grid'] - Active explorer view mode
  * @returns {React.ReactElement} Details panel component
  */
-const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse }) => {
+const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, viewMode = 'grid' }) => {
     const collapseButton = onCollapse && (
         <IconButton
             icon="chevron-right"
@@ -48,18 +50,27 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse }) => {
     }
 
     // Determine if item is a directory or file
-    const isDirectory = 'sub_file_count' in item;
+    const isDirectory = item.isDirectory || 'sub_file_count' in item;
+
+    if (isDirectory) {
+        return (
+            <div className="details-panel">
+                {collapseButton}
+                <div className="details-content folder-preview-content">
+                    <FolderContentsPreview path={item.path} viewMode={viewMode} />
+                </div>
+            </div>
+        );
+    }
 
     // Format size
-    const size = isDirectory
-        ? `${item.sub_file_count || 0} files, ${item.sub_dir_count || 0} folders`
-        : formatFileSize(item.size_in_bytes);
+    const size = formatFileSize(item.size_in_bytes);
 
     // Get file type
-    const fileType = isDirectory ? 'Folder' : getFileType(item.name);
+    const fileType = getFileType(item.name);
 
     // Get extension (for files)
-    const extension = !isDirectory && item.name.includes('.')
+    const extension = item.name.includes('.')
         ? item.name.split('.').pop().toUpperCase()
         : '';
 
@@ -104,18 +115,16 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse }) => {
                         <span className="details-label">Size:</span>
                         <span className="details-value">
                           {size}
-                            {!isDirectory && item.size_in_bytes != null && (
+                            {item.size_in_bytes != null && (
                                 <span className="details-value-secondary"> ({item.size_in_bytes.toLocaleString()} bytes)</span>
                             )}
                         </span>
                     </div>
 
-                    {!isDirectory && (
-                        <div className="details-row">
-                            <span className="details-label">Type:</span>
-                            <span className="details-value">{fileType}</span>
-                        </div>
-                    )}
+                    <div className="details-row">
+                        <span className="details-label">Type:</span>
+                        <span className="details-value">{fileType}</span>
+                    </div>
                 </div>
 
                 <div className="details-section">
