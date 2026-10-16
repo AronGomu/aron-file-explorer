@@ -3,6 +3,8 @@ import usePersistedState from '../../hooks/usePersistedState';
 import FileContentPreview from './FileContentPreview';
 import FileDetails from './FileDetails';
 import IconButton from '../common/IconButton';
+import { formatFileSize, formatDate, getFileType } from '../../utils/formatters';
+import { getDirectoryPath } from '../../utils/pathUtils';
 import './detailsPanel.css';
 
 const MIN_PREVIEW_WIDTH = 200;
@@ -142,6 +144,17 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, viewMode 
     const panelClassName = `details-panel${isResizing ? ' details-resizing' : ''}${isSplitting ? ' details-splitting' : ''}`;
     const hasItem = item && !isMultipleSelection;
     const revision = item ? `${item.last_modified || ''}:${item.size_in_bytes ?? ''}` : '';
+    const isDirectory = hasItem && (item.isDirectory || 'sub_file_count' in item);
+    const footerSummary = hasItem ? [
+        item.name,
+        isDirectory ? 'Folder' : getFileType(item.name),
+        isDirectory ? [
+            Number.isFinite(item.sub_file_count) ? `${item.sub_file_count} files` : null,
+            Number.isFinite(item.sub_dir_count) ? `${item.sub_dir_count} folders` : null,
+        ].filter(Boolean).join(', ') : Number.isFinite(item.size_in_bytes) ? formatFileSize(item.size_in_bytes) : null,
+        item.last_modified ? `Modified ${formatDate(item.last_modified, true)}` : null,
+        getDirectoryPath(item.path),
+    ].filter(Boolean).join(' · ') : '';
 
     return (
         <div id="explorer-preview-panel" ref={panelRef} className={panelClassName}
@@ -182,6 +195,7 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, viewMode 
                     </>}
                 </div>
                 <div className="details-panel-footer">
+                    <span className="details-footer-summary truncate" title={footerSummary}>{footerSummary}</span>
                     <IconButton icon="info" className="details-info-toggle"
                         label={showInformation ? 'Hide information' : 'Show information'}
                         title={showInformation ? 'Hide information' : 'Show information'}

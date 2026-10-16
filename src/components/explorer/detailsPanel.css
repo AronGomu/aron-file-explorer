@@ -43,10 +43,7 @@
 }
 
 .details-info-toggle {
-    position: absolute;
-    right: 4px;
-    bottom: 4px;
-    z-index: 2;
+    flex-shrink: 0;
     background-color: var(--background-secondary);
 }
 
@@ -55,7 +52,19 @@
 }
 
 .details-panel-footer {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
     flex: 0 0 40px;
+    min-width: 0;
+    padding: 4px 4px 4px 12px;
+}
+
+.details-footer-summary {
+    flex: 1;
+    min-width: 0;
+    color: var(--text-secondary);
+    font-size: var(--font-size-xs);
 }
 
 .details-body {
