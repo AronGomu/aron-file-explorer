@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { getFileType } from '../../utils/formatters';
 import { useFileSystem } from '../../providers/FileSystemProvider';
 import { useContextMenu } from '../../providers/ContextMenuProvider';
+import { useHistory } from '../../providers/HistoryProvider';
 import { showError } from '../../utils/NotificationSystem';
 import FileItem from './FileItem';
 import EmptyState from './EmptyState';
@@ -33,6 +34,7 @@ const MAX_COLUMN_WIDTH = 2000;
 const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, searchTerm = '', disableArrowKeys = false, onColumnsChange, isPreviewPanelOpen = false, onPreviewPanelToggle }) => {
     const { selectedItems, selectItem, selectMultiple, loadDirectory, clearSelection, focusedItem, setFocusedItem, openFile } = useFileSystem();
     const { openContextMenu } = useContextMenu();
+    const { currentPath, getDirectoryViewState, saveDirectoryViewState } = useHistory();
     const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
     const [columnsPerRow, setColumnsPerRow] = useState(4); // Dynamic column calculation
     const [gridZoom, setGridZoom] = useState(100);
@@ -44,6 +46,32 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
     const [selectionBox, setSelectionBox] = useState(null);
     const selectionDrag = useRef(null);
     const suppressDragClick = useRef(false);
+    const previousListing = useRef(null);
+    const restoringSelection = useRef(false);
+
+    const scrollItemIntoView = useCallback((index) => {
+        const container = containerRef.current;
+        const element = container?.querySelectorAll('.file-item')[index];
+        if (!element) return;
+        const bounds = container.getBoundingClientRect();
+        const itemBounds = element.getBoundingClientRect();
+        const headerHeight = container.querySelector('.file-list-header')?.getBoundingClientRect().height || 0;
+        const viewportTop = bounds.top + container.clientTop;
+        const visibleTop = viewportTop + headerHeight;
+        const visibleBottom = viewportTop + container.clientHeight;
+        if (itemBounds.top < visibleTop) container.scrollTop += itemBounds.top - visibleTop;
+        else if (itemBounds.bottom > visibleBottom) container.scrollTop += itemBounds.bottom - visibleBottom;
+    }, []);
+
+    const rememberScrollPosition = (event) => {
+        const path = data?.directory || currentPath;
+        if (event.target !== event.currentTarget || isLoading || isSearching ||
+            path !== currentPath || previousListing.current?.data !== data) return;
+        const saved = getDirectoryViewState(path);
+        if (saved) saveDirectoryViewState(path, {
+            ...saved, scrollTop: event.currentTarget.scrollTop, scrollLeft: event.currentTarget.scrollLeft
+        });
+    };
 
     const handleColumnResizeStart = (event, column) => {
         if (event.button !== 0) return;
@@ -411,6 +439,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
      */
     useEffect(() => {
         const handleKeyDown = (e) => {
+            if (isLoading || (data?.directory && data.directory !== currentPath)) return;
             // Don't handle arrow keys if user is typing in an input or textarea
             if (e.target instanceof HTMLInputElement || 
                 e.target instanceof HTMLTextAreaElement || 
@@ -520,22 +549,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
 
                 const item = sortedItems[newFocusedIndex];
                 if (moved && item) {
-                    const container = containerRef.current;
-                    const element = container?.querySelectorAll('.file-item')[newFocusedIndex];
-                    if (element) {
-                        const containerBounds = container.getBoundingClientRect();
-                        const itemBounds = element.getBoundingClientRect();
-                        const headerHeight = container.querySelector('.file-list-header')?.getBoundingClientRect().height || 0;
-                        const viewportTop = containerBounds.top + container.clientTop;
-                        const visibleTop = viewportTop + headerHeight;
-                        const visibleBottom = viewportTop + container.clientHeight;
-
-                        if (itemBounds.top < visibleTop) {
-                            container.scrollTop += itemBounds.top - visibleTop;
-                        } else if (itemBounds.bottom > visibleBottom) {
-                            container.scrollTop += itemBounds.bottom - visibleBottom;
-                        }
-                    }
+                    scrollItemIntoView(newFocusedIndex);
 
                     if (e.shiftKey && lastSelectedIndex !== -1) {
                         // Shift+Arrow: select range from lastSelectedIndex to newFocusedIndex
@@ -611,32 +625,57 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
             document.removeEventListener('select-item', handleSelectItem);
             document.removeEventListener('clear-selection', handleClearSelection);
         };
-    }, [selectItem, clearSelection, sortedItems, focusedItem, setFocusedItem, loadDirectory, viewMode, showError, disableArrowKeys, columnsPerRow]);
+    }, [selectItem, clearSelection, sortedItems, focusedItem, setFocusedItem, loadDirectory, viewMode, showError, disableArrowKeys, columnsPerRow, isLoading, data, currentPath, scrollItemIntoView]);
 
-    /**
-     * Clears selection when displayed data changes
-     */
-
-    // Track if this is the first mount or a navigation (not a deselection)
-    const isFirstMount = useRef(true);
-    const prevDataRef = useRef();
-
-    useEffect(() => {
-        // Only clear selection if the data object reference actually changed (navigation), not just selection
-        if (prevDataRef.current !== data) {
-            clearSelection();
-            setLastSelectedIndex(-1);
-            prevDataRef.current = data;
+    // Restore only after the requested folder's listing has finished loading.
+    useLayoutEffect(() => {
+        const path = isSearching ? null : data?.directory || currentPath;
+        if (isLoading) {
+            previousListing.current = null;
+            return;
         }
-    }, [data, clearSelection]);
+        if (!data || (path && path !== currentPath)) return;
+        if (previousListing.current?.data === data && previousListing.current.path === path) return;
+        previousListing.current = { data, path };
+        restoringSelection.current = true;
 
-    useEffect(() => {
-        // Only focus first item on first mount or navigation, not after deselection
-        if (sortedItems.length > 0 && !focusedItem && isFirstMount.current) {
-            setFocusedItem(sortedItems[0]);
-            isFirstMount.current = false;
+        const saved = path ? getDirectoryViewState(path) : null;
+        const selectedPaths = new Set(saved?.selectedPaths || []);
+        let selection = sortedItems.filter(item => selectedPaths.has(item.path));
+        const focus = sortedItems.find(item => item.path === saved?.focusedPath) ||
+            selection[0] || sortedItems[0] || null;
+        if (!selection.length && focus) selection = [focus];
+        selectMultiple(selection);
+        setFocusedItem(focus);
+        const focusIndex = focus ? sortedItems.findIndex(item => item.path === focus.path) : -1;
+        const anchorIndex = sortedItems.findIndex(item => item.path === saved?.anchorPath);
+        setLastSelectedIndex(anchorIndex >= 0 ? anchorIndex : focusIndex);
+
+        if (containerRef.current) {
+            containerRef.current.scrollTop = saved?.scrollTop || 0;
+            containerRef.current.scrollLeft = saved?.scrollLeft || 0;
+            scrollItemIntoView(focusIndex);
         }
-    }, [sortedItems, focusedItem, setFocusedItem]);
+    }, [data, isLoading, isSearching, currentPath, sortedItems, getDirectoryViewState,
+        selectMultiple, setFocusedItem, scrollItemIntoView]);
+
+    useLayoutEffect(() => {
+        if (restoringSelection.current) {
+            restoringSelection.current = false;
+            return;
+        }
+        const path = data?.directory || currentPath;
+        if (isLoading || isSearching || !data || path !== currentPath ||
+            previousListing.current?.data !== data) return;
+        saveDirectoryViewState(path, {
+            selectedPaths: selectedItems.map(item => item.path),
+            focusedPath: focusedItem?.path || null,
+            anchorPath: sortedItems[lastSelectedIndex]?.path || null,
+            scrollTop: containerRef.current?.scrollTop || 0,
+            scrollLeft: containerRef.current?.scrollLeft || 0
+        });
+    }, [data, isLoading, isSearching, currentPath, selectedItems, focusedItem,
+        lastSelectedIndex, sortedItems, saveDirectoryViewState]);
 
     const expandPreviewButton = !isPreviewPanelOpen && onPreviewPanelToggle && (
         <IconButton
@@ -790,6 +829,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
                 onPointerCancel={handleSelectionEnd}
                 onLostPointerCapture={handleSelectionEnd}
                 onScrollCapture={updateRegionSelection}
+                onScroll={rememberScrollPosition}
                 onClickCapture={handleSelectionClick}
             >
                 {viewMode === 'list' && (

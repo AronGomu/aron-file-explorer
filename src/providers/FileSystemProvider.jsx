@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useHistory } from './HistoryProvider';
 import { useSettings } from './SettingsProvider';
@@ -33,6 +33,7 @@ export default function FileSystemProvider({ children }) {
     const [isLoading, setIsLoading] = useState(true); // Starten Sie mit isLoading=true
     const [selectedItems, setSelectedItems] = useState([]);
     const [focusedItem, setFocusedItem] = useState(null);
+    const directoryLoadId = useRef(0);
     const [volumes, setVolumes] = useState([]);
     const [error, setError] = useState(null);
     const { navigateTo, currentPath } = useHistory();
@@ -112,6 +113,7 @@ export default function FileSystemProvider({ children }) {
         }
 
         console.log(`Attempting to load directory: ${path}`);
+        const loadId = ++directoryLoadId.current;
         setIsLoading(true);
         setError(null);
 
@@ -120,9 +122,10 @@ export default function FileSystemProvider({ children }) {
             if (isSftpPath(path)) {
                 console.log(`Loading SFTP directory: ${path}`);
                 const sftpData = await loadSftpDirectory(path);
+                if (loadId !== directoryLoadId.current) return null;
                 if (sftpData) {
                     const filteredData = filterDirectoryData(sftpData);
-                    setCurrentDirData(filteredData);
+                    setCurrentDirData({ ...filteredData, directory: path });
                     navigateTo(path);
                     console.log(`Successfully loaded SFTP directory: ${path}`);
                     return true;
@@ -138,6 +141,7 @@ export default function FileSystemProvider({ children }) {
 
             const loadPromise = invoke('open_directory', { path });
             const dirContent = await Promise.race([loadPromise, timeoutPromise]);
+            if (loadId !== directoryLoadId.current) return null;
 
             if (!dirContent) {
                 throw new Error(`Empty response from open_directory: ${path}`);
@@ -146,7 +150,7 @@ export default function FileSystemProvider({ children }) {
             try {
                 const dirData = JSON.parse(dirContent);
                 const filteredData = filterDirectoryData(dirData);
-                setCurrentDirData(filteredData);
+                setCurrentDirData({ ...filteredData, directory: path });
                 navigateTo(path);
                 console.log(`Successfully loaded directory: ${path}`);
                 return true;
@@ -154,6 +158,7 @@ export default function FileSystemProvider({ children }) {
                 throw new Error(`Failed to parse directory data: ${parseError.message}`);
             }
         } catch (err) {
+            if (loadId !== directoryLoadId.current) return null;
             console.error(`Failed to load directory: ${path}`, err);
             
             // Handle permission errors specifically for macOS user directories
@@ -174,7 +179,7 @@ export default function FileSystemProvider({ children }) {
             }
             return false;
         } finally {
-            setIsLoading(false);
+            if (loadId === directoryLoadId.current) setIsLoading(false);
         }
     }, [navigateTo, filterDirectoryData, isSftpPath, loadSftpDirectory]);
 
@@ -246,7 +251,7 @@ export default function FileSystemProvider({ children }) {
             // 3. Versuche das Verzeichnis zu laden
             const success = await loadDirectory(defaultDir);
 
-            if (!success) {
+            if (success === false) {
                 // 4. Wenn der erste Versuch fehlschlägt, versuche absolute Fallback-Pfade
                 console.warn("First directory load failed, trying fallbacks...");
                 const fallbacks = ['/', 'C:\\', '/tmp'];
@@ -255,7 +260,9 @@ export default function FileSystemProvider({ children }) {
                 for (const fallback of fallbacks) {
                     if (fallback !== defaultDir) {
                         console.log(`Trying fallback directory: ${fallback}`);
-                        if (await loadDirectory(fallback)) {
+                        const loaded = await loadDirectory(fallback);
+                        if (loaded === null) break;
+                        if (loaded) {
                             console.log(`Successfully loaded fallback directory: ${fallback}`);
                             break;
                         }

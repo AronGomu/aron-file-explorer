@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { readExplorerSession, LAST_LOCATION_KEY } from '../utils/explorerSession';
 
 // Create history context
@@ -11,6 +11,8 @@ const HistoryContext = createContext({
     navigateTo: () => {},
     goBack: () => {},
     goForward: () => {},
+    getDirectoryViewState: () => null,
+    saveDirectoryViewState: () => {},
 });
 
 export default function HistoryProvider({ children }) {
@@ -39,6 +41,11 @@ export default function HistoryProvider({ children }) {
     });
     const [history, setHistory] = useState(initialHistory.history);
     const [currentIndex, setCurrentIndex] = useState(initialHistory.currentIndex);
+    const directoryViewStates = useRef(new Map());
+    const getDirectoryViewState = useCallback(path => directoryViewStates.current.get(path), []);
+    const saveDirectoryViewState = useCallback((path, state) => {
+        if (path) directoryViewStates.current.set(path, state);
+    }, []);
 
     // Derived state
     const currentPath = history[currentIndex] || null;
@@ -97,6 +104,8 @@ export default function HistoryProvider({ children }) {
         navigateTo,
         goBack,
         goForward,
+        getDirectoryViewState,
+        saveDirectoryViewState,
     };
 
     return (
