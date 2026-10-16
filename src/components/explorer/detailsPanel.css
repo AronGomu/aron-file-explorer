@@ -61,6 +61,11 @@
     font-weight: var(--font-weight-medium);
 }
 
+.details-panel-collapsed .details-panel-header {
+    gap: 0;
+    padding-right: 4px;
+}
+
 .details-panel-footer {
     display: flex;
     align-items: center;

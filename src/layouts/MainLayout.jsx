@@ -526,17 +526,19 @@ const MainLayout = () => {
     /**
      * Handles details panel toggle with settings persistence
      */
-    const handleDetailsPanelToggle = useCallback(async () => {
-        const newState = !isDetailsPanelOpen;
-        setIsDetailsPanelOpen(newState);
+    const handleDetailsPanelOpenChange = useCallback(async (open) => {
+        setIsDetailsPanelOpen(open);
 
         // Save to settings
         try {
-            await invoke('update_settings_field', { key: 'show_details_panel', value: newState });
+            await invoke('update_settings_field', { key: 'show_details_panel', value: open });
         } catch (error) {
             console.error('Failed to save details panel setting:', error);
         }
-    }, [isDetailsPanelOpen]);
+    }, [setIsDetailsPanelOpen]);
+
+    const handleDetailsPanelToggle = useCallback(() => handleDetailsPanelOpenChange(!isDetailsPanelOpen),
+        [isDetailsPanelOpen, handleDetailsPanelOpenChange]);
 
     useEffect(() => {
         const handlePreviewToggle = (event) => {
@@ -592,8 +594,6 @@ const MainLayout = () => {
                             viewMode={viewMode}
                             isSearching={!!searchValue}
                             searchTerm={searchValue}
-                            isPreviewPanelOpen={isDetailsPanelOpen}
-                            onPreviewPanelToggle={handleDetailsPanelToggle}
                         />
                     </div>
                 );
@@ -669,14 +669,14 @@ const MainLayout = () => {
                             {renderMainContent()}
 
                             {/* Details panel (when selected) */}
-                            {isDetailsPanelOpen && (
-                                <DetailsPanel
-                                    item={selectedItems[0] || null}
-                                    isMultipleSelection={selectedItems.length > 1}
-                                    onCollapse={handleDetailsPanelToggle}
-                                    viewMode={viewMode}
-                                />
-                            )}
+                            <DetailsPanel
+                                item={selectedItems[0] || null}
+                                isMultipleSelection={selectedItems.length > 1}
+                                isCollapsed={!isDetailsPanelOpen}
+                                onOpenChange={handleDetailsPanelOpenChange}
+                                onCollapse={handleDetailsPanelToggle}
+                                viewMode={viewMode}
+                            />
                         </div>
 
                     </div>

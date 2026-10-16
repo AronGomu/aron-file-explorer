@@ -6,7 +6,6 @@ import { useHistory } from '../../providers/HistoryProvider';
 import { showError } from '../../utils/NotificationSystem';
 import FileItem from './FileItem';
 import EmptyState from './EmptyState';
-import IconButton from '../common/IconButton';
 import './fileList.css';
 
 const LIST_COLUMNS = [
@@ -27,11 +26,9 @@ const MAX_COLUMN_WIDTH = 2000;
  * @param {string} [props.searchTerm=''] - The search term being used
  * @param {boolean} [props.disableArrowKeys=false] - Whether to disable arrow key navigation
  * @param {Function} [props.onColumnsChange] - Callback when columns per row changes
- * @param {boolean} [props.isPreviewPanelOpen=false] - Whether the preview panel is open
- * @param {Function} [props.onPreviewPanelToggle] - Callback to toggle the preview panel
  * @returns {React.ReactElement} File list component
  */
-const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, searchTerm = '', disableArrowKeys = false, onColumnsChange, isPreviewPanelOpen = false, onPreviewPanelToggle }) => {
+const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, searchTerm = '', disableArrowKeys = false, onColumnsChange }) => {
     const { selectedItems, selectItem, selectMultiple, loadDirectory, clearSelection, focusedItem, setFocusedItem, openFile } = useFileSystem();
     const { openContextMenu } = useContextMenu();
     const { currentPath, getDirectoryViewState, saveDirectoryViewState } = useHistory();
@@ -703,23 +700,10 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
     }, [data, isLoading, isSearching, currentPath, selectedItems, focusedItem,
         lastSelectedIndex, sortedItems, saveDirectoryViewState]);
 
-    const expandPreviewButton = !isPreviewPanelOpen && onPreviewPanelToggle && (
-        <IconButton
-            icon="chevron-left"
-            className="file-list-preview-toggle"
-            label="Expand preview panel"
-            title="Expand preview panel (Space)"
-            aria-expanded={false}
-            aria-keyshortcuts="Space"
-            onClick={onPreviewPanelToggle}
-        />
-    );
-
     // If data is null or loading, show loading state
     if (isLoading) {
         return (
-            <div className={`file-list-wrapper${expandPreviewButton ? ' with-preview-toggle' : ''}`}>
-                {expandPreviewButton}
+            <div className="file-list-wrapper">
                 <div className="file-list-container">
                     <div className="loading-state">
                         <div className="loading-spinner"></div>
@@ -733,8 +717,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
     // If data is empty, show empty state
     if (!data || (!data.directories?.length && !data.files?.length)) {
         return (
-            <div className={`file-list-wrapper${expandPreviewButton ? ' with-preview-toggle' : ''}`}>
-                {expandPreviewButton}
+            <div className="file-list-wrapper">
                 <div className="file-list-container">
                     <div
                         className="empty-state-container"
@@ -835,8 +818,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
     };
 
     return (
-        <div className={`file-list-wrapper${expandPreviewButton ? ' with-preview-toggle' : ''}`}>
-            {expandPreviewButton}
+        <div className="file-list-wrapper">
             <div
                 ref={containerRef}
                 className={`file-list-container view-mode-${viewMode.toLowerCase()} scrollable-content`}

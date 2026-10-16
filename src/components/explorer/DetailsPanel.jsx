@@ -8,6 +8,8 @@ import { getDirectoryPath } from '../../utils/pathUtils';
 import './detailsPanel.css';
 
 const MIN_PREVIEW_WIDTH = 200;
+const COLLAPSED_PREVIEW_WIDTH = 48;
+const COLLAPSE_RESISTANCE = 100;
 const getMaximumPreviewWidth = (panel) => Math.max(MIN_PREVIEW_WIDTH,
     Math.floor((panel?.parentElement?.clientWidth || window.innerWidth) * 0.75));
 
@@ -17,10 +19,12 @@ const getMaximumPreviewWidth = (panel) => Math.max(MIN_PREVIEW_WIDTH,
  * @param {Object} [props.item] - The selected item to display details for
  * @param {boolean} [props.isMultipleSelection=false] - Whether multiple items are selected
  * @param {Function} [props.onCollapse] - Callback to collapse the preview panel
+ * @param {boolean} [props.isCollapsed=false] - Whether the preview is collapsed to its rail
+ * @param {Function} [props.onOpenChange] - Callback to open or collapse the preview panel
  * @param {string} [props.viewMode='grid'] - Active explorer view mode
  * @returns {React.ReactElement} Details panel component
  */
-const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, viewMode = 'grid' }) => {
+const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, isCollapsed = false, onOpenChange, viewMode = 'grid' }) => {
     const [showInformation, setShowInformation] = usePersistedState('fileExplorerDetailsVisible', false);
     const [splitRatio, setSplitRatio] = usePersistedState('fileExplorerPreviewSplit', 0.6);
     const [isSplitting, setIsSplitting] = useState(false);
@@ -45,21 +49,36 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, viewMode 
         return () => observer.disconnect();
     }, []);
 
-    const resizePanel = (width) => setPanelWidth(Math.max(MIN_PREVIEW_WIDTH, Math.min(Math.round(width), maximumWidth)));
+    const resizePanel = (width) => {
+        const collapsed = width < MIN_PREVIEW_WIDTH;
+        if (!collapsed) setPanelWidth(Math.min(Math.round(width), maximumWidth));
+        const previousCollapsed = resizeStart.current?.collapsed ?? isCollapsed;
+        if (collapsed !== previousCollapsed) {
+            if (resizeStart.current) resizeStart.current.collapsed = collapsed;
+            if (onOpenChange) onOpenChange(!collapsed);
+            else onCollapse?.();
+        }
+    };
 
     const handleResizeStart = (event) => {
         if (event.button !== 0) return;
         event.preventDefault();
         event.stopPropagation();
         event.currentTarget.focus();
-        resizeStart.current = { x: event.clientX, width: panelRef.current.getBoundingClientRect().width };
+        resizeStart.current = { x: event.clientX, width: panelRef.current.getBoundingClientRect().width, collapsed: isCollapsed };
         event.currentTarget.setPointerCapture(event.pointerId);
         setIsResizing(true);
     };
 
     const handleResizeMove = (event) => {
         if (!resizeStart.current || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
-        resizePanel(resizeStart.current.width + resizeStart.current.x - event.clientX);
+        const width = resizeStart.current.width + resizeStart.current.x - event.clientX;
+        if (!resizeStart.current.collapsed && width < MIN_PREVIEW_WIDTH &&
+            width > MIN_PREVIEW_WIDTH - COLLAPSE_RESISTANCE) {
+            setPanelWidth(MIN_PREVIEW_WIDTH);
+            return;
+        }
+        resizePanel(width);
     };
 
     const handleResizeEnd = (event) => {
@@ -73,9 +92,9 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, viewMode 
 
     const handleResizeKeyDown = (event) => {
         if (!event.altKey || !event.shiftKey || event.ctrlKey || event.metaKey) return;
-        if (event.key === 'ArrowLeft') resizePanel(panelWidth + 10);
-        else if (event.key === 'ArrowRight') resizePanel(panelWidth - 10);
-        else if (event.key === 'Home') resizePanel(MIN_PREVIEW_WIDTH);
+        if (event.key === 'ArrowLeft') resizePanel(isCollapsed ? panelWidth : panelWidth + 10);
+        else if (event.key === 'ArrowRight') resizePanel(isCollapsed ? COLLAPSED_PREVIEW_WIDTH : panelWidth - 10);
+        else if (event.key === 'Home') resizePanel(COLLAPSED_PREVIEW_WIDTH);
         else if (event.key === 'End') resizePanel(maximumWidth);
         else return;
         event.preventDefault();
@@ -91,10 +110,10 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, viewMode 
             aria-keyshortcuts="Alt+Shift+ArrowLeft Alt+Shift+ArrowRight Alt+Shift+Home Alt+Shift+End"
             aria-orientation="vertical"
             aria-controls="explorer-preview-panel"
-            aria-valuemin={MIN_PREVIEW_WIDTH}
+            aria-valuemin={COLLAPSED_PREVIEW_WIDTH}
             aria-valuemax={maximumWidth}
-            aria-valuenow={panelWidth}
-            aria-valuetext={`${panelWidth} pixels`}
+            aria-valuenow={isCollapsed ? COLLAPSED_PREVIEW_WIDTH : panelWidth}
+            aria-valuetext={isCollapsed ? 'Collapsed' : `${panelWidth} pixels`}
             tabIndex={0}
             onPointerDown={handleResizeStart}
             onPointerMove={handleResizeMove}
@@ -145,7 +164,7 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, viewMode 
         event.stopPropagation();
     };
 
-    const panelClassName = `details-panel${isResizing ? ' details-resizing' : ''}${isSplitting ? ' details-splitting' : ''}`;
+    const panelClassName = `details-panel${isCollapsed ? ' details-panel-collapsed' : ''}${isResizing ? ' details-resizing' : ''}${isSplitting ? ' details-splitting' : ''}`;
     const hasItem = item && !isMultipleSelection;
     const revision = item ? `${item.last_modified || ''}:${item.size_in_bytes ?? ''}` : '';
     const isDirectory = hasItem && (item.isDirectory || 'sub_file_count' in item);
@@ -162,21 +181,21 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, viewMode 
 
     return (
         <div id="explorer-preview-panel" ref={panelRef} className={panelClassName}
-            style={{ '--details-panel-width': `${panelWidth}px` }}>
+            style={{ '--details-panel-width': `${isCollapsed ? COLLAPSED_PREVIEW_WIDTH : panelWidth}px` }}>
             {resizeHandle}
             <div className="details-panel-header">
                 {onCollapse && <IconButton
-                    icon="chevron-right"
+                    icon={isCollapsed ? 'chevron-left' : 'chevron-right'}
                     className="details-panel-toggle"
-                    label="Collapse preview panel"
-                    title="Collapse preview panel (Space)"
-                    aria-expanded={true}
+                    label={isCollapsed ? 'Expand preview panel' : 'Collapse preview panel'}
+                    title={`${isCollapsed ? 'Expand' : 'Collapse'} preview panel (Space)`}
+                    aria-expanded={!isCollapsed}
                     aria-keyshortcuts="Space"
                     onClick={onCollapse}
                 />}
-                {hasItem && <span className="details-panel-title truncate" title={item.name}>{item.name}</span>}
+                {!isCollapsed && hasItem && <span className="details-panel-title truncate" title={item.name}>{item.name}</span>}
             </div>
-            {hasItem ? <>
+            {!isCollapsed && (hasItem ? <>
                 <div ref={splitRef} className="details-body" style={{
                     gridTemplateRows: showInformation
                         ? `minmax(0, ${previewFraction}fr) 12px minmax(0, ${1 - previewFraction}fr)`
@@ -213,7 +232,7 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, viewMode 
                 <p>{isMultipleSelection
                     ? 'Multiple items selected. Select a single item to view its preview.'
                     : 'Select an item to view its preview.'}</p>
-            </div>}
+            </div>)}
         </div>
     );
 };
