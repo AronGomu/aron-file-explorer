@@ -1,10 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import usePersistedState from '../../hooks/usePersistedState';
 import FileIcon from './FileIcon';
 import FolderContentsPreview from './FolderContentsPreview';
 import IconButton from '../common/IconButton';
 import { formatFileSize, formatDate, getFileType } from '../../utils/formatters';
 import { getFileIconType } from '../../utils/icons';
 import './detailsPanel.css';
+
+const MIN_PREVIEW_WIDTH = 200;
+const getMaximumPreviewWidth = (panel) => Math.max(MIN_PREVIEW_WIDTH,
+    Math.floor((panel?.parentElement?.clientWidth || window.innerWidth) * 0.75));
 
 /**
  * Component that displays detailed information about a selected item
@@ -17,6 +22,82 @@ import './detailsPanel.css';
  */
 const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, viewMode = 'grid' }) => {
     const [detailsPath, setDetailsPath] = useState(null);
+    const [panelWidth, setPanelWidth] = usePersistedState('fileExplorerDetailsPanelWidth', 300);
+    const [maximumWidth, setMaximumWidth] = useState(() => getMaximumPreviewWidth());
+    const [isResizing, setIsResizing] = useState(false);
+    const panelRef = useRef(null);
+    const resizeStart = useRef(null);
+
+    useEffect(() => {
+        const constrainWidth = () => {
+            const maximum = getMaximumPreviewWidth(panelRef.current);
+            setMaximumWidth(maximum);
+            setPanelWidth(width => Math.max(MIN_PREVIEW_WIDTH, Math.min(width, maximum)));
+        };
+        constrainWidth();
+        const observer = new ResizeObserver(constrainWidth);
+        observer.observe(panelRef.current.parentElement);
+        return () => observer.disconnect();
+    }, []);
+
+    const resizePanel = (width) => setPanelWidth(Math.max(MIN_PREVIEW_WIDTH, Math.min(Math.round(width), maximumWidth)));
+
+    const handleResizeStart = (event) => {
+        if (event.button !== 0) return;
+        event.preventDefault();
+        event.stopPropagation();
+        event.currentTarget.focus();
+        resizeStart.current = { x: event.clientX, width: panelRef.current.getBoundingClientRect().width };
+        event.currentTarget.setPointerCapture(event.pointerId);
+        setIsResizing(true);
+    };
+
+    const handleResizeMove = (event) => {
+        if (!resizeStart.current || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
+        resizePanel(resizeStart.current.width + resizeStart.current.x - event.clientX);
+    };
+
+    const handleResizeEnd = (event) => {
+        if (event.type === 'pointerup') handleResizeMove(event);
+        resizeStart.current = null;
+        setIsResizing(false);
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+    };
+
+    const handleResizeKeyDown = (event) => {
+        if (event.key === 'ArrowLeft') resizePanel(panelWidth + 10);
+        else if (event.key === 'ArrowRight') resizePanel(panelWidth - 10);
+        else if (event.key === 'Home') resizePanel(MIN_PREVIEW_WIDTH);
+        else if (event.key === 'End') resizePanel(maximumWidth);
+        else return;
+        event.preventDefault();
+        event.stopPropagation();
+    };
+
+    const resizeHandle = (
+        <div
+            className="details-resize-handle"
+            role="separator"
+            aria-label="Resize preview pane"
+            aria-orientation="vertical"
+            aria-controls="explorer-preview-panel"
+            aria-valuemin={MIN_PREVIEW_WIDTH}
+            aria-valuemax={maximumWidth}
+            aria-valuenow={panelWidth}
+            aria-valuetext={`${panelWidth} pixels`}
+            tabIndex={0}
+            onPointerDown={handleResizeStart}
+            onPointerMove={handleResizeMove}
+            onPointerUp={handleResizeEnd}
+            onPointerCancel={handleResizeEnd}
+            onLostPointerCapture={handleResizeEnd}
+            onKeyDown={handleResizeKeyDown}
+        />
+    );
+    const panelClassName = `details-panel${isResizing ? ' details-resizing' : ''}`;
+    const panelStyle = { '--details-panel-width': `${panelWidth}px` };
     const collapseButton = onCollapse && (
         <IconButton
             icon="chevron-right"
@@ -32,7 +113,8 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, viewMode 
     // If no item selected or multiple items are selected
     if (!item || isMultipleSelection) {
         return (
-            <div className="details-panel">
+            <div id="explorer-preview-panel" ref={panelRef} className={panelClassName} style={panelStyle}>
+                {resizeHandle}
                 {collapseButton}
                 <div className="details-content">
                     {isMultipleSelection ? (
@@ -74,7 +156,8 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, viewMode 
     const accessed = formatDate(item.accessed, true);
 
     return (
-        <div className={`details-panel${canToggleDetails ? ' with-details-toggle' : ''}`}>
+        <div id="explorer-preview-panel" ref={panelRef} className={`${panelClassName}${canToggleDetails ? ' with-details-toggle' : ''}`} style={panelStyle}>
+            {resizeHandle}
             {collapseButton}
             <div className={`details-content${isDirectory && !showDetails ? ' folder-preview-content' : ''}${isImage && !showDetails ? ' image-preview-content' : ''}`}>
                 {isDirectory && !showDetails ? (

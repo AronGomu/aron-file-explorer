@@ -168,16 +168,6 @@ img, svg {
     padding: var(--space-md);
 }
 
-.panel-resize-handle {
-    width: 4px;
-    background-color: var(--border);
-    cursor: col-resize;
-}
-
-.panel-resize-handle:hover {
-    background-color: var(--accent);
-}
-
 .main-layout {
     display: flex;
     height: 100vh;

@@ -664,15 +664,12 @@ const MainLayout = () => {
 
                             {/* Details panel (when selected) */}
                             {isDetailsPanelOpen && (
-                                <>
-                                    <div className="panel-resize-handle"></div>
-                                    <DetailsPanel
-                                        item={selectedItems[0] || null}
-                                        isMultipleSelection={selectedItems.length > 1}
-                                        onCollapse={handleDetailsPanelToggle}
-                                        viewMode={viewMode}
-                                    />
-                                </>
+                                <DetailsPanel
+                                    item={selectedItems[0] || null}
+                                    isMultipleSelection={selectedItems.length > 1}
+                                    onCollapse={handleDetailsPanelToggle}
+                                    viewMode={viewMode}
+                                />
                             )}
                         </div>
 

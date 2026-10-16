@@ -1,6 +1,9 @@
 .details-panel {
     position: relative;
     width: var(--details-panel-width);
+    min-width: 0;
+    min-height: 0;
+    flex-shrink: 0;
     height: 100%;
     background-color: var(--background-secondary);
     border-left: 1px solid var(--border);
@@ -12,8 +15,31 @@
 .details-panel-toggle {
     position: absolute;
     top: 4px;
-    left: 4px;
+    left: 12px;
     z-index: 2;
+}
+
+.details-resize-handle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 12px;
+    cursor: col-resize;
+    touch-action: none;
+    z-index: 3;
+}
+
+.details-resize-handle:hover,
+.details-resize-handle:focus-visible,
+.details-resizing .details-resize-handle {
+    background-color: var(--border-strong);
+}
+
+.details-resizing,
+.details-resizing * {
+    cursor: col-resize;
+    user-select: none;
 }
 
 .details-info-toggle {
@@ -186,11 +212,14 @@
 .image-preview-content {
     display: flex;
     flex-direction: column;
+    flex: 1 1 0;
     min-height: 0;
-    padding: 36px 1px 44px;
+    overflow: hidden;
+    padding: 36px 1px 44px 12px;
 }
 
 .image-preview-only {
+    position: relative;
     flex: 1;
     min-height: 0;
     padding: 0;
@@ -199,7 +228,8 @@
 }
 
 .image-preview-only .details-image {
-    flex: 1;
+    position: absolute;
+    inset: 0;
     min-height: 0;
     height: 100%;
     margin: 0;
@@ -274,7 +304,6 @@
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .details-panel {
-        width: 100%;
         position: absolute;
         top: 0;
         right: 0;

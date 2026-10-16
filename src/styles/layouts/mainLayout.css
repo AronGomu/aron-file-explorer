@@ -235,18 +235,6 @@
     background-image: none !important;
 }
 
-/* Panel resize handle */
-.panel-resize-handle {
-    width: 4px;
-    background-color: var(--border);
-    cursor: col-resize;
-    transition: background-color var(--transition-fast);
-}
-
-.panel-resize-handle:hover {
-    background-color: var(--text-primary);
-}
-
 /* Responsive layout adjustments */
 @media (max-width: 1024px) {
     .toolbar-center {
