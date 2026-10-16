@@ -540,15 +540,21 @@ const MainLayout = () => {
 
     useEffect(() => {
         const handlePreviewToggle = (event) => {
-            if (event.defaultPrevented || event.key !== ' ' || event.ctrlKey || event.metaKey ||
-                event.altKey || event.shiftKey || event.target.isContentEditable ||
-                event.target.closest('input, textarea, select, button, a, [role="button"], [role="dialog"], #explorer-preview-panel')) return;
+            if ((event.key !== ' ' && event.code !== 'Space') || event.ctrlKey || event.metaKey ||
+                event.altKey || event.shiftKey || event.isComposing) return;
+            const field = event.target.closest?.('input, textarea');
+            const isTyping = event.target.isContentEditable ||
+                event.target.closest?.('[role="textbox"]:not([aria-readonly="true"]), [role="searchbox"]:not([aria-readonly="true"])') ||
+                (field && !field.readOnly && !field.disabled &&
+                    !['button', 'submit', 'reset', 'checkbox', 'radio', 'range', 'color', 'file'].includes(field.type));
+            if (isTyping) return;
             event.preventDefault();
+            event.stopImmediatePropagation();
             if (!event.repeat) handleDetailsPanelToggle();
         };
 
-        document.addEventListener('keydown', handlePreviewToggle);
-        return () => document.removeEventListener('keydown', handlePreviewToggle);
+        window.addEventListener('keydown', handlePreviewToggle, true);
+        return () => window.removeEventListener('keydown', handlePreviewToggle, true);
     }, [handleDetailsPanelToggle]);
 
     /**

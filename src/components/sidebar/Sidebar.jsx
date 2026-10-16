@@ -102,6 +102,7 @@ const Sidebar = ({ currentView }) => {
     };
 
     const handleResizeKeyDown = (event) => {
+        if (!event.altKey || !event.shiftKey || event.ctrlKey || event.metaKey) return;
         switch (event.key) {
             case 'ArrowLeft':
                 resizeSidebar((isSidebarCollapsed ? COLLAPSED_WIDTH : sidebarWidth) - 10);
@@ -658,6 +659,8 @@ const Sidebar = ({ currentView }) => {
                     className="sidebar-resize-handle"
                     role="separator"
                     aria-label="Resize sidebar"
+                    title="Resize sidebar (Alt+Shift+Left/Right)"
+                    aria-keyshortcuts="Alt+Shift+ArrowLeft Alt+Shift+ArrowRight Alt+Shift+Home Alt+Shift+End"
                     aria-orientation="vertical"
                     aria-controls="explorer-sidebar"
                     aria-valuemin={COLLAPSED_WIDTH}

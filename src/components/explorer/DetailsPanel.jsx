@@ -72,6 +72,7 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, viewMode 
     };
 
     const handleResizeKeyDown = (event) => {
+        if (!event.altKey || !event.shiftKey || event.ctrlKey || event.metaKey) return;
         if (event.key === 'ArrowLeft') resizePanel(panelWidth + 10);
         else if (event.key === 'ArrowRight') resizePanel(panelWidth - 10);
         else if (event.key === 'Home') resizePanel(MIN_PREVIEW_WIDTH);
@@ -86,6 +87,8 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, viewMode 
             className="details-resize-handle"
             role="separator"
             aria-label="Resize preview pane"
+            title="Resize preview pane (Alt+Shift+Left/Right)"
+            aria-keyshortcuts="Alt+Shift+ArrowLeft Alt+Shift+ArrowRight Alt+Shift+Home Alt+Shift+End"
             aria-orientation="vertical"
             aria-controls="explorer-preview-panel"
             aria-valuemin={MIN_PREVIEW_WIDTH}
@@ -132,6 +135,7 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, viewMode 
     };
 
     const handleSplitKeyDown = (event) => {
+        if (!event.altKey || !event.shiftKey || event.ctrlKey || event.metaKey) return;
         if (event.key === 'ArrowUp') resizeSplit(previewFraction - 0.02);
         else if (event.key === 'ArrowDown') resizeSplit(previewFraction + 0.02);
         else if (event.key === 'Home') resizeSplit(0.15);
@@ -184,6 +188,8 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, viewMode 
                     {showInformation && <>
                         <div className="details-split-handle" role="separator"
                             aria-label="Resize preview and information sections" aria-orientation="horizontal"
+                            title="Resize preview and information sections (Alt+Shift+Up/Down)"
+                            aria-keyshortcuts="Alt+Shift+ArrowUp Alt+Shift+ArrowDown Alt+Shift+Home Alt+Shift+End"
                             aria-controls="explorer-file-preview explorer-file-information"
                             aria-valuemin={15} aria-valuemax={85} aria-valuenow={Math.round(previewFraction * 100)}
                             aria-valuetext={`${Math.round(previewFraction * 100)}% preview`}

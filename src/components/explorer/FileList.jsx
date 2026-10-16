@@ -468,7 +468,8 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
             if (e.target instanceof HTMLInputElement || 
                 e.target instanceof HTMLTextAreaElement || 
                 e.target.isContentEditable ||
-                e.target.closest?.('#explorer-preview-panel') ||
+                (e.target.closest?.('#explorer-preview-panel') &&
+                    !e.target.closest?.('.details-resize-handle, .details-split-handle')) ||
                 disableArrowKeys) {
                 return;
             }
