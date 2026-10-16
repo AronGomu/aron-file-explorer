@@ -4,6 +4,7 @@ import { useSettings } from '../../providers/SettingsProvider';
 import { useSftp } from '../../providers/SftpProvider';
 import FileIcon from './FileIcon';
 import { formatFileSize, formatDate, getFileType } from '../../utils/formatters';
+import { getFileIconType } from '../../utils/icons';
 
 const FolderContentsPreview = ({ path, viewMode }) => {
     const { settings } = useSettings();
@@ -106,10 +107,12 @@ const FolderContentsPreview = ({ path, viewMode }) => {
         <div className="folder-preview-items view-mode-grid"
             role="list" aria-label="Folder contents">
             {items.map(entry => (
-                <div key={entry.path} className="folder-preview-item" role="listitem" title={entry.name}>
+                <div key={entry.path} className="folder-preview-item" role="listitem" title={entry.name} aria-label={entry.name}>
                     <FileIcon filename={entry.name} path={entry.path}
                         revision={`${entry.last_modified || ''}:${entry.size_in_bytes ?? ''}`} isDirectory={entry.isDirectory} />
-                    <span className="folder-preview-name truncate">{entry.name}</span>
+                    {(entry.isDirectory || getFileIconType(entry.name) !== 'image') && (
+                        <span className="folder-preview-name truncate">{entry.name}</span>
+                    )}
                 </div>
             ))}
         </div>

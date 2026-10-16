@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import FileIcon from './FileIcon';
 import { formatFileSize, formatDate, getFileType } from '../../utils/formatters';
 import { replaceFileName } from '../../utils/pathUtils.js';
+import { getFileIconType } from '../../utils/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { useFileSystem } from '../../providers/FileSystemProvider';
 import { useHistory } from '../../providers/HistoryProvider';
@@ -35,6 +36,7 @@ const FileItem = ({
     const { clipboard } = useContextMenu();
 
     const isDirectory = item.isDirectory || 'sub_file_count' in item;
+    const hideImageName = viewMode === 'grid' && !isDirectory && getFileIconType(item.name) === 'image';
     const imageRevision = `${item.last_modified || ''}:${item.size_in_bytes ?? ''}`;
     const fileType = isDirectory ? 'Folder' : getFileType(item.name);
     const size = isDirectory
@@ -141,6 +143,8 @@ const FileItem = ({
                 onMouseDown={handleMouseDown}
                 onContextMenu={handleContextMenu}
                 data-path={item.path}
+                title={hideImageName ? item.name : undefined}
+                aria-label={hideImageName ? item.name : undefined}
                 role={viewMode === 'list' ? 'row' : undefined}
             >
                 {viewMode === 'grid' && (
@@ -149,9 +153,11 @@ const FileItem = ({
                             <FileIcon filename={item.name} path={item.path} revision={imageRevision} isDirectory={isDirectory} />
                         </div>
 
-                        <div className="file-name truncate" title={item.name}>
-                            {item.name}
-                        </div>
+                        {!hideImageName && (
+                            <div className="file-name truncate" title={item.name}>
+                                {item.name}
+                            </div>
+                        )}
                     </div>
                 )}
 
