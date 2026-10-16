@@ -72,6 +72,7 @@
 }
 
 .file-item-grid {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -98,6 +99,17 @@
 .file-item.view-mode-grid .file-name {
     max-width: 100%;
     font-size: calc(var(--font-size-sm) * var(--file-grid-zoom, 1));
+}
+
+.file-item.view-mode-grid.image-item {
+    padding: 1px;
+}
+
+.file-item.view-mode-grid.image-item .file-icon-container {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
 }
 
 /* List view */

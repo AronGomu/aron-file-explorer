@@ -36,7 +36,7 @@ const categoryIcons = {
 };
 
 /** Displays one format-specific icon, with a generic category fallback. */
-const FileIcon = ({ filename, path, revision = '', isDirectory, size = 'medium' }) => {
+const FileIcon = ({ filename, path, revision = '', isDirectory, size = 'medium', thumbnailSize = size === 'large' ? 512 : 256 }) => {
     const formatIcon = isDirectory ? null : getFileTypeIcon(filename);
     const category = isDirectory ? 'folder' : getFileIconType(filename);
     const iconType = category === 'default' && formatIcon ? 'code' : category;
@@ -71,7 +71,7 @@ const FileIcon = ({ filename, path, revision = '', isDirectory, size = 'medium' 
         <div className={`file-icon file-icon-${iconType} file-icon-${size}`}>
             {path && category === 'image' ? (
                 <ImageThumbnail key={`${path}:${revision}:${size}`} path={path} filename={filename}
-                    revision={revision} size={size === 'large' ? 512 : 256}>
+                    revision={revision} size={thumbnailSize}>
                     {symbol}
                 </ImageThumbnail>
             ) : symbol}

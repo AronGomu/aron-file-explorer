@@ -107,7 +107,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
     };
 
     const changeGridZoom = useCallback((direction) => {
-        setGridZoom(zoom => Math.max(50, Math.min(250, zoom + direction * 10)));
+        setGridZoom(zoom => Math.max(50, Math.min(1000, zoom + direction * 10)));
     }, []);
 
     useEffect(() => {
@@ -921,6 +921,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
                             key={item.path}
                             item={item}
                             viewMode={viewMode}
+                            thumbnailSize={viewMode === 'grid' ? (gridZoom > 700 ? 1024 : gridZoom > 350 ? 512 : 256) : 256}
                             isSelected={selectedItems.some(selected => selected.path === item.path)}
                             isFocused={focusedItem && focusedItem.path === item.path}
                             onClick={(event) => handleItemClick(item, index, event)}

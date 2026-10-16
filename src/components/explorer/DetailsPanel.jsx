@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import FileIcon from './FileIcon';
 import FolderContentsPreview from './FolderContentsPreview';
 import IconButton from '../common/IconButton';
@@ -16,6 +16,7 @@ import './detailsPanel.css';
  * @returns {React.ReactElement} Details panel component
  */
 const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, viewMode = 'grid' }) => {
+    const [detailsPath, setDetailsPath] = useState(null);
     const collapseButton = onCollapse && (
         <IconButton
             icon="chevron-right"
@@ -52,26 +53,18 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, viewMode 
 
     // Determine if item is a directory or file
     const isDirectory = item.isDirectory || 'sub_file_count' in item;
-
-    if (isDirectory) {
-        return (
-            <div className="details-panel">
-                {collapseButton}
-                <div className="details-content folder-preview-content">
-                    <FolderContentsPreview path={item.path} viewMode={viewMode} />
-                </div>
-            </div>
-        );
-    }
+    const isImage = !isDirectory && getFileIconType(item.name) === 'image';
+    const canToggleDetails = isDirectory || isImage;
+    const showDetails = !canToggleDetails || detailsPath === item.path;
 
     // Format size
-    const size = formatFileSize(item.size_in_bytes);
+    const size = item.size_in_bytes != null ? formatFileSize(item.size_in_bytes) : 'Unknown';
 
     // Get file type
-    const fileType = getFileType(item.name);
+    const fileType = isDirectory ? 'Folder' : getFileType(item.name);
 
     // Get extension (for files)
-    const extension = item.name.includes('.')
+    const extension = !isDirectory && item.name.includes('.')
         ? item.name.split('.').pop().toUpperCase()
         : '';
 
@@ -81,93 +74,119 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, viewMode 
     const accessed = formatDate(item.accessed, true);
 
     return (
-        <div className="details-panel">
+        <div className={`details-panel${canToggleDetails ? ' with-details-toggle' : ''}`}>
             {collapseButton}
-            <div className="details-content">
-                <div className="details-preview">
-                    <div className={`details-icon${getFileIconType(item.name) === 'image' ? ' details-image' : ''}`}>
-                        <FileIcon
-                            filename={item.name}
-                            path={item.path}
-                            revision={`${item.last_modified || ''}:${item.size_in_bytes ?? ''}`}
-                            isDirectory={isDirectory}
-                            size="large"
-                        />
+            <div className={`details-content${isDirectory && !showDetails ? ' folder-preview-content' : ''}${isImage && !showDetails ? ' image-preview-content' : ''}`}>
+                {isDirectory && !showDetails ? (
+                    <FolderContentsPreview path={item.path} viewMode={viewMode} />
+                ) : <>
+                    <div className={`details-preview${isImage && !showDetails ? ' image-preview-only' : ''}`}>
+                        <div className={`details-icon${isImage ? ' details-image' : ''}`}>
+                            <FileIcon
+                                filename={item.name}
+                                path={item.path}
+                                revision={`${item.last_modified || ''}:${item.size_in_bytes ?? ''}`}
+                                isDirectory={isDirectory}
+                                size="large"
+                                thumbnailSize={isImage && !showDetails ? 1024 : 512}
+                            />
+                        </div>
+
+                        {showDetails && <>
+                            <div className="details-name truncate" title={item.name}>
+                                {item.name}
+                            </div>
+
+                            <div className="details-type">
+                                {fileType}{extension ? ` (${extension})` : ''}
+                            </div>
+                        </>}
                     </div>
 
-                    <div className="details-name truncate" title={item.name}>
-                        {item.name}
-                    </div>
+                    {showDetails && <>
+                        <div className="details-section">
+                            <h4 className="details-section-title">General</h4>
 
-                    <div className="details-type">
-                        {fileType}{extension ? ` (${extension})` : ''}
-                    </div>
-                </div>
+                            <div className="details-row">
+                                <span className="details-label">Location:</span>
+                                <span className="details-value truncate" title={item.path}>
+                                  {item.path.replace(`/${item.name}`, '')}
+                                </span>
+                            </div>
 
-                <div className="details-section">
-                    <h4 className="details-section-title">General</h4>
+                            {isDirectory ? (
+                                <div className="details-row">
+                                    <span className="details-label">Contents:</span>
+                                    <span className="details-value">
+                                        {item.sub_file_count ?? 'Unknown'} files, {item.sub_dir_count ?? 'Unknown'} folders
+                                    </span>
+                                </div>
+                            ) : <div className="details-row">
+                                <span className="details-label">Size:</span>
+                                <span className="details-value">
+                                  {size}
+                                    {item.size_in_bytes != null && (
+                                        <span className="details-value-secondary"> ({item.size_in_bytes.toLocaleString()} bytes)</span>
+                                    )}
+                                </span>
+                            </div>}
 
-                    <div className="details-row">
-                        <span className="details-label">Location:</span>
-                        <span className="details-value truncate" title={item.path}>
-                          {item.path.replace(`/${item.name}`, '')}
-                        </span>
-                    </div>
+                            <div className="details-row">
+                                <span className="details-label">Type:</span>
+                                <span className="details-value">{fileType}</span>
+                            </div>
+                        </div>
 
-                    <div className="details-row">
-                        <span className="details-label">Size:</span>
-                        <span className="details-value">
-                          {size}
-                            {item.size_in_bytes != null && (
-                                <span className="details-value-secondary"> ({item.size_in_bytes.toLocaleString()} bytes)</span>
-                            )}
-                        </span>
-                    </div>
+                        <div className="details-section">
+                            <h4 className="details-section-title">Dates</h4>
 
-                    <div className="details-row">
-                        <span className="details-label">Type:</span>
-                        <span className="details-value">{fileType}</span>
-                    </div>
-                </div>
+                            <div className="details-row">
+                                <span className="details-label">Created:</span>
+                                <span className="details-value">{created}</span>
+                            </div>
 
-                <div className="details-section">
-                    <h4 className="details-section-title">Dates</h4>
+                            <div className="details-row">
+                                <span className="details-label">Modified:</span>
+                                <span className="details-value">{modified}</span>
+                            </div>
 
-                    <div className="details-row">
-                        <span className="details-label">Created:</span>
-                        <span className="details-value">{created}</span>
-                    </div>
+                            <div className="details-row">
+                                <span className="details-label">Accessed:</span>
+                                <span className="details-value">{accessed}</span>
+                            </div>
+                        </div>
 
-                    <div className="details-row">
-                        <span className="details-label">Modified:</span>
-                        <span className="details-value">{modified}</span>
-                    </div>
+                        <div className="details-section">
+                            <h4 className="details-section-title">Permissions</h4>
 
-                    <div className="details-row">
-                        <span className="details-label">Accessed:</span>
-                        <span className="details-value">{accessed}</span>
-                    </div>
-                </div>
+                            <div className="details-row">
+                                <span className="details-label">Access rights:</span>
+                                <span className="details-value">{item.access_rights_as_string}</span>
+                            </div>
 
-                <div className="details-section">
-                    <h4 className="details-section-title">Permissions</h4>
+                            <div className="details-row">
+                                <span className="details-label">Octal:</span>
+                                <span className="details-value">{item.access_rights_as_number}</span>
+                            </div>
 
-                    <div className="details-row">
-                        <span className="details-label">Access rights:</span>
-                        <span className="details-value">{item.access_rights_as_string}</span>
-                    </div>
-
-                    <div className="details-row">
-                        <span className="details-label">Octal:</span>
-                        <span className="details-value">{item.access_rights_as_number}</span>
-                    </div>
-
-                    <div className="details-row">
-                        <span className="details-label">Symlink:</span>
-                        <span className="details-value">{item.is_symlink ? 'Yes' : 'No'}</span>
-                    </div>
-                </div>
+                            <div className="details-row">
+                                <span className="details-label">Symlink:</span>
+                                <span className="details-value">{item.is_symlink ? 'Yes' : 'No'}</span>
+                            </div>
+                        </div>
+                    </>}
+                </>}
             </div>
+            {canToggleDetails && (
+                <IconButton
+                    icon={showDetails ? 'eye' : 'info'}
+                    className="details-info-toggle"
+                    label={showDetails ? 'Show preview' : 'Show details'}
+                    title={showDetails ? 'Show preview' : 'Show details'}
+                    aria-pressed={showDetails}
+                    onClick={() => setDetailsPath(showDetails ? null : item.path)}
+                />
+            )}
         </div>
     );
 };

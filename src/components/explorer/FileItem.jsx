@@ -25,6 +25,7 @@ import './fileItem.css';
 const FileItem = ({
                       item,
                       viewMode = 'grid',
+                      thumbnailSize = 256,
                       isSelected = false,
                       isFocused = false,
                       onClick,
@@ -137,7 +138,7 @@ const FileItem = ({
     return (
         <>
             <div
-                className={`file-item view-mode-${viewMode.toLowerCase()} ${isSelected ? 'selected' : ''} ${isFocused ? 'focused' : ''} ${isDirectory ? 'directory' : 'file'} ${isCut ? 'cut' : ''}`}
+                className={`file-item view-mode-${viewMode.toLowerCase()} ${isSelected ? 'selected' : ''} ${isFocused ? 'focused' : ''} ${isDirectory ? 'directory' : 'file'} ${isCut ? 'cut' : ''} ${hideImageName ? 'image-item' : ''}`}
                 onClick={handleClick}
                 onDoubleClick={handleDoubleClick}
                 onMouseDown={handleMouseDown}
@@ -150,7 +151,7 @@ const FileItem = ({
                 {viewMode === 'grid' && (
                     <div className="file-item-grid">
                         <div className="file-icon-container">
-                            <FileIcon filename={item.name} path={item.path} revision={imageRevision} isDirectory={isDirectory} />
+                            <FileIcon filename={item.name} path={item.path} revision={imageRevision} isDirectory={isDirectory} thumbnailSize={thumbnailSize} />
                         </div>
 
                         {!hideImageName && (
