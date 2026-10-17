@@ -1,0 +1,348 @@
+    Blocking waiting for file lock on build directory
+   Compiling src-tauri v0.1.0 (/home/aron/Projects/FileExplorer/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.25s
+
+running 260 tests
+test commands::command_exec_commands::command_exec_tests::echo_command_test_unix ... ok
+test commands::command_exec_commands::command_exec_tests::ls_command_test_unix ... ok
+test commands::command_exec_commands::command_exec_tests::working_directory_test_unix ... ok
+test commands::deletion_commands::tests::deletion_batch_restores_files_directories_and_symlinks_without_overwriting ... ok
+test commands::deletion_commands::tests::failed_trash_preserves_previous_undo_batch ... ok
+test commands::file_system_operation_commands::tests_file_system_operation_commands::copy_directory_test ... ok
+test commands::file_system_operation_commands::tests_file_system_operation_commands::copy_file_test ... ok
+test commands::file_system_operation_commands::tests_file_system_operation_commands::create_directory_test ... ok
+test commands::file_system_operation_commands::tests_file_system_operation_commands::create_file_test ... ok
+test commands::file_system_operation_commands::tests_file_system_operation_commands::failed_move_to_trash_because_invalid_resource_test ... ok
+test commands::file_system_operation_commands::tests_file_system_operation_commands::failed_to_copy_file_or_dir_because_source_path_does_not_exist_test ... ok
+test commands::file_system_operation_commands::tests_file_system_operation_commands::failed_to_create_directory_because_parent_directory_does_not_exist_test ... ok
+test commands::file_system_operation_commands::tests_file_system_operation_commands::failed_to_create_file_because_directory_does_not_exist_test ... ok
+test commands::file_system_operation_commands::tests_file_system_operation_commands::failed_to_create_file_because_path_is_no_directory_test ... ok
+test commands::file_system_operation_commands::tests_file_system_operation_commands::failed_to_open_directory_because_directory_does_not_exist_test ... ok
+test commands::file_system_operation_commands::tests_file_system_operation_commands::failed_to_open_directory_because_path_is_not_a_directory_test ... ok
+test commands::file_system_operation_commands::tests_file_system_operation_commands::failed_to_open_file_because_file_not_exists_test ... ok
+test commands::file_system_operation_commands::tests_file_system_operation_commands::failed_to_open_file_because_path_is_not_a_file_test ... ok
+test commands::file_system_operation_commands::tests_file_system_operation_commands::failed_to_rename_because_file_does_not_exist_test ... ok
+test commands::file_system_operation_commands::tests_file_system_operation_commands::failed_to_rename_because_new_path_already_exists_test ... ok
+test commands::file_system_operation_commands::tests_file_system_operation_commands::failed_to_unzip_because_destination_path_required_for_multiple_zip_files_test ... ok
+test commands::file_system_operation_commands::tests_file_system_operation_commands::failed_to_unzip_because_failed_to_create_extraction_directory_test ... ok
+test commands::file_system_operation_commands::tests_file_system_operation_commands::failed_to_unzip_because_no_zip_files_provided_test ... ok
+test commands::file_system_operation_commands::tests_file_system_operation_commands::failed_to_unzip_because_zip_file_does_not_exist_test ... ok
+test commands::file_system_operation_commands::tests_file_system_operation_commands::failed_to_zip_because_destination_path_required_for_multiple_sources_test ... ok
+test commands::file_system_operation_commands::tests_file_system_operation_commands::failed_to_zip_because_no_source_paths_provided_test ... ok
+test commands::file_system_operation_commands::tests_file_system_operation_commands::failed_to_zip_because_source_path_does_not_exist_test ... ok
+test commands::file_system_operation_commands::tests_file_system_operation_commands::move_file_to_trash_test ... ok
+test commands::file_system_operation_commands::tests_file_system_operation_commands::open_directory_test ... ok
+test commands::file_system_operation_commands::tests_file_system_operation_commands::open_file_test ... ok
+test commands::file_system_operation_commands::tests_file_system_operation_commands::rename_directory_test ... ok
+test commands::file_system_operation_commands::tests_file_system_operation_commands::rename_file_test ... ok
+test commands::file_system_operation_commands::tests_file_system_operation_commands::unzip_single_file_test ... ok
+test commands::file_system_operation_commands::tests_file_system_operation_commands::zip_single_file_test ... ok
+test commands::hash_commands::tests_hash_commands::test_all_hash_methods ... FAILED
+test commands::hash_commands::tests_hash_commands::test_binary_file_hash ... FAILED
+test commands::hash_commands::tests_hash_commands::test_compare_file_hash ... FAILED
+test commands::hash_commands::tests_hash_commands::test_empty_file ... FAILED
+test commands::hash_commands::tests_hash_commands::test_hash_method_switching ... FAILED
+test commands::hash_commands::tests_hash_commands::test_invalid_hash_comparison ... FAILED
+test commands::hash_commands::tests_hash_commands::test_non_existent_file ... FAILED
+test commands::hash_commands::tests_hash_commands::test_save_hash_to_file ... FAILED
+test commands::hash_commands::tests_hash_commands::test_special_chars_in_path ... FAILED
+test commands::hash_commands::tests_hash_commands::test_unicode_content ... FAILED
+test commands::hash_commands::tests_hash_commands::test_zero_byte_boundaries ... FAILED
+test commands::meta_data_commands::tests_meta_data_commands::test_get_meta_data_as_json_contains_volumes ... ok
+test commands::meta_data_commands::tests_meta_data_commands::test_get_meta_data_as_json_success ... ok
+test commands::permission_commands::permission_commands_tests::test_check_directory_access_existing ... ok
+test commands::permission_commands::permission_commands_tests::test_check_directory_access_nonexistent ... ok
+test commands::permission_commands::permission_commands_tests::test_request_full_disk_access_noop_non_macos ... ok
+test commands::search_engine_commands::tests_autocomplete_commands::test_add_and_remove_path ... ok
+test commands::search_engine_commands::tests_autocomplete_commands::test_add_and_search_path ... ok
+test commands::search_engine_commands::tests_autocomplete_commands::test_add_paths_recursive_uses_chunked ... ok
+test commands::search_engine_commands::tests_autocomplete_commands::test_clear_search_engine ... ok
+test commands::search_engine_commands::tests_autocomplete_commands::test_get_search_engine_info ... ok
+test commands::search_engine_commands::tests_autocomplete_commands::test_recursive_add_and_remove ... ok
+test commands::search_engine_commands::tests_autocomplete_commands::test_recursive_add_now_uses_chunked ... ok
+test commands::search_engine_commands::tests_autocomplete_commands::test_search_impl_with_empty_engine ... ok
+test commands::search_engine_commands::tests_autocomplete_commands::test_search_with_extension_filtering ... ok
+test commands::search_engine_commands::tests_autocomplete_commands::test_search_with_extension_impl_with_empty_engine ... ok
+test commands::settings_commands::tests_settings_commands::test_get_setting_field_existing_key ... ok
+test commands::settings_commands::tests_settings_commands::test_get_setting_field_invalid_key ... ok
+test commands::settings_commands::tests_settings_commands::test_get_settings_as_json_contains_default ... ok
+test commands::settings_commands::tests_settings_commands::test_reset_settings_command_success ... ok
+test commands::settings_commands::tests_settings_commands::test_update_multiple_settings_success ... ok
+test commands::settings_commands::tests_settings_commands::test_update_multiple_settings_with_invalid_key ... ok
+test commands::settings_commands::tests_settings_commands::test_update_settings_field_invalid_key ... ok
+test commands::settings_commands::tests_settings_commands::test_update_settings_field_success ... ok
+test commands::template_commands::tests_template_commands::test_add_template ... ok
+test commands::template_commands::tests_template_commands::test_add_template_nonexistent_source ... ok
+test commands::template_commands::tests_template_commands::test_add_template_single_file ... ok
+test commands::template_commands::tests_template_commands::test_copy_to_dest_path_directory ... ok
+test commands::template_commands::tests_template_commands::test_copy_to_dest_path_file ... ok
+test commands::template_commands::tests_template_commands::test_get_template_paths_with_templates ... ok
+test commands::template_commands::tests_template_commands::test_remove_nonexistent_template ... ok
+test commands::template_commands::tests_template_commands::test_remove_template ... ok
+test commands::template_commands::tests_template_commands::test_use_template ... ok
+test commands::template_commands::tests_template_commands::test_use_template_invalid_destination ... ok
+test commands::template_commands::tests_template_commands::test_use_template_nonexistent ... ok
+test commands::theme_commands::tests::theme_concurrent_selection_and_settings_disk_match_memory ... ok
+test commands::theme_commands::tests::theme_selection_save_failure_and_reset_failure ... ok
+test commands::theme_commands::tests::theme_selection_unknown_and_generic_bypass ... ok
+test commands::theme_commands::tests::theme_settings_malformed_blocks_every_save ... ok
+test commands::theme_commands::tests::theme_settings_raw_migration_selection_reset ... ok
+test commands::theme_commands::tests::theme_switch_reload_race ... ok
+test commands::volume_operations_commands::tests::test_get_volumes ... ok
+test error_handling::error_handling_tests::test ... ok
+test search_engine::art_v5::tests_art_v5::debug_byte_representation ... ok
+test search_engine::art_v5::tests_art_v5::debug_test_v5 ... ok
+test search_engine::art_v5::tests_art_v5::test_basic_insert_and_find_v5 ... ok
+test search_engine::art_v5::tests_art_v5::test_clear_trie ... ok
+test search_engine::art_v5::tests_art_v5::test_complete_filenames_v3 ... ok
+test search_engine::art_v5::tests_art_v5::test_completion_performance ... ok
+test search_engine::art_v5::tests_art_v5::test_component_split ... ok
+test search_engine::art_v5::tests_art_v5::test_duplicate_insertion ... ok
+test search_engine::art_v5::tests_art_v5::test_empty_prefix_split_and_merge_v5 ... ok
+test search_engine::art_v5::tests_art_v5::test_empty_trie ... ok
+test search_engine::art_v5::tests_art_v5::test_extended_normalization ... ok
+test search_engine::art_v5::tests_art_v5::test_file_extensions ... ok
+test search_engine::art_v5::tests_art_v5::test_insertion_performance_art_v5 ... ok
+test search_engine::art_v5::tests_art_v5::test_long_path ... ok
+test search_engine::art_v5::tests_art_v5::test_multiple_files_with_similar_names ... ok
+test search_engine::art_v5::tests_art_v5::test_node_sizing_and_shrinking_v5 ... ok
+test search_engine::art_v5::tests_art_v5::test_normalization ... ok
+test search_engine::art_v5::tests_art_v5::test_prefix_compression ... ok
+test search_engine::art_v5::tests_art_v5::test_prefix_matching ... ok
+test search_engine::art_v5::tests_art_v5::test_preserve_space_searches_v5 ... ok
+test search_engine::art_v5::tests_art_v5::test_remove_path ... ok
+test search_engine::art_v5::tests_art_v5::test_scoring_and_sorting ... ok
+test search_engine::art_v5::tests_art_v5::test_search_with_current_directory ... ok
+test search_engine::art_v5::tests_art_v5::test_specific_path_cases ... ok
+test search_engine::art_v5::tests_art_v5::test_with_real_world_data_art_v3 ... ok
+test search_engine::fast_fuzzy_v2::tests_fast_fuzzy_v2::benchmark_comparison_with_alternatives ... ok
+test search_engine::fast_fuzzy_v2::tests_fast_fuzzy_v2::benchmark_fuzzy_vs_substring_matching ... ok
+test search_engine::fast_fuzzy_v2::tests_fast_fuzzy_v2::benchmark_indexing_speed ... ok
+test search_engine::fast_fuzzy_v2::tests_fast_fuzzy_v2::benchmark_query_performance ... ok
+test search_engine::fast_fuzzy_v2::tests_fast_fuzzy_v2::test_add_path ... ok
+test search_engine::fast_fuzzy_v2::tests_fast_fuzzy_v2::test_basic_search ... ok
+test search_engine::fast_fuzzy_v2::tests_fast_fuzzy_v2::test_case_insensitivity_v2 ... ok
+test search_engine::fast_fuzzy_v2::tests_fast_fuzzy_v2::test_different_query_lengths ... ok
+test search_engine::fast_fuzzy_v2::tests_fast_fuzzy_v2::test_empty_query ... ok
+test search_engine::fast_fuzzy_v2::tests_fast_fuzzy_v2::test_extract_query_trigrams ... ok
+test search_engine::fast_fuzzy_v2::tests_fast_fuzzy_v2::test_fast_lowercase ... ok
+test search_engine::fast_fuzzy_v2::tests_fast_fuzzy_v2::test_misspelled_queries ... ok
+test search_engine::fast_fuzzy_v2::tests_fast_fuzzy_v2::test_pack_trigram ... ok
+test search_engine::fast_fuzzy_v2::tests_fast_fuzzy_v2::test_remove_path ... ok
+test search_engine::fast_fuzzy_v2::tests_fast_fuzzy_v2::test_search_limit ... ok
+test search_engine::fast_fuzzy_v2::tests_fast_fuzzy_v2::test_search_performance_large ... ok
+test search_engine::fast_fuzzy_v2::tests_fast_fuzzy_v2::test_search_performance_medium ... ok
+test search_engine::fast_fuzzy_v2::tests_fast_fuzzy_v2::test_search_performance_small ... ok
+test search_engine::fast_fuzzy_v2::tests_fast_fuzzy_v2::test_search_ranking ... ok
+test search_engine::fast_fuzzy_v2::tests_fast_fuzzy_v2::test_substring_bonus ... ok
+test search_engine::fast_fuzzy_v2::tests_fast_fuzzy_v2::test_variation_generation ... ok
+test search_engine::lru_cache_v2::tests_lru_cache_v2::benchmark_cache_size_impact_lru_cache ... ok
+test search_engine::lru_cache_v2::tests_lru_cache_v2::benchmark_lru_behavior ... ok
+test search_engine::lru_cache_v2::tests_lru_cache_v2::benchmark_path_retrieval ... ok
+test search_engine::lru_cache_v2::tests_lru_cache_v2::test_basic_operations ... ok
+test search_engine::lru_cache_v2::tests_lru_cache_v2::test_clone ... ok
+test search_engine::lru_cache_v2::tests_lru_cache_v2::test_ttl_expiration ... ok
+test search_engine::path_cache_wrapper::tests_path_cache::benchmark_cache_size_impact ... ok
+test search_engine::path_cache_wrapper::tests_path_cache::benchmark_cache_size_impact_path_cache ... ok
+test search_engine::path_cache_wrapper::tests_path_cache::benchmark_lru_behavior ... ok
+test search_engine::path_cache_wrapper::tests_path_cache::benchmark_path_retrieval ... ok
+test search_engine::path_cache_wrapper::tests_path_cache::test_basic_operations ... ok
+test search_engine::path_cache_wrapper::tests_path_cache::test_score_update ... ok
+test search_engine::path_cache_wrapper::tests_path_cache::test_ttl_expiration ... ok
+test search_engine::search_core::tests_search_core::test_add_and_remove_with_nonexistent_paths ... ok
+test search_engine::search_core::tests_search_core::test_add_paths_recursive ... ok
+test search_engine::search_core::tests_search_core::test_add_paths_recursive_with_exclusions ... ok
+test search_engine::search_core::tests_search_core::test_basic_search ... ok
+test search_engine::search_core::tests_search_core::test_cache_expiration ... ok
+test search_engine::search_core::tests_search_core::test_current_directory_context ... ok
+test search_engine::search_core::tests_search_core::test_extension_preference ... ok
+test search_engine::search_core::tests_search_core::test_fuzzy_search_fallback ... ok
+test search_engine::search_core::tests_search_core::test_recency_and_frequency_ranking ... ok
+test search_engine::search_core::tests_search_core::test_recursive_operations_with_permissions ... ok
+test search_engine::search_core::tests_search_core::test_removal ... ok
+test search_engine::search_core::tests_search_core::test_remove_paths_recursive ... ok
+test search_engine::search_core::tests_search_core::test_stats ... ok
+test search_engine::search_core::tests_search_core::test_with_real_world_data_search_core ... ok
+test state::logging::tests_logging::test_enforce_log_file_limit ... ok
+test state::logging::tests_logging::test_error_log_creation ... ok
+test state::logging::tests_logging::test_log_error ... ok
+test state::logging::tests_logging::test_log_file_creation ... ok
+test state::logging::tests_logging::test_log_file_creation_after_rotation ... ok
+test state::logging::tests_logging::test_log_info ... ok
+test state::logging::tests_logging::test_log_rotate_when_max_size_reached ... ok
+test state::logging::tests_logging::test_log_warn ... ok
+test state::logging::tests_logging::test_logging_state_full ... ok
+test state::logging::tests_logging::test_logging_state_minimal ... ok
+test state::logging::tests_logging::test_logging_state_off ... ok
+test state::logging::tests_logging::test_logging_state_partial ... ok
+test state::meta_data::metadata_tests::test_default_meta_data ... ok
+test state::meta_data::metadata_tests::test_meta_data_state_creation ... ok
+test state::meta_data::metadata_tests::test_refresh_volumes ... ok
+test state::meta_data::metadata_tests::test_write_meta_data_to_file ... ok
+test state::searchengine_data::bench_indexing_methods::benchmark_indexing_methods_comparison ... ok
+test state::searchengine_data::bench_indexing_methods::benchmark_indexing_scalability ... ok
+test state::searchengine_data::bench_indexing_methods::benchmark_memory_usage_comparison ... ok
+test state::searchengine_data::bench_indexing_methods::test_concurrent_search_optimization ... FAILED
+test state::searchengine_data::tests_searchengine_state::test_add_and_remove_path ... ok
+test state::searchengine_data::tests_searchengine_state::test_cancel_indexing ... ok
+test state::searchengine_data::tests_searchengine_state::test_chunked_directory_context_for_search ... ok
+test state::searchengine_data::tests_searchengine_state::test_chunked_empty_search_query ... ok
+test state::searchengine_data::tests_searchengine_state::test_chunked_get_stats ... ok
+test state::searchengine_data::tests_searchengine_state::test_chunked_indexing_cancel ... ok
+test state::searchengine_data::tests_searchengine_state::test_chunked_indexing_invalid_path ... ok
+test state::searchengine_data::tests_searchengine_state::test_chunked_indexing_stop ... ok
+test state::searchengine_data::tests_searchengine_state::test_chunked_interactive_search_scenarios ... ok
+test state::searchengine_data::tests_searchengine_state::test_chunked_multiple_searches ... ok
+test state::searchengine_data::tests_searchengine_state::test_chunked_search_after_indexing ... ok
+test state::searchengine_data::tests_searchengine_state::test_chunked_search_by_extension ... ok
+test state::searchengine_data::tests_searchengine_state::test_chunked_sequential_indexing ... ok
+test state::searchengine_data::tests_searchengine_state::test_chunked_update_indexing_progress ... ok
+test state::searchengine_data::tests_searchengine_state::test_chunked_vs_traditional_indexing_results_consistency ... ok
+test state::searchengine_data::tests_searchengine_state::test_chunked_with_real_world_data ... ok
+test state::searchengine_data::tests_searchengine_state::test_clone_implementation ... ok
+test state::searchengine_data::tests_searchengine_state::test_concurrent_operations ... ok
+test state::searchengine_data::tests_searchengine_state::test_directory_context_for_search ... ok
+test state::searchengine_data::tests_searchengine_state::test_empty_search_query ... ok
+test state::searchengine_data::tests_searchengine_state::test_get_stats ... ok
+test state::searchengine_data::tests_searchengine_state::test_initialization ... ok
+test state::searchengine_data::tests_searchengine_state::test_interactive_search_scenarios ... ok
+test state::searchengine_data::tests_searchengine_state::test_multiple_searches ... ok
+test state::searchengine_data::tests_searchengine_state::test_search ... ok
+test state::searchengine_data::tests_searchengine_state::test_search_by_extension ... ok
+test state::searchengine_data::tests_searchengine_state::test_sequential_indexing ... ok
+test state::searchengine_data::tests_searchengine_state::test_start_chunked_indexing ... ok
+test state::searchengine_data::tests_searchengine_state::test_start_chunked_indexing_cancellation ... ok
+test state::searchengine_data::tests_searchengine_state::test_start_indexing_invalid_path ... ok
+test state::searchengine_data::tests_searchengine_state::test_stop_indexing_when_not_indexing ... ok
+test state::searchengine_data::tests_searchengine_state::test_update_config ... ok
+test state::searchengine_data::tests_searchengine_state::test_update_indexing_progress ... ok
+test state::searchengine_data::tests_searchengine_state::test_with_real_world_data ... ok
+test state::settings_data::tests_settings::test_default_settings ... ok
+test state::settings_data::tests_settings::test_get_complex_field ... ok
+test state::settings_data::tests_settings::test_get_existing_field ... ok
+test state::settings_data::tests_settings::test_get_invalid_key ... ok
+test state::settings_data::tests_settings::test_init_settings_json_exists ... ok
+test state::settings_data::tests_settings::test_invalid_key ... ok
+test state::settings_data::tests_settings::test_invalid_type_for_show_hidden_files_and_folders ... ok
+test state::settings_data::tests_settings::test_settings_state_creation ... ok
+test state::settings_data::tests_settings::test_update_default_checksum_hash_field ... ok
+test state::settings_data::tests_settings::test_update_default_folder_path_on_opening_field ... ok
+test state::settings_data::tests_settings::test_update_logging_level_field ... ok
+test state::settings_data::tests_settings::test_update_multiple_valid_fields ... ok
+test state::settings_data::tests_settings::test_update_show_hidden_files_and_folders_field ... ok
+test state::settings_data::tests_settings::test_update_with_empty_updates_map ... ok
+test state::settings_data::tests_settings::test_update_with_invalid_key ... ok
+test state::settings_data::tests_settings::test_update_with_invalid_value_type ... ok
+test state::settings_data::tests_settings::test_update_with_mixed_valid_and_invalid_keys ... ok
+test state::settings_data::theme_settings_regression::theme_settings_malformed ... ok
+test state::settings_data::theme_settings_regression::theme_settings_migration ... ok
+test state::settings_data::theme_snapshot_tests::theme_snapshot_defaults_extras_and_load_error ... ok
+test state::settings_data::theme_snapshot_tests::theme_snapshot_lock_failure_rejects_not_settings ... ok
+test state::settings_data::theme_snapshot_tests::theme_snapshot_serialization_failure_rejects_not_settings ... ok
+test themes::catalog::tests::theme_custom_duplicate_owner ... ok
+test themes::catalog::tests::theme_file_size_and_type ... ok
+test themes::catalog::tests::theme_no_follow_symlinks_and_directory_swap ... ok
+test themes::catalog::tests::theme_seed_ledger_recovery ... ok
+test themes::catalog::tests::theme_seed_once ... ok
+test themes::catalog::tests::theme_watch_add_copy ... ok
+test themes::definition::tests::theme_schema_parity ... ok
+test themes::watcher::tests::theme_watch_atomic_save ... ok
+test themes::watcher::tests::theme_watch_debounce ... ok
+test themes::watcher::tests::theme_watch_delete_active ... ok
+test themes::watcher::tests::theme_watch_directory_recreated ... ok
+test themes::watcher::tests::theme_watch_duplicate ... ok
+test themes::watcher::tests::theme_watch_emit_failure ... ok
+test themes::watcher::tests::theme_watch_event_paths ... ok
+test themes::watcher::tests::theme_watch_independent_paths ... ok
+test themes::watcher::tests::theme_watch_invalid_then_valid ... ok
+test themes::watcher::tests::theme_watch_no_follow_and_fifo ... ok
+test themes::watcher::tests::theme_watch_notify_rename_write_shared_deadline ... ok
+test themes::watcher::tests::theme_watch_rename_chain_shared_deadline ... ok
+test themes::watcher::tests::theme_watch_rename_duplicate_shared_deadline ... ok
+test themes::watcher::tests::theme_watch_rename_groups_merge_then_expire ... ok
+test themes::watcher::tests::theme_watch_rename_owner_duplicate_takeover ... ok
+test themes::watcher::tests::theme_watch_rename_write_shared_deadline ... ok
+test themes::watcher::tests::theme_watch_shutdown ... ok
+
+failures:
+
+---- commands::hash_commands::tests_hash_commands::test_all_hash_methods stdout ----
+
+thread 'commands::hash_commands::tests_hash_commands::test_all_hash_methods' (234882) panicked at src-tauri/src/commands/hash_commands.rs:291:14:
+called `Result::unwrap()` on an `Err` value: Custom { kind: InvalidData, error: "Could not load settings. Defaults are temporary; existing file was not changed." }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- commands::hash_commands::tests_hash_commands::test_binary_file_hash stdout ----
+
+thread 'commands::hash_commands::tests_hash_commands::test_binary_file_hash' (234883) panicked at src-tauri/src/commands/hash_commands.rs:291:14:
+called `Result::unwrap()` on an `Err` value: Custom { kind: InvalidData, error: "Could not load settings. Defaults are temporary; existing file was not changed." }
+
+---- commands::hash_commands::tests_hash_commands::test_compare_file_hash stdout ----
+
+thread 'commands::hash_commands::tests_hash_commands::test_compare_file_hash' (234884) panicked at src-tauri/src/commands/hash_commands.rs:291:14:
+called `Result::unwrap()` on an `Err` value: Custom { kind: InvalidData, error: "Could not load settings. Defaults are temporary; existing file was not changed." }
+
+---- commands::hash_commands::tests_hash_commands::test_empty_file stdout ----
+
+thread 'commands::hash_commands::tests_hash_commands::test_empty_file' (234885) panicked at src-tauri/src/commands/hash_commands.rs:291:14:
+called `Result::unwrap()` on an `Err` value: Custom { kind: InvalidData, error: "Could not load settings. Defaults are temporary; existing file was not changed." }
+
+---- commands::hash_commands::tests_hash_commands::test_hash_method_switching stdout ----
+
+thread 'commands::hash_commands::tests_hash_commands::test_hash_method_switching' (234886) panicked at src-tauri/src/commands/hash_commands.rs:507:18:
+called `Result::unwrap()` on an `Err` value: Custom { kind: InvalidData, error: "Could not load settings. Defaults are temporary; existing file was not changed." }
+
+---- commands::hash_commands::tests_hash_commands::test_invalid_hash_comparison stdout ----
+
+thread 'commands::hash_commands::tests_hash_commands::test_invalid_hash_comparison' (234887) panicked at src-tauri/src/commands/hash_commands.rs:291:14:
+called `Result::unwrap()` on an `Err` value: Custom { kind: InvalidData, error: "Could not load settings. Defaults are temporary; existing file was not changed." }
+
+---- commands::hash_commands::tests_hash_commands::test_non_existent_file stdout ----
+
+thread 'commands::hash_commands::tests_hash_commands::test_non_existent_file' (234888) panicked at src-tauri/src/commands/hash_commands.rs:291:14:
+called `Result::unwrap()` on an `Err` value: Custom { kind: InvalidData, error: "Could not load settings. Defaults are temporary; existing file was not changed." }
+
+---- commands::hash_commands::tests_hash_commands::test_save_hash_to_file stdout ----
+
+thread 'commands::hash_commands::tests_hash_commands::test_save_hash_to_file' (234889) panicked at src-tauri/src/commands/hash_commands.rs:291:14:
+called `Result::unwrap()` on an `Err` value: Custom { kind: InvalidData, error: "Could not load settings. Defaults are temporary; existing file was not changed." }
+
+---- commands::hash_commands::tests_hash_commands::test_special_chars_in_path stdout ----
+
+thread 'commands::hash_commands::tests_hash_commands::test_special_chars_in_path' (234890) panicked at src-tauri/src/commands/hash_commands.rs:291:14:
+called `Result::unwrap()` on an `Err` value: Custom { kind: InvalidData, error: "Could not load settings. Defaults are temporary; existing file was not changed." }
+
+---- commands::hash_commands::tests_hash_commands::test_unicode_content stdout ----
+
+thread 'commands::hash_commands::tests_hash_commands::test_unicode_content' (234891) panicked at src-tauri/src/commands/hash_commands.rs:291:14:
+called `Result::unwrap()` on an `Err` value: Custom { kind: InvalidData, error: "Could not load settings. Defaults are temporary; existing file was not changed." }
+
+---- commands::hash_commands::tests_hash_commands::test_zero_byte_boundaries stdout ----
+
+thread 'commands::hash_commands::tests_hash_commands::test_zero_byte_boundaries' (234892) panicked at src-tauri/src/commands/hash_commands.rs:291:14:
+called `Result::unwrap()` on an `Err` value: Custom { kind: InvalidData, error: "Could not load settings. Defaults are temporary; existing file was not changed." }
+
+---- state::searchengine_data::bench_indexing_methods::test_concurrent_search_optimization stdout ----
+Concurrent search 3 failed with error: Engine is currently searching
+
+thread 'state::searchengine_data::bench_indexing_methods::test_concurrent_search_optimization' (236885) panicked at src-tauri/src/state/searchengine_data.rs:3933:13:
+Concurrent search 3 should succeed, got error: Some("Engine is currently searching")
+
+
+failures:
+    commands::hash_commands::tests_hash_commands::test_all_hash_methods
+    commands::hash_commands::tests_hash_commands::test_binary_file_hash
+    commands::hash_commands::tests_hash_commands::test_compare_file_hash
+    commands::hash_commands::tests_hash_commands::test_empty_file
+    commands::hash_commands::tests_hash_commands::test_hash_method_switching
+    commands::hash_commands::tests_hash_commands::test_invalid_hash_comparison
+    commands::hash_commands::tests_hash_commands::test_non_existent_file
+    commands::hash_commands::tests_hash_commands::test_save_hash_to_file
+    commands::hash_commands::tests_hash_commands::test_special_chars_in_path
+    commands::hash_commands::tests_hash_commands::test_unicode_content
+    commands::hash_commands::tests_hash_commands::test_zero_byte_boundaries
+    state::searchengine_data::bench_indexing_methods::test_concurrent_search_optimization
+
+test result: FAILED. 248 passed; 12 failed; 0 ignored; 0 measured; 0 filtered out; finished in 310.36s
+
+/home/aron/Projects/FileExplorer/target/debug/deps/src_tauri-a9e4e52a172c262b --test-threads=1 exited with status 101

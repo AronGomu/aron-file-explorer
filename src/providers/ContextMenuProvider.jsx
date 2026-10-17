@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import { deleteSelection } from '../utils/fileDeletion';
 import { invoke } from '@tauri-apps/api/core';
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { useFileSystem } from './FileSystemProvider';
@@ -24,9 +25,12 @@ export default function ContextMenuProvider({ children }) {
     const [clipboard, setClipboard] = useState({ items: [], operation: null });
     const [isProcessing, setIsProcessing] = useState(false);
 
-    const { selectedItems, loadDirectory, clearSelection, moveToTrash, currentDirData } = useFileSystem();
+    const deletionBusy = useRef(false);
+    const { selectedItems, isLoading, loadDirectory, clearSelection, removeDeletedItems, currentDirData } = useFileSystem();
     const { currentPath } = useHistory();
-    const { isSftpPath, parseSftpPath, copySftpItem, moveSftpItem, downloadAndOpenSftpFile } = useSftp();
+    const { isSftpPath, parseSftpPath, copySftpItem, moveSftpItem, downloadAndOpenSftpFile, deleteSftpItem } = useSftp();
+    const activePath = useRef(currentPath);
+    activePath.current = currentPath;
 
     // Check if item is in favorites
     const isInFavorites = useCallback((item) => {
@@ -343,30 +347,63 @@ export default function ContextMenuProvider({ children }) {
         }
     }, [clipboard, currentPath, loadDirectory, isSftpPath, copySftpItem, moveSftpItem, generateUniqueDestPath]);
 
-    // Delete items
+    const refreshAfterDeletion = useCallback(async (paths) => {
+        if (!paths.length) return;
+        removeDeletedItems(paths);
+        if (activePath.current) await loadDirectory(activePath.current);
+    }, [loadDirectory, removeDeletedItems]);
+
     const deleteItems = useCallback(async (items) => {
-        if (!items.length) return;
-
-        const itemNames = items.map(item => item.name).join(', ');
-        const confirmMessage = `Are you sure you want to move ${items.length === 1 ? itemNames : `${items.length} items`} to trash?`;
-
-        // Use custom confirm dialog
-        const shouldDelete = await showConfirm(confirmMessage, 'Move to Trash');
-        if (!shouldDelete) return;
-
+        if (!items.length || deletionBusy.current || isProcessing || isLoading) return;
+        deletionBusy.current = true;
         setIsProcessing(true);
         try {
-            // Call moveToTrash for each item - it handles SFTP vs local paths and directory reload
-            for (const item of items) {
-                await moveToTrash(item.path);
-            }
+            const removed = await deleteSelection(items, {
+                invoke, confirm: showConfirm, isSftpPath, deleteSftpItem, reportError: showError,
+            });
+            await refreshAfterDeletion(removed);
         } catch (error) {
-            console.error('Delete operation failed:', error);
             showError(`Failed to delete: ${error.message || error}`);
         } finally {
+            deletionBusy.current = false;
             setIsProcessing(false);
         }
-    }, [moveToTrash]);
+    }, [isProcessing, isLoading, isSftpPath, deleteSftpItem, refreshAfterDeletion]);
+
+    const undoDeletion = useCallback(async () => {
+        if (deletionBusy.current || isProcessing || isLoading) return;
+        deletionBusy.current = true;
+        setIsProcessing(true);
+        try {
+            const result = await invoke('undo_last_deletion');
+            if (result.trashed.length && activePath.current) await loadDirectory(activePath.current);
+            for (const [path, error] of result.failed) showError(`Could not restore “${path}”: ${error}`);
+            if (result.trashed.length) showSuccess(`Restored ${result.trashed.length} item(s) from trash.`);
+        } catch (error) {
+            showError(`Could not undo deletion: ${error.message || error}`);
+        } finally {
+            deletionBusy.current = false;
+            setIsProcessing(false);
+        }
+    }, [isProcessing, isLoading, loadDirectory]);
+
+    useEffect(() => {
+        const handleDeletionShortcut = (event) => {
+            if (event.defaultPrevented || event.isComposing || event.repeat || event.altKey ||
+                event.target.isContentEditable || event.target.closest?.('input, textarea, select, button, [role="textbox"], #explorer-preview-panel') ||
+                document.querySelector('[role="dialog"], .modal-overlay')) return;
+            if (event.key === 'Delete' && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+                if (!selectedItems.length) return;
+                event.preventDefault();
+                deleteItems(selectedItems);
+            } else if ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === 'z') {
+                event.preventDefault();
+                undoDeletion();
+            }
+        };
+        window.addEventListener('keydown', handleDeletionShortcut);
+        return () => window.removeEventListener('keydown', handleDeletionShortcut);
+    }, [deleteItems, undoDeletion, selectedItems]);
 
     // Rename item - dispatch event to open rename modal
     const renameItem = useCallback((item) => {

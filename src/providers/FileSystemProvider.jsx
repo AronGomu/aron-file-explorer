@@ -435,6 +435,13 @@ export default function FileSystemProvider({ children }) {
         }
     }, [loadDirectory, isSftpPath, deleteSftpItem, currentPath]);
 
+    const removeDeletedItems = useCallback((paths) => {
+        const deleted = item => item && paths.some(path => item.path === path ||
+            item.path.startsWith(path.replace(/[\\/]+$/, '') + (path.includes('\\') ? '\\' : '/')));
+        setSelectedItems(items => items.filter(item => !deleted(item)));
+        setFocusedItem(item => deleted(item) ? null : item);
+    }, []);
+
     // Zip selected items
     const zipItems = useCallback(async (sourcePaths, destinationPath = null) => {
         setIsLoading(true);
@@ -549,6 +556,7 @@ export default function FileSystemProvider({ children }) {
         createDirectory,
         renameItem,
         moveToTrash,
+        removeDeletedItems,
         selectItem,
         selectMultiple,
         clearSelection,

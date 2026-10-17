@@ -12,3 +12,4 @@ pub mod theme_commands;
 pub mod image_commands;
 pub mod file_preview_commands;
 mod text_highlighting;
+pub mod deletion_commands;

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
+import { arrowSelection } from '../../utils/fileSelection';
 import { getFileType } from '../../utils/formatters';
 import { useFileSystem } from '../../providers/FileSystemProvider';
 import { useContextMenu } from '../../providers/ContextMenuProvider';
@@ -176,8 +177,8 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
 
     const handleSelectionStart = (event) => {
         suppressDragClick.current = false;
-        if (viewMode !== 'grid' || event.button !== 0 || event.pointerType !== 'mouse' ||
-            event.target.closest('[data-path]')) return;
+        if (!['grid', 'list'].includes(viewMode) || event.button !== 0 || event.pointerType !== 'mouse' ||
+            event.target.closest('[data-path], .file-list-header')) return;
         const container = event.currentTarget;
         const bounds = container.getBoundingClientRect();
         const x = event.clientX - bounds.left - container.clientLeft;
@@ -462,7 +463,9 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
         const handleKeyDown = (e) => {
             if (isLoading || (data?.directory && data.directory !== currentPath)) return;
             // Don't handle arrow keys if user is typing in an input or textarea
-            if (e.target instanceof HTMLInputElement || 
+            if (e.defaultPrevented || document.querySelector('[role="dialog"], .modal-overlay') ||
+                e.altKey || e.target.closest?.('select, button, [role="dialog"]') ||
+                e.target instanceof HTMLInputElement ||
                 e.target instanceof HTMLTextAreaElement || 
                 e.target.isContentEditable ||
                 (e.target.closest?.('#explorer-preview-panel') &&
@@ -477,87 +480,27 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
                     ? sortedItems.findIndex(item => item.path === focusedItem.path)
                     : -1;
 
-                let newFocusedIndex = currentFocusedIndex;
-                let moved = false;
+                const isArrow = ['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft'].includes(e.key);
+                const range = isArrow ? arrowSelection({
+                    current: currentFocusedIndex, anchor: lastSelectedIndex, key: e.key,
+                    columns: viewMode === 'grid' ? columnsPerRow : 1, count: sortedItems.length,
+                }) : null;
+
+                if (range) {
+                    e.preventDefault();
+                    const item = sortedItems[range.index];
+                    if (e.shiftKey) {
+                        selectMultiple(sortedItems.slice(range.start, range.end + 1));
+                        setLastSelectedIndex(range.anchor);
+                    } else if (!e.ctrlKey && !e.metaKey) {
+                        selectItem(item, false);
+                        setLastSelectedIndex(range.index);
+                    }
+                    setFocusedItem(item);
+                    scrollItemIntoView(range.index);
+                }
 
                 switch (e.key) {
-                    case 'ArrowDown':
-                        e.preventDefault();
-                        if (viewMode === 'grid') {
-                            newFocusedIndex = currentFocusedIndex + columnsPerRow;
-                            if (newFocusedIndex < sortedItems.length) {
-                                setFocusedItem(sortedItems[newFocusedIndex]);
-                                moved = true;
-                            } else {
-                                const remainder = currentFocusedIndex % columnsPerRow;
-                                setFocusedItem(sortedItems[remainder]);
-                                newFocusedIndex = remainder;
-                                moved = true;
-                            }
-                        } else {
-                            newFocusedIndex = currentFocusedIndex < sortedItems.length - 1 
-                                ? currentFocusedIndex + 1 
-                                : 0;
-                            setFocusedItem(sortedItems[newFocusedIndex]);
-                            moved = true;
-                        }
-                        break;
-                    case 'ArrowUp':
-                        e.preventDefault();
-                        if (viewMode === 'grid') {
-                            newFocusedIndex = currentFocusedIndex - columnsPerRow;
-                            if (newFocusedIndex >= 0) {
-                                setFocusedItem(sortedItems[newFocusedIndex]);
-                                moved = true;
-                            } else {
-                                const remainder = currentFocusedIndex % columnsPerRow;
-                                const totalRows = Math.ceil(sortedItems.length / columnsPerRow);
-                                const lastRowStartIndex = (totalRows - 1) * columnsPerRow;
-                                const targetIndex = Math.min(lastRowStartIndex + remainder, sortedItems.length - 1);
-                                setFocusedItem(sortedItems[targetIndex]);
-                                newFocusedIndex = targetIndex;
-                                moved = true;
-                            }
-                        } else {
-                            newFocusedIndex = currentFocusedIndex > 0 
-                                ? currentFocusedIndex - 1 
-                                : sortedItems.length - 1;
-                            setFocusedItem(sortedItems[newFocusedIndex]);
-                            moved = true;
-                        }
-                        break;
-                    case 'ArrowRight':
-                        e.preventDefault();
-                        if (viewMode === 'grid') {
-                            if (currentFocusedIndex < sortedItems.length - 1) {
-                                newFocusedIndex = currentFocusedIndex + 1;
-                                setFocusedItem(sortedItems[newFocusedIndex]);
-                                moved = true;
-                            }
-                        } else {
-                            newFocusedIndex = currentFocusedIndex < sortedItems.length - 1 
-                                ? currentFocusedIndex + 1 
-                                : 0;
-                            setFocusedItem(sortedItems[newFocusedIndex]);
-                            moved = true;
-                        }
-                        break;
-                    case 'ArrowLeft':
-                        e.preventDefault();
-                        if (viewMode === 'grid') {
-                            if (currentFocusedIndex > 0) {
-                                newFocusedIndex = currentFocusedIndex - 1;
-                                setFocusedItem(sortedItems[newFocusedIndex]);
-                                moved = true;
-                            }
-                        } else {
-                            newFocusedIndex = currentFocusedIndex > 0 
-                                ? currentFocusedIndex - 1 
-                                : sortedItems.length - 1;
-                            setFocusedItem(sortedItems[newFocusedIndex]);
-                            moved = true;
-                        }
-                        break;
                     case 'Enter':
                         if (focusedItem) {
                             e.preventDefault();
@@ -568,40 +511,6 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
                             }
                         }
                         break;
-                }
-
-                const item = sortedItems[newFocusedIndex];
-                if (moved && item) {
-                    scrollItemIntoView(newFocusedIndex);
-
-                    if (e.shiftKey && lastSelectedIndex !== -1) {
-                        // Shift+Arrow: select range from lastSelectedIndex to newFocusedIndex
-                        const start = Math.min(lastSelectedIndex, newFocusedIndex);
-                        const end = Math.max(lastSelectedIndex, newFocusedIndex);
-                        const itemsToSelect = sortedItems.slice(start, end + 1);
-                        clearSelection();
-                        itemsToSelect.forEach(rangeItem => {
-                            selectItem(rangeItem, true);
-                        });
-                    } else if (e.ctrlKey || e.metaKey) {
-                        // Cmd/Ctrl+Arrow: add/remove focused item to selection
-                        const isAlreadySelected = selectedItems.some(selected => selected.path === item.path);
-                        if (isAlreadySelected) {
-                            // Deselect by clearing and re-selecting others
-                            const otherSelected = selectedItems.filter(selected => selected.path !== item.path);
-                            clearSelection();
-                            otherSelected.forEach(otherItem => {
-                                selectItem(otherItem, true);
-                            });
-                        } else {
-                            selectItem(item, true);
-                        }
-                        setLastSelectedIndex(newFocusedIndex);
-                    } else {
-                        // No modifier: single selection
-                        selectItem(item, false);
-                        setLastSelectedIndex(newFocusedIndex);
-                    }
                 }
             }
         };
@@ -624,6 +533,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
         const handleSelectItem = (e) => {
             if (e.detail && e.detail.item) {
                 selectItem(e.detail.item, false);
+                setLastSelectedIndex(sortedItems.findIndex(item => item.path === e.detail.item.path));
             }
         };
 
@@ -648,7 +558,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
             document.removeEventListener('select-item', handleSelectItem);
             document.removeEventListener('clear-selection', handleClearSelection);
         };
-    }, [selectItem, clearSelection, sortedItems, focusedItem, setFocusedItem, loadDirectory, viewMode, showError, disableArrowKeys, columnsPerRow, isLoading, data, currentPath, scrollItemIntoView]);
+    }, [selectItem, selectMultiple, clearSelection, lastSelectedIndex, sortedItems, focusedItem, setFocusedItem, loadDirectory, viewMode, showError, disableArrowKeys, columnsPerRow, isLoading, data, currentPath, scrollItemIntoView]);
 
     // Restore only after the requested folder's listing has finished loading.
     useLayoutEffect(() => {
@@ -785,12 +695,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
             const end = Math.max(lastSelectedIndex, index);
             const itemsToSelect = sortedItems.slice(start, end + 1);
 
-            // Clear current selection and select range
-            clearSelection();
-            itemsToSelect.forEach(rangeItem => {
-                selectItem(rangeItem, true);
-            });
-            setLastSelectedIndex(index);
+            selectMultiple(itemsToSelect);
         } else if (event.ctrlKey || event.metaKey) {
             // Toggle selection with Ctrl key
             if (isAlreadySelected) {

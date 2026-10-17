@@ -1,0 +1,8 @@
+[
+  "list: Shift+Arrow expands, shrinks and crosses anchor",
+  "grid: Shift+Arrow expands, shrinks and crosses anchor",
+  "Delete: batch confirmation cancels safely; confirmation trashes both selected files; Ctrl+Z restores both",
+  "List view: real native mouse drag selects five rows; release preserves selection",
+  "Delete inside text input preserves files and does not open a confirmation",
+  "Trash denied: permanent deletion warning states unrecoverable; Cancel preserves fixture; Confirm deletes only fixture"
+]

@@ -32,6 +32,9 @@ fn get_launch_directories() -> Vec<String> {
 fn all_commands() -> fn(Invoke) -> bool {
     tauri::generate_handler![
         get_launch_directories,
+        commands::deletion_commands::trash_items,
+        commands::deletion_commands::undo_last_deletion,
+        commands::deletion_commands::permanently_delete,
         // Filesystem commands
         //file_system_operation_commands::open_file,
         file_system_operation_commands::open_directory,

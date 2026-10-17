@@ -134,7 +134,11 @@ export const showConfirm = (message, title = 'Confirm') => {
             z-index: 10001;
         `;
 
+        const previousFocus = document.activeElement;
         const dialog = document.createElement('div');
+        dialog.setAttribute('role', 'dialog');
+        dialog.setAttribute('aria-modal', 'true');
+        dialog.setAttribute('aria-label', title);
         dialog.style.cssText = `
             background: var(--surface);
             color: var(--text-primary);
@@ -160,6 +164,8 @@ export const showConfirm = (message, title = 'Confirm') => {
             margin: 0 0 24px 0;
             color: var(--text-secondary);
             line-height: 1.5;
+            white-space: pre-line;
+            overflow-wrap: anywhere;
         `;
 
         const buttonContainer = document.createElement('div');
@@ -192,9 +198,11 @@ export const showConfirm = (message, title = 'Confirm') => {
         `;
 
         const cleanup = () => {
+            document.removeEventListener('keydown', handleKeyDown);
             if (modal.parentNode) {
                 modal.parentNode.removeChild(modal);
             }
+            if (previousFocus?.isConnected) previousFocus.focus();
         };
 
         cancelBtn.addEventListener('click', () => {
@@ -216,7 +224,13 @@ export const showConfirm = (message, title = 'Confirm') => {
 
         // ESC key to cancel
         const handleKeyDown = (e) => {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                (document.activeElement === cancelBtn ? confirmBtn : cancelBtn).focus();
+            }
             if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
                 cleanup();
                 resolve(false);
                 document.removeEventListener('keydown', handleKeyDown);
@@ -232,7 +246,7 @@ export const showConfirm = (message, title = 'Confirm') => {
         modal.appendChild(dialog);
         document.body.appendChild(modal);
 
-        // Focus confirm button
-        confirmBtn.focus();
+        // Cancellation is the safe default for irreversible deletion.
+        cancelBtn.focus();
     });
 };

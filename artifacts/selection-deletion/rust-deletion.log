@@ -1,0 +1,7 @@
+
+running 3 tests
+test commands::deletion_commands::tests::deletion_batch_restores_files_directories_and_symlinks_without_overwriting ... ok
+test commands::deletion_commands::tests::failed_trash_preserves_previous_undo_batch ... ok
+test commands::deletion_commands::tests::undo_restores_only_latest_deletion_of_the_same_path ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 258 filtered out; finished in 0.01s

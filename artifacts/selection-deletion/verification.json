@@ -1,0 +1,29 @@
+{
+  "assumptions": [
+    "Shift+Arrow maintains a fixed anchor and stops at boundaries.",
+    "Ctrl+Z restores the latest local deletion batch during the current app session.",
+    "SFTP deletion is permanent and requires explicit confirmation."
+  ],
+  "passed": [
+    "node --test tests/file-selection.test.mjs tests/file-deletion.test.mjs: 7 passed",
+    "node scripts/run-isolated-rust-tests.mjs --filter deletion_commands: 3 passed",
+    "npm run build",
+    "cargo build --manifest-path src-tauri/Cargo.toml --features custom-protocol",
+    "Native Tauri scenarios in native-results.json",
+    "git diff --check"
+  ],
+  "suiteFailures": {
+    "npm test": "11 passed; 1 failed: retains sidebar shell and navigation; missing className=\"sidebar-footer\"",
+    "isolatedFullRust": "248 passed; 12 failed: 11 hash/settings failures and test_concurrent_search_optimization",
+    "isolatedHashRust": "0 passed; 11 failed: Could not load settings. Defaults are temporary; existing file was not changed."
+  },
+  "platforms": {
+    "verified": "Linux native Tauri/WebKitGTK",
+    "unverified": [
+      "macOS",
+      "Windows"
+    ]
+  },
+  "missingSkill": ".agents/skills/make-glossary-aron/SKILL.md not found in project or shared skill directories",
+  "cleanup": "Removed own .tmp/deletion-native fixtures, four isolated Rust runs, and temporary verification scripts/logs; retained evidence in artifacts/selection-deletion."
+}
