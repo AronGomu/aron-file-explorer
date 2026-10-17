@@ -33,12 +33,13 @@ use logging::Logger;
 use crate::state::searchengine_data::SearchEngineState;
 use meta_data::MetaDataState;
 use std::sync::{Arc, Mutex};
-use tauri::{Builder, Wry};
+use tauri::Manager;
 
-pub fn setup_app_state(app: Builder<Wry>) -> Builder<Wry> {
+pub fn setup_app_state(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     // Create our shared state instances
     let meta_data_state = Arc::new(Mutex::new(MetaDataState::new()));
-    let (settings, load_status) = load_settings_state();
+    let path = app.path().app_config_dir()?.join("settings.json");
+    let (settings, load_status) = load_system_settings_state(path, &crate::constants::SETTINGS_CONFIG_ABS_PATH);
     let settings_state = Arc::new(Mutex::new(settings));
     let search_engine_state = Arc::new(Mutex::new(SearchEngineState::new(settings_state.clone())));
     
@@ -46,8 +47,9 @@ pub fn setup_app_state(app: Builder<Wry>) -> Builder<Wry> {
     Logger::init(settings_state.clone());
     
     //To add more just .manage
-    app.manage(meta_data_state)
-        .manage(settings_state)
-        .manage(load_status)
-        .manage(search_engine_state)
+    app.manage(meta_data_state);
+    app.manage(settings_state);
+    app.manage(load_status);
+    app.manage(search_engine_state);
+    Ok(())
 }

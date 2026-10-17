@@ -136,7 +136,7 @@ test('theme_system_os_transition: Settings + open confirm retain identity across
     expect(invoke.mock.calls.filter(([command]) => command === 'set_active_theme_id')).toEqual([]);
 });
 
-test('theme_custom_plugin_roundtrip: discovery selection edit diagnostics deletion remount preserves requested ID', async () => {
+test('theme_custom_plugin_roundtrip: discovery selection edit diagnostics deletion remount uses System fallback', async () => {
     await mount();
     const custom = { ...EMBEDDED_THEMES[0], id: 'custom-copy', name: 'Custom Copy', tokens: { ...EMBEDDED_THEMES[0].tokens, background: '#abcdef' } };
     await publish([...EMBEDDED_THEMES, custom]);
@@ -158,13 +158,13 @@ test('theme_custom_plugin_roundtrip: discovery selection edit diagnostics deleti
     expect(document.querySelector('#notification-container').textContent).toContain('Duplicate theme id "custom-copy" in "duplicate.theme.json". File ignored.');
     expect(document.documentElement.style.getPropertyValue('--background')).toBe('#123456');
     await publish([...EMBEDDED_THEMES]);
-    expect(selector.selectedOptions[0].disabled).toBe(true);
-    expect(context.activeThemeId).toBe(custom.id);
-    expect(document.documentElement.style.getPropertyValue('--background')).toBe('#123456');
+    expect(selector.value).toBe('system');
+    expect(context.activeThemeId).toBe('system');
+    expect(document.documentElement.style.getPropertyValue('--background')).toBe(EMBEDDED_THEMES[0].tokens.background);
     act(() => root.unmount()); root = null; host.remove();
     await mount();
     expect(settings.active_theme_id).toBe(custom.id);
     expect(settings.unrelated).toEqual({ retained: true });
     expect(document.documentElement.dataset.theme).toBe('catppuccin-latte');
-    expect(document.querySelector('#theme-selection').selectedOptions[0].disabled).toBe(true);
+    expect(document.querySelector('#theme-selection').value).toBe('system');
 });

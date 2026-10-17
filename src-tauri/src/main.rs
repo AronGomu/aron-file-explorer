@@ -8,6 +8,7 @@ pub mod models;
 mod search_engine;
 mod state;
 mod themes;
+mod launch_requests;
 
 use crate::commands::{
     command_exec_commands, file_system_operation_commands, hash_commands, meta_data_commands,
@@ -32,6 +33,7 @@ fn get_launch_directories() -> Vec<String> {
 fn all_commands() -> fn(Invoke) -> bool {
     tauri::generate_handler![
         get_launch_directories,
+        launch_requests::get_launch_request,
         commands::deletion_commands::trash_items,
         commands::deletion_commands::undo_last_deletion,
         commands::deletion_commands::permanently_delete,
@@ -47,6 +49,9 @@ fn all_commands() -> fn(Invoke) -> bool {
         file_system_operation_commands::zip,
         file_system_operation_commands::unzip,
         commands::image_commands::get_image_thumbnail,
+        commands::video_commands::get_video_thumbnail,
+        commands::file_move_commands::move_items,
+        sftp_file_system_operation_commands::move_items_sftp,
         commands::file_preview_commands::get_text_preview,
         // Command execution commands
         command_exec_commands::execute_command,
@@ -58,6 +63,7 @@ fn all_commands() -> fn(Invoke) -> bool {
         // Volume commands
         volume_operations_commands::get_system_volumes_information_as_json,
         volume_operations_commands::get_system_volumes_information,
+        volume_operations_commands::mount_volume,
         // Settings commands
         settings_commands::get_settings_as_json,
         settings_commands::get_settings_snapshot,
@@ -135,7 +141,14 @@ async fn main() {
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(all_commands())
         .setup(move |app| {
+            state::setup_app_state(app)?;
             app.manage(themes::catalog::ThemeState::new(app));
+            if commands::theme_commands::restore_active_theme_id(
+                &app.state::<themes::catalog::ThemeState>(),
+                app.state::<std::sync::Arc<std::sync::Mutex<state::SettingsState>>>().inner(),
+            ).is_err() {
+                eprintln!("Could not persist the default theme selection");
+            }
             let handle = std::sync::Arc::new(app.handle().clone());
             let state = app.state::<themes::catalog::ThemeState>();
             let directory = state.registry.lock().expect("theme registry initialized").catalog.directory.clone();
@@ -162,8 +175,6 @@ async fn main() {
             
             Ok(())
         });
-
-    let app = state::setup_app_state(app);
 
     log_info!("Starting Tauri application...");
 

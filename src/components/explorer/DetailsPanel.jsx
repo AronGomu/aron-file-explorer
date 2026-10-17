@@ -38,6 +38,19 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, isCollaps
     const resizeStart = useRef(null);
 
     useEffect(() => {
+        const shortcuts = event => {
+            if (event.defaultPrevented || event.isComposing || document.querySelector('[role="dialog"], .modal-overlay') ||
+                event.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+            if ((event.ctrlKey || event.metaKey) && event.altKey && !event.shiftKey && event.key.toLowerCase() === 'i') {
+                event.preventDefault();
+                if (!event.repeat) setShowInformation(visible => !visible);
+            }
+        };
+        document.addEventListener('keydown', shortcuts);
+        return () => document.removeEventListener('keydown', shortcuts);
+    }, []);
+
+    useEffect(() => {
         const constrainWidth = () => {
             const maximum = getMaximumPreviewWidth(panelRef.current);
             setMaximumWidth(maximum);
@@ -224,7 +237,8 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, isCollaps
                     <span className="details-footer-summary truncate" title={footerSummary}>{footerSummary}</span>
                     <IconButton icon="info" className="details-info-toggle"
                         label={showInformation ? 'Hide information' : 'Show information'}
-                        title={showInformation ? 'Hide information' : 'Show information'}
+                        title={`${showInformation ? 'Hide' : 'Show'} information (Ctrl+Alt+I)`}
+                        aria-keyshortcuts="Control+Alt+i Meta+Alt+i"
                         aria-expanded={showInformation} aria-controls="explorer-file-information"
                         onClick={() => setShowInformation(visible => !visible)} />
                 </div>

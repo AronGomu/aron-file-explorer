@@ -37,6 +37,8 @@ import SettingsApplier from '../utils/SettingsApplier.js';
 import '../styles/layouts/mainLayout.css';
 import '../components/explorer/viewModes.css';
 import {replaceFileName} from "../utils/pathUtils.js";
+import { restoreItemPaneAfterPointer, focusItemPane } from '../utils/explorerFocus';
+import InterfaceShortcuts from '../components/common/InterfaceShortcuts';
 
 /**
  * MainLayout component that serves as the primary layout structure for the application.
@@ -366,6 +368,15 @@ const MainLayout = () => {
         }
     }, [currentDirData]);
 
+    const handleViewModeChange = useCallback(async (mode) => {
+        setViewMode(mode);
+        try {
+            await invoke('update_settings_field', { key: 'default_view', value: mode });
+        } catch (error) {
+            console.error('Failed to save view mode setting:', error);
+        }
+    }, []);
+
     /**
      * Effect to handle keyboard shortcuts
      */
@@ -375,10 +386,19 @@ const MainLayout = () => {
          * @param {KeyboardEvent} e - The keyboard event
          */
         const handleKeyDown = (e) => {
+            if (e.defaultPrevented || e.isComposing || document.querySelector('[role="dialog"], .modal-overlay') ||
+                e.target.closest?.('input, textarea, select, [contenteditable="true"], [role="textbox"]')) return;
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && !e.altKey && ['Digit1', 'Digit2'].includes(e.code)) {
+                e.preventDefault();
+                handleViewModeChange(e.code === 'Digit1' ? 'grid' : 'list');
+                requestAnimationFrame(focusItemPane);
+                return;
+            }
             // Toggle sidebar: Ctrl+B
             if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'b') {
                 e.preventDefault();
                 if (!e.repeat) toggleSidebar();
+                requestAnimationFrame(focusItemPane);
                 return;
             }
 
@@ -422,7 +442,7 @@ const MainLayout = () => {
 
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [selectedItems, toggleSidebar]);
+    }, [selectedItems, toggleSidebar, handleViewModeChange]);
 
     /**
      * Copies current path to clipboard
@@ -445,6 +465,7 @@ const MainLayout = () => {
                 }
             }
             
+            if (pathToCopy.includes(' ')) pathToCopy = `"${pathToCopy}"`;
             await navigator.clipboard.writeText(pathToCopy);
             // Show temporary notification
             const notification = document.createElement('div');
@@ -514,15 +535,6 @@ const MainLayout = () => {
         }
     };
 
-    const handleViewModeChange = useCallback(async (mode) => {
-        setViewMode(mode);
-        try {
-            await invoke('update_settings_field', { key: 'default_view', value: mode });
-        } catch (error) {
-            console.error('Failed to save view mode setting:', error);
-        }
-    }, []);
-
     /**
      * Handles details panel toggle with settings persistence
      */
@@ -542,6 +554,8 @@ const MainLayout = () => {
 
     useEffect(() => {
         const handlePreviewToggle = (event) => {
+            if (event.defaultPrevented || document.querySelector('[role="dialog"], .modal-overlay') ||
+                event.target.closest?.('button, [role="button"], select, video, audio, object, iframe')) return;
             if ((event.key !== ' ' && event.code !== 'Space') || event.ctrlKey || event.metaKey ||
                 event.altKey || event.shiftKey || event.isComposing) return;
             const field = event.target.closest?.('input, textarea');
@@ -605,9 +619,11 @@ const MainLayout = () => {
     // Removed renderSftpFileList - now handled seamlessly by the regular explorer view
 
     return (
-        <div className="main-layout">
+        <div className="main-layout" onPointerUpCapture={restoreItemPaneAfterPointer}
+            onClickCapture={restoreItemPaneAfterPointer}>
             {/* Settings Applier - applies settings to DOM */}
             <SettingsApplier />
+            <InterfaceShortcuts />
 
             {/* Full-width tabs at the top */}
             <TabManager>
@@ -624,6 +640,11 @@ const MainLayout = () => {
                         <div className="toolbar-center">
                         </div>
                         <div className="toolbar-right">
+                            <button type="button" className="icon-button" aria-label="Button shortcuts"
+                                title="Button shortcuts (F10)" aria-keyshortcuts="F10"
+                                onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F10', cancelable: true }))}>
+                                <span aria-hidden="true">⌨</span>
+                            </button>
                             {currentView === 'explorer' && (
                                 <div className="view-modes" role="group" aria-label="File view">
                                     {[
@@ -637,7 +658,8 @@ const MainLayout = () => {
                                             onClick={() => handleViewModeChange(mode.id)}
                                             aria-label={mode.label}
                                             aria-pressed={viewMode === mode.id}
-                                            title={mode.label}
+                                            aria-keyshortcuts={`Control+Shift+${mode.id === 'grid' ? '1' : '2'}`}
+                                            title={`${mode.label} (Ctrl+Shift+${mode.id === 'grid' ? '1' : '2'})`}
                                         >
                                             <span className={`icon icon-${mode.icon}`} aria-hidden="true"></span>
                                         </button>

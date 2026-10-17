@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { readExplorerSession, LAST_LOCATION_KEY } from '../utils/explorerSession';
+import { readExplorerSession, LAST_LOCATION_KEY, readDirectoryScrollPositions, writeDirectoryScrollPositions } from '../utils/explorerSession';
 
 // Create history context
 const HistoryContext = createContext({
@@ -41,10 +41,17 @@ export default function HistoryProvider({ children }) {
     });
     const [history, setHistory] = useState(initialHistory.history);
     const [currentIndex, setCurrentIndex] = useState(initialHistory.currentIndex);
-    const directoryViewStates = useRef(new Map());
+    const directoryViewStates = useRef(null);
+    if (!directoryViewStates.current) directoryViewStates.current = readDirectoryScrollPositions();
     const getDirectoryViewState = useCallback(path => directoryViewStates.current.get(path), []);
     const saveDirectoryViewState = useCallback((path, state) => {
-        if (path) directoryViewStates.current.set(path, state);
+        if (!path) return;
+        const previous = directoryViewStates.current.get(path);
+        directoryViewStates.current.delete(path);
+        directoryViewStates.current.set(path, state);
+        if (!previous || previous.scrollTop !== state.scrollTop || previous.scrollLeft !== state.scrollLeft) {
+            writeDirectoryScrollPositions(directoryViewStates.current);
+        }
     }, []);
 
     // Derived state

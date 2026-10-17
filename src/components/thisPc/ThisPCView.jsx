@@ -251,8 +251,13 @@ const ThisPCView = () => {
      * Handles clicking on a volume/drive item
      * @param {Object} volume - The volume object to navigate to
      */
-    const handleVolumeClick = (volume) => {
-        handleFolderClick(volume.mount_point);
+    const handleVolumeClick = async (volume) => {
+        try {
+            const path = volume.is_mounted === false
+                ? await invoke('mount_volume', { device: volume.device }) : volume.mount_point;
+            if (volume.is_mounted === false) await loadVolumes();
+            handleFolderClick(path);
+        } catch (error) { showError(String(error)); }
     };
 
     /**
@@ -367,7 +372,7 @@ const ThisPCView = () => {
 
                         return (
                             <div
-                                key={volume.mount_point}
+                                key={volume.device || volume.mount_point}
                                 className="drive-item"
                                 onClick={() => handleVolumeClick(volume)}
                             >
@@ -380,14 +385,16 @@ const ThisPCView = () => {
                                         {volume.volume_name || volume.mount_point}
                                     </div>
                                     <div className="drive-path">
-                                        {volume.mount_point} • {volume.file_system}
+                                        {volume.is_mounted === false ? 'Not mounted — click to mount' : volume.mount_point} • {volume.file_system}
                                     </div>
 
                                     <div className="drive-storage">
                                         <div className="storage-info">
-                                            <span>{formatFileSize(volume.available_space)} free of {formatFileSize(volume.size)}</span>
+                                            <span>{volume.is_mounted === false
+                                                ? `${formatFileSize(volume.drive_size || volume.size)} drive · ${formatFileSize(volume.size)} volume`
+                                                : `${formatFileSize(volume.available_space)} free of ${formatFileSize(volume.size)}`}</span>
                                         </div>
-                                        <div className="storage-bar">
+                                        <div className="storage-bar" hidden={volume.is_mounted === false}>
                                             <div
                                                 className="storage-used"
                                                 style={{ width: `${Math.min(usedPercentage, 100)}%` }}
@@ -396,7 +403,7 @@ const ThisPCView = () => {
                                     </div>
                                 </div>
 
-                                {volume.is_removable && (
+                                {volume.is_removable && volume.is_mounted !== false && (
                                     <div className="drive-actions">
                                         <button
                                             className="eject-button"

@@ -4,6 +4,43 @@ use std::net::TcpStream;
 use std::path::Path;
 use std::fs;
 use crate::models::SFTPDirectory;
+use super::file_move_commands::{plan_moves, MoveResult};
+
+#[tauri::command]
+pub async fn move_items_sftp(
+    host: String, port: u16, username: String, password: String,
+    paths: Vec<String>, destination: String,
+) -> Result<MoveResult, String> {
+    tokio::task::spawn_blocking(move || {
+        let sftp = connect_to_sftp_via_password(host, port, username, password)?;
+        let destination = sftp.realpath(Path::new(&destination)).map_err(|e| e.to_string())?;
+        if !sftp.stat(&destination).map_err(|e| e.to_string())?.is_dir() {
+            return Err("The drop destination must be a folder".into());
+        }
+        let mut sources = Vec::new();
+        for path in paths {
+            let entry = Path::new(&path);
+            let name = entry.file_name().ok_or("Cannot move a filesystem root")?;
+            let parent = entry.parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or(Path::new("."));
+            let source = sftp.realpath(parent).map_err(|e| e.to_string())?.join(name);
+            let metadata = sftp.lstat(&source).map_err(|e| e.to_string())?;
+            sources.push((path, source, metadata.is_dir()));
+        }
+        let plan = plan_moves(sources, &destination, |path| match sftp.lstat(path) {
+            Ok(_) => Ok(true),
+            Err(error) if matches!(error.code(), ssh2::ErrorCode::SFTP(2) | ssh2::ErrorCode::SFTP(10)) => Ok(false),
+            Err(error) => Err(error.to_string()),
+        })?;
+        let mut result = MoveResult::default();
+        for item in plan {
+            match sftp.rename(&item.source, &item.destination, Some(ssh2::RenameFlags::empty())) {
+                Ok(()) => result.moved.push(item.label),
+                Err(error) => result.failed.push((item.label, error.to_string())),
+            }
+        }
+        Ok(result)
+    }).await.map_err(|error| error.to_string())?
+}
 
 fn connect_to_sftp_via_password(
     host: String,

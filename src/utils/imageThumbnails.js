@@ -33,14 +33,16 @@ export function getPreviewFilePath(path, revision, remote) {
     });
 }
 
-export function getImageThumbnail(path, revision, size, remote) {
-    const key = JSON.stringify([path, revision, size]);
+export function getImageThumbnail(path, revision, size, remote, mediaType = 'image') {
+    const key = JSON.stringify([path, revision, size, mediaType]);
     return cache(thumbnails, key, () => new Promise((resolve, reject) => {
         pending.push({ resolve, reject, load: async () => {
             const localPath = await getPreviewFilePath(path, revision, remote);
             const extension = path.split('.').pop().toLowerCase();
             let imagePath = localPath;
-            if (!['svg', 'svgz', 'avif'].includes(extension) && !(['gif', 'apng'].includes(extension) && size >= 512)) {
+            if (mediaType === 'video') {
+                imagePath = await invoke('get_video_thumbnail', { path: localPath, size });
+            } else if (!['svg', 'svgz', 'avif'].includes(extension) && !(['gif', 'apng'].includes(extension) && size >= 512)) {
                 try {
                     imagePath = await invoke('get_image_thumbnail', { path: localPath, size });
                 } catch {

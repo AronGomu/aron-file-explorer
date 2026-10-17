@@ -251,19 +251,39 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         let path = temp.path().join("themes");
         let first = snapshot(&path);
-        assert_eq!(first.themes.len(), 2);
+        assert_eq!(first.themes.len(), SEEDS.len());
+        assert!(first.issues.is_empty());
         let ledger = fs::read(path.join(".seed-state.json")).unwrap();
-        assert_eq!(serde_json::from_slice::<Value>(&ledger).unwrap(), json!({"schemaVersion":1,"seededIds":["catppuccin-latte","catppuccin-mocha"]}));
+        let mut ids: Vec<_> = SEEDS.iter().map(|(id, _)| *id).collect();
+        ids.sort();
+        assert_eq!(serde_json::from_slice::<Value>(&ledger).unwrap(), json!({"schemaVersion":1,"seededIds":ids}));
         assert_eq!(snapshot(&path), first);
         let custom = SEEDS[0].1.replace("#eff1f5", "#abcdef");
         fs::write(path.join("catppuccin-latte.theme.json"), &custom).unwrap();
         fs::remove_file(path.join("catppuccin-mocha.theme.json")).unwrap();
         let later = snapshot(&path);
-        assert_eq!(later.themes.len(), 1);
-        assert_eq!(later.themes[0].tokens["background"], "#abcdef");
+        assert_eq!(later.themes.len(), SEEDS.len() - 1);
+        assert_eq!(later.themes.iter().find(|t| t.id == "catppuccin-latte").unwrap().tokens["background"], "#abcdef");
         assert_eq!(fs::read_to_string(path.join("catppuccin-latte.theme.json")).unwrap(), custom);
         assert!(!path.join("catppuccin-mocha.theme.json").exists());
         assert_eq!(fs::read(path.join(".seed-state.json")).unwrap(), ledger);
+    }
+    #[test]
+    fn theme_upgrade_seeds_new_variants_preserving_user_edits_and_deletions() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path();
+        fs::write(path.join(".seed-state.json"), br#"{"schemaVersion":1,"seededIds":["catppuccin-latte","catppuccin-mocha"]}"#).unwrap();
+        let custom = SEEDS[0].1.replace("#eff1f5", "#abcdef");
+        fs::write(path.join("catppuccin-latte.theme.json"), &custom).unwrap();
+        let catalog = snapshot(path);
+        assert_eq!(catalog.themes.len(), SEEDS.len() - 1);
+        assert!(catalog.issues.is_empty());
+        assert!(!path.join("catppuccin-mocha.theme.json").exists());
+        assert_eq!(fs::read_to_string(path.join("catppuccin-latte.theme.json")).unwrap(), custom);
+        for (id, _) in &SEEDS[2..] {
+            assert!(catalog.themes.iter().any(|theme| theme.id == *id));
+        }
+        assert_eq!(snapshot(path), catalog);
     }
     #[test]
     fn theme_seed_ledger_recovery() {
@@ -272,14 +292,14 @@ mod tests {
         fs::write(path.join("catppuccin-latte.theme.json"), b"user bytes").unwrap();
         fs::write(path.join("theme.schema.json"), b"user schema").unwrap();
         let first = snapshot(path);
-        assert_eq!(first.themes.len(), 1);
+        assert_eq!(first.themes.len(), SEEDS.len() - 1);
         assert_eq!(fs::read(path.join("catppuccin-latte.theme.json")).unwrap(), b"user bytes");
         assert_eq!(fs::read(path.join("theme.schema.json")).unwrap(), b"user schema");
         fs::write(path.join(".seed-state.json"), b"{corrupt").unwrap();
         fs::remove_file(path.join("catppuccin-latte.theme.json")).unwrap();
         let corrupt = snapshot(path);
         assert!(corrupt.issues.iter().any(|i| i.code == "io" && i.file.as_deref() == Some(".seed-state.json")));
-        assert_eq!(corrupt.themes.len(), 1);
+        assert_eq!(corrupt.themes.len(), SEEDS.len() - 1);
         assert!(!path.join("catppuccin-latte.theme.json").exists());
         assert_eq!(fs::read(path.join(".seed-state.json")).unwrap(), b"{corrupt");
         // Interrupted first seed: ledger records Latte, existing Mocha is never overwritten.
@@ -298,7 +318,7 @@ mod tests {
         fs::create_dir(temp.path().join("nested")).unwrap();
         fs::write(temp.path().join("nested/ignored.theme.json"), SEEDS[0].1).unwrap();
         let catalog = snapshot(temp.path());
-        assert_eq!(catalog.themes.len(), 3);
+        assert_eq!(catalog.themes.len(), SEEDS.len() + 1);
         assert_eq!(catalog.themes.iter().find(|t| t.id == "custom").unwrap().name, "Custom first");
         assert!(catalog.issues.iter().any(|i| i.code == "duplicate" && i.file.as_deref() == Some("z.theme.json") && i.id.as_deref() == Some("custom")));
     }

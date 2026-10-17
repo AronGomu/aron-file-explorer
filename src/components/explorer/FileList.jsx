@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { arrowSelection } from '../../utils/fileSelection';
+import { focusItemPane, isEditingTarget } from '../../utils/explorerFocus';
 import { getFileType } from '../../utils/formatters';
 import { useFileSystem } from '../../providers/FileSystemProvider';
 import { useContextMenu } from '../../providers/ContextMenuProvider';
 import { useHistory } from '../../providers/HistoryProvider';
+import usePersistedState from '../../hooks/usePersistedState';
 import { showError } from '../../utils/NotificationSystem';
 import FileItem from './FileItem';
 import EmptyState from './EmptyState';
@@ -35,9 +37,10 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
     const { currentPath, getDirectoryViewState, saveDirectoryViewState } = useHistory();
     const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
     const [columnsPerRow, setColumnsPerRow] = useState(4); // Dynamic column calculation
-    const [viewZoom, setViewZoom] = useState(100);
-    const viewZoomValue = useRef(100);
-    const viewZoomTarget = useRef(100);
+    const [savedViewZoom, setSavedViewZoom] = usePersistedState('fileExplorerViewZoom', 100);
+    const [viewZoom, setViewZoom] = useState(() => Math.max(50, Math.min(1000, savedViewZoom)));
+    const viewZoomValue = useRef(viewZoom);
+    const viewZoomTarget = useRef(viewZoom);
     const viewZoomFrame = useRef(null);
     const listZoom = viewMode === 'list' ? viewZoom / 100 : 1;
     const [columnWidths, setColumnWidths] = useState(() =>
@@ -50,6 +53,11 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
     const suppressDragClick = useRef(false);
     const previousListing = useRef(null);
     const restoringSelection = useRef(false);
+
+    useEffect(() => {
+        if (!isLoading && data?.directory === currentPath && !isEditingTarget(document.activeElement) &&
+            !document.activeElement.closest?.('video, audio, object, iframe')) focusItemPane();
+    }, [isLoading, data?.directory, currentPath]);
 
     const scrollItemIntoView = useCallback((index) => {
         const container = containerRef.current;
@@ -110,6 +118,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
 
     const changeViewZoom = useCallback((delta) => {
         viewZoomTarget.current = Math.max(50, Math.min(1000, viewZoomTarget.current + delta));
+        setSavedViewZoom(viewZoomTarget.current);
         if (viewZoomFrame.current !== null) return;
 
         let previousTime = performance.now();
@@ -124,7 +133,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
             viewZoomFrame.current = finished ? null : requestAnimationFrame(animate);
         };
         viewZoomFrame.current = requestAnimationFrame(animate);
-    }, []);
+    }, [setSavedViewZoom]);
 
     useEffect(() => {
         const container = containerRef.current;
@@ -462,14 +471,14 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (isLoading || (data?.directory && data.directory !== currentPath)) return;
+            const isArrow = ['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft'].includes(e.key);
             // Don't handle arrow keys if user is typing in an input or textarea
             if (e.defaultPrevented || document.querySelector('[role="dialog"], .modal-overlay') ||
-                e.altKey || e.target.closest?.('select, button, [role="dialog"]') ||
+                e.isComposing || e.altKey || e.target.closest?.('select, [role="dialog"], video, audio, object, iframe') ||
+                (!isArrow && e.target.closest?.('button, [role="button"]')) ||
                 e.target instanceof HTMLInputElement ||
                 e.target instanceof HTMLTextAreaElement || 
                 e.target.isContentEditable ||
-                (e.target.closest?.('#explorer-preview-panel') &&
-                    !e.target.closest?.('.details-resize-handle, .details-split-handle')) ||
                 disableArrowKeys) {
                 return;
             }
@@ -480,7 +489,6 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
                     ? sortedItems.findIndex(item => item.path === focusedItem.path)
                     : -1;
 
-                const isArrow = ['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft'].includes(e.key);
                 const range = isArrow ? arrowSelection({
                     current: currentFocusedIndex, anchor: lastSelectedIndex, key: e.key,
                     columns: viewMode === 'grid' ? columnsPerRow : 1, count: sortedItems.length,
@@ -488,6 +496,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
 
                 if (range) {
                     e.preventDefault();
+                    focusItemPane();
                     const item = sortedItems[range.index];
                     if (e.shiftKey) {
                         selectMultiple(sortedItems.slice(range.start, range.end + 1));
@@ -572,7 +581,16 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
         previousListing.current = { data, path };
         restoringSelection.current = true;
 
-        const saved = path ? getDirectoryViewState(path) : null;
+        let launch;
+        try { launch = JSON.parse(sessionStorage.getItem('fileExplorerLaunchSelection') || 'null'); } catch { /* No launch selection. */ }
+        const requested = sortedItems.filter(item => launch?.selectedPaths?.includes(item.path));
+        const saved = requested.length ? {
+            selectedPaths: requested.map(item => item.path), focusedPath: requested[0].path, anchorPath: requested[0].path,
+        } : path ? getDirectoryViewState(path) : null;
+        if (requested.length) {
+            launch.selectedPaths = launch.selectedPaths.filter(path => !requested.some(item => item.path === path));
+            sessionStorage.setItem('fileExplorerLaunchSelection', JSON.stringify(launch));
+        }
         const selectedPaths = new Set(saved?.selectedPaths || []);
         let selection = sortedItems.filter(item => selectedPaths.has(item.path));
         const focus = sortedItems.find(item => item.path === saved?.focusedPath) ||
@@ -587,7 +605,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
         if (containerRef.current) {
             containerRef.current.scrollTop = saved?.scrollTop || 0;
             containerRef.current.scrollLeft = saved?.scrollLeft || 0;
-            scrollItemIntoView(focusIndex);
+            if (!saved || !Number.isFinite(saved.scrollTop)) scrollItemIntoView(focusIndex);
         }
     }, [data, isLoading, isSearching, currentPath, sortedItems, getDirectoryViewState,
         selectMultiple, setFocusedItem, scrollItemIntoView]);
@@ -614,7 +632,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
     if (isLoading) {
         return (
             <div className="file-list-wrapper">
-                <div className="file-list-container">
+                <div className="file-list-container" tabIndex={-1}>
                     <div className="loading-state">
                         <div className="loading-spinner"></div>
                         <p>Loading...</p>
@@ -628,7 +646,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
     if (!data || (!data.directories?.length && !data.files?.length)) {
         return (
             <div className="file-list-wrapper">
-                <div className="file-list-container">
+                <div className="file-list-container" tabIndex={-1}>
                     <div
                         className="empty-state-container"
                         onClick={handleContainerClick}
@@ -673,6 +691,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
      * @param {boolean} [isDoubleClick=false] - Whether this is a double-click
      */
     const handleItemClick = (item, index, event, isDoubleClick = false) => {
+        focusItemPane();
         // Always set the focused item when clicking on it
         setFocusedItem(item);
 
@@ -726,6 +745,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
         <div className="file-list-wrapper">
             <div
                 ref={containerRef}
+                tabIndex={-1}
                 className={`file-list-container view-mode-${viewMode.toLowerCase()} scrollable-content`}
                 style={{
                     '--file-grid-zoom': viewZoom / 100,

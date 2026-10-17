@@ -1,4 +1,5 @@
 import React from 'react';
+import useFileDropTarget from '../../hooks/useFileDropTarget';
 import { useHistory } from '../../providers/HistoryProvider';
 
 /**
@@ -20,6 +21,7 @@ const SidebarItem = ({
                          icon,
                          name,
                          path,
+                         dropPath = path,
                          info,
                          isCollapsed = false,
                          isActive = false,
@@ -27,6 +29,7 @@ const SidebarItem = ({
                          onContextMenu,
                          actions = []
                      }) => {
+    const dropTargetProps = useFileDropTarget();
     /**
      * Handle context menu
      * @param {React.MouseEvent} e - Context menu event
@@ -65,6 +68,13 @@ const SidebarItem = ({
     return (
         <li
             className={`sidebar-item ${isActive ? 'active' : ''}`}
+            {...dropTargetProps(dropPath)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={event => {
+                if (event.target !== event.currentTarget || !['Enter', ' '].includes(event.key)) return;
+                event.preventDefault(); onClick?.();
+            }}
             onClick={onClick}
             onDoubleClick={handleDoubleClick}
             onMouseDown={handleMouseDown}

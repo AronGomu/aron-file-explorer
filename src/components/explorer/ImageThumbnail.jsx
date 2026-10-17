@@ -3,7 +3,7 @@ import { useSftp } from '../../providers/SftpProvider';
 import { getImageThumbnail } from '../../utils/imageThumbnails';
 import './imageThumbnail.css';
 
-const ImageThumbnail = ({ path, filename, revision, size, children }) => {
+const ImageThumbnail = ({ path, filename, revision, size, mediaType = 'image', children }) => {
     const { isSftpPath, parseSftpPath } = useSftp();
     const element = useRef(null);
     const [visible, setVisible] = useState(false);
@@ -29,7 +29,7 @@ const ImageThumbnail = ({ path, filename, revision, size, children }) => {
             try {
                 const remote = isSftpPath(path) ? parseSftpPath(path) : null;
                 if (isSftpPath(path) && !remote?.connection) throw new Error('Connection unavailable');
-                const url = await getImageThumbnail(path, revision, size, remote);
+                const url = await getImageThumbnail(path, revision, size, remote, mediaType);
                 if (!cancelled) { setSource(url); setFailed(false); }
             } catch {
                 if (!cancelled) setFailed(true);
@@ -37,7 +37,7 @@ const ImageThumbnail = ({ path, filename, revision, size, children }) => {
         };
         load();
         return () => { cancelled = true; };
-    }, [path, revision, size, visible, isSftpPath, parseSftpPath]);
+    }, [path, revision, size, mediaType, visible, isSftpPath, parseSftpPath]);
 
     return (
         <span ref={element} className="image-thumbnail">

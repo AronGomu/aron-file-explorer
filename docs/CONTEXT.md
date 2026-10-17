@@ -6,6 +6,6 @@ FileExplorer is cross-platform Tauri desktop file manager.
 - Backend: Rust + Tauri 2 (`src-tauri/`)
 - IPC: Tauri commands registered in `src-tauri/src/main.rs`
 - Automated tests: Rust unit/integration tests; no frontend test framework detected
-- CI: `.github/workflows/test-only.yml`
+- Validation runs locally; no GitHub Actions workflows.
 
 Source-of-truth code lives in `src/` and `src-tauri/src/`. Generated docs and build output are not source of truth.

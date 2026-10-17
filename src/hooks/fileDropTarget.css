@@ -1,0 +1,11 @@
+.file-item[data-file-drop-path][data-file-drop-active="true"],
+.segment-button[data-file-drop-path][data-file-drop-active="true"],
+.sidebar-item[data-file-drop-path][data-file-drop-active="true"] {
+    background-color: var(--accent-surface);
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+}
+
+.file-item[data-file-drag-source="true"] {
+    opacity: 0.6;
+}

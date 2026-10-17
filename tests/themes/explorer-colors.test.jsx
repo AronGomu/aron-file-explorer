@@ -78,12 +78,13 @@ test('theme_control_states: ignored React event props removed without replacemen
         const source = readFileSync(path, 'utf8');
         expect(source).not.toContain('onSelectStart');
         expect(source).not.toContain('handleSelectStart');
-        expect(source).toContain('onMouseDown={handleMouseDown}');
+        if (!path.endsWith('/FileItem.jsx')) expect(source).toContain('onMouseDown={handleMouseDown}');
+        else expect(source).toContain('draggable={!isProcessing}');
     }
 });
 
 test('theme_explorer_views: owned CSS has no unknown vars, legacy color aliases, or literal paints', () => {
-    const known = new Set([...Object.values(TOKEN_TO_CSS), '--background-rgb', '--border-rgb', '--accent-rgb', '--x', '--y']);
+    const known = new Set([...Object.values(TOKEN_TO_CSS), '--background-rgb', '--border-rgb', '--accent-rgb', '--x', '--y', '--file-grid-zoom', '--file-list-zoom', '--file-list-columns', '--file-list-table-width']);
     css('src/styles/variables.css').walkDecls(decl => { if (decl.prop.startsWith('--')) known.add(decl.prop); });
     const paths = ['src/styles/global.css', 'src/styles/components.css', 'src/styles/modern.css', 'src/styles/layouts/mainLayout.css', 'src/layouts/detailsLayout.css', 'src/components/common/common.css'];
     for (const dir of ['explorer', 'contextMenu', 'sidebar', 'tabs', 'settings', 'thisPc']) {

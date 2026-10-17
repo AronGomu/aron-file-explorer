@@ -156,6 +156,30 @@ pub fn load_settings_state() -> (SettingsState, SettingsLoadStatus) {
     SettingsState::load_at(Settings::default().abs_file_path_buf)
 }
 
+// Runtime settings belong to the OS app-config directory, independent of process cwd.
+// Import a valid legacy file only when the authoritative destination does not exist.
+pub(crate) fn load_system_settings_state(path: PathBuf, legacy: &std::path::Path) -> (SettingsState, SettingsLoadStatus) {
+    let import = || -> io::Result<()> {
+        let directory = ConfigDirectory::open(path.parent().unwrap(), true)?;
+        let name = path.file_name().unwrap();
+        match directory.read_regular(name, None) {
+            Ok(_) => return Ok(()),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {},
+            Err(error) => return Err(error),
+        }
+        let previous = ConfigDirectory::open(legacy.parent().unwrap(), false)?;
+        let bytes = previous.read_regular(legacy.file_name().unwrap(), None)?;
+        let raw = serde_json::from_slice::<Value>(&bytes)?.as_object().cloned()
+            .ok_or_else(|| Error::new(io::ErrorKind::InvalidData, "Settings is not a JSON object"))?;
+        SettingsState::typed_view(raw, &path)?;
+        // create-new leaves a concurrently created authoritative file intact.
+        directory.create_new(name, &bytes)
+    };
+    // Missing/invalid legacy files must not block fresh defaults or overwrite existing files.
+    let _ = import();
+    SettingsState::load_at(path)
+}
+
 fn merge_values(target: &mut Value, source: Value) {
     if let (Some(target), Some(source)) = (target.as_object_mut(), source.as_object()) {
         for (key, value) in source {
@@ -987,5 +1011,48 @@ mod theme_snapshot_tests {
         let (state, status) = SettingsState::load_at(temp.path().join("settings.json"));
         state.0.lock().unwrap().abs_file_path_buf = std::ffi::OsString::from_vec(vec![0xff]).into();
         assert_eq!(get_settings_snapshot_impl(&Arc::new(Mutex::new(state)), &status).err().unwrap(), "Failed to serialize settings snapshot");
+    }
+}
+
+#[cfg(test)]
+mod system_theme_persistence {
+    use super::*;
+    use serde_json::json;
+    use std::fs;
+
+    #[test]
+    fn system_settings_migrate_once_and_remain_authoritative_across_launch_directories() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("os-config/com.explr.app/settings.json");
+        let legacy = temp.path().join("first-launch/settings.json");
+        fs::create_dir_all(legacy.parent().unwrap()).unwrap();
+        let original = json!({"active_theme_id":"catppuccin-mocha","unrelated":{"keep":true}});
+        fs::write(&legacy, serde_json::to_vec(&original).unwrap()).unwrap();
+        let (settings, status) = load_system_settings_state(path.clone(), &legacy);
+        assert!(status.0.is_none());
+        assert_eq!(settings.0.lock().unwrap().active_theme_id, "catppuccin-mocha");
+        settings.save_active_theme_id("catppuccin-latte").unwrap();
+        let other = temp.path().join("different-launch/settings.json");
+        fs::create_dir_all(other.parent().unwrap()).unwrap();
+        fs::write(&other, br#"{"active_theme_id":"catppuccin-mocha"}"#).unwrap();
+        let (reopened, status) = load_system_settings_state(path.clone(), &other);
+        assert!(status.0.is_none());
+        assert_eq!(reopened.0.lock().unwrap().active_theme_id, "catppuccin-latte");
+        assert_eq!(serde_json::from_slice::<Value>(&fs::read(&path).unwrap()).unwrap()["unrelated"], original["unrelated"]);
+        assert_eq!(serde_json::from_slice::<Value>(&fs::read(legacy).unwrap()).unwrap(), original);
+    }
+
+    #[test]
+    fn fresh_system_settings_use_system_and_never_replace_a_corrupt_existing_config() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("system/settings.json");
+        let legacy = temp.path().join("missing/settings.json");
+        let (settings, status) = load_system_settings_state(path.clone(), &legacy);
+        assert!(status.0.is_none());
+        assert_eq!(settings.0.lock().unwrap().active_theme_id, "system");
+        fs::write(&path, b"{broken").unwrap();
+        let (_, status) = load_system_settings_state(path.clone(), &legacy);
+        assert!(status.0.is_some());
+        assert_eq!(fs::read(path).unwrap(), b"{broken");
     }
 }

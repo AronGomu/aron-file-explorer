@@ -134,16 +134,16 @@ test('theme_selection_save_failure: optimistic, serialized, resolved rejection, 
     expect(showError).toHaveBeenCalledWith('Could not save theme selection. Keeping "Catppuccin Latte".', 5000);
 });
 
-test('theme_selection_unknown: no save; missing startup keeps requested disabled option', async () => {
+test('theme_selection_unknown: no save; missing startup uses System default', async () => {
     disk.active_theme_id = 'deleted-custom';
     await mount();
-    expect(theme.activeThemeId).toBe('deleted-custom'); expect(theme.resolvedThemeId).toBe(latte.id);
-    expect(document.querySelector('option[value="deleted-custom"]').disabled).toBe(true);
-    expect(showError).toHaveBeenCalledWith('Theme "deleted-custom" is unavailable. Keeping "Catppuccin Latte".', 5000);
+    expect(theme.activeThemeId).toBe('system'); expect(theme.resolvedThemeId).toBe(latte.id);
+    expect(document.querySelector('option[value="deleted-custom"]')).toBeNull();
+    expect(showError).toHaveBeenCalledWith('Theme "deleted-custom" is unavailable. Using the System default.', 5000);
     const calls = invoke.mock.calls.length;
     await act(async () => theme.setTheme('unknown'));
     expect(invoke.mock.calls.length).toBe(calls);
-    expect(theme.activeThemeId).toBe('deleted-custom');
+    expect(theme.activeThemeId).toBe('system');
 });
 
 test('theme_reset_isolated: real reset syncs System without remount; reload preserves child identity', async () => {

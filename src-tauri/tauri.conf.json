@@ -25,6 +25,7 @@
         "width": 1200,
         "height": 800,
         "resizable": true,
+        "dragDropEnabled": false,
         "visible": true,
         "fullscreen": false
       }
@@ -32,7 +33,11 @@
   },
   "bundle": {
     "active": true,
-    "resources": {"resources/themes/LICENSE": "themes/LICENSE"},
+    "resources": {
+      "resources/themes/LICENSE": "themes/LICENSE",
+      "resources/themes/licenses/": "themes/licenses/",
+      "resources/themes/sources.json": "themes/sources.json"
+    },
     "targets": ["deb", "rpm", "dmg", "msi"],
     "icon": ["icons/logo_32x32.png", "icons/logo_128x128.png", "icons/logo.icns", "icons/logo.ico"],
     "windows": {

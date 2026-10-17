@@ -69,9 +69,9 @@ const FileIcon = ({ filename, path, revision = '', isDirectory, size = 'medium',
 
     return (
         <div className={`file-icon file-icon-${iconType} file-icon-${size}`}>
-            {path && category === 'image' ? (
+            {path && ['image', 'video'].includes(category) ? (
                 <ImageThumbnail key={`${path}:${revision}:${size}`} path={path} filename={filename}
-                    revision={revision} size={thumbnailSize}>
+                    revision={revision} size={thumbnailSize} mediaType={category}>
                     {symbol}
                 </ImageThumbnail>
             ) : symbol}

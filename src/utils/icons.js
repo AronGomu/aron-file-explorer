@@ -23,7 +23,7 @@ export const getFileIconType = (filename) => {
     }
 
     // Video files
-    const videoExtensions = ['mp4', 'avi', 'mov', 'wmv', 'mkv', 'webm', 'flv', '3gp', 'm4v', 'mpeg', 'mpg'];
+    const videoExtensions = ['mp4', 'avi', 'mov', 'wmv', 'mkv', 'webm', 'flv', '3gp', '3g2', 'm4v', 'mpeg', 'mpg', 'mpe', 'mpv', 'm2v', 'm1v', 'ogv', 'ogm', 'mts', 'm2ts', 'm2t', 'vob', 'asf', 'f4v', 'mxf', 'divx', 'xvid', 'rm', 'rmvb', 'qt', 'dv', 'y4m', 'mjpeg', 'mjpg', 'h264', 'h265', 'hevc', 'av1'];
     if (videoExtensions.includes(extension)) {
         return 'video';
     }

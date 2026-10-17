@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useHistory } from '../../providers/HistoryProvider';
 import { useSftp } from '../../providers/SftpProvider';
 import { readExplorerSession, EXPLORER_SESSION_KEY } from '../../utils/explorerSession';
+import { focusItemPane } from '../../utils/explorerFocus';
+import { showError } from '../../utils/NotificationSystem';
 import IconButton from '../common/IconButton';
 import './tabs.css';
 
@@ -152,7 +155,10 @@ const TabManager = ({ children }) => {
     const closeTab = (tabId, event) => {
         event?.stopPropagation();
 
-        if (tabs.length <= 1) return; // Don't close the last tab
+        if (tabs.length <= 1) {
+            getCurrentWindow().close().catch(error => showError(`Failed to close window: ${error}`));
+            return;
+        }
 
         const tabIndex = tabs.findIndex(tab => tab.id === tabId);
         const isActiveTab = tabId === activeTabId;
@@ -265,6 +271,25 @@ const TabManager = ({ children }) => {
         closeTab(tabId, e);
     };
 
+    useEffect(() => {
+        const shortcuts = event => {
+            if (event.defaultPrevented || event.isComposing || event.altKey || event.shiftKey ||
+                !(event.ctrlKey || event.metaKey) || document.querySelector('[role="dialog"], .modal-overlay')) return;
+            const key = event.key.toLowerCase();
+            if (key !== 't' && key !== 'w') return;
+            if (key === 't' && event.target.closest?.('input, textarea, select, [contenteditable="true"], [role="textbox"]')) return;
+            event.preventDefault();
+            if (event.repeat) return;
+            if (key === 't') createNewTab();
+            else {
+                closeTab(activeTabId);
+                requestAnimationFrame(focusItemPane);
+            }
+        };
+        document.addEventListener('keydown', shortcuts);
+        return () => document.removeEventListener('keydown', shortcuts);
+    });
+
     if (tabs.length === 0) {
         return <div className="tab-manager-loading">Loading...</div>;
     }
@@ -277,6 +302,13 @@ const TabManager = ({ children }) => {
                         <div
                             key={tab.id}
                             className={`tab ${tab.id === activeTabId ? 'active' : ''}`}
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`Open tab ${getTabTitle(tab.path)}`}
+                            onKeyDown={event => {
+                                if (event.target !== event.currentTarget || !['Enter', ' '].includes(event.key)) return;
+                                event.preventDefault(); switchToTab(tab.id);
+                            }}
                             onClick={() => switchToTab(tab.id)}
                             onDoubleClick={handleDoubleClick}
                             onMouseDown={handleMouseDown}
@@ -314,6 +346,8 @@ const TabManager = ({ children }) => {
                                         onDoubleClick={handleDoubleClick}
                                         onMouseDown={handleMouseDown}
                                         aria-label="Close tab"
+                                        title="Close tab (Ctrl+W)"
+                                        aria-keyshortcuts="Control+w Meta+w"
                                     >
                                         <span className="icon icon-x"></span>
                                     </button>
@@ -327,6 +361,9 @@ const TabManager = ({ children }) => {
                             icon="plus"
                             size="sm"
                             onClick={createNewTab}
+                            label="New tab"
+                            title="New tab (Ctrl+T)"
+                            aria-keyshortcuts="Control+t Meta+t"
                         />
                     </div>
                 </div>

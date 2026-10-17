@@ -3,6 +3,8 @@ import { useHistory } from '../../providers/HistoryProvider';
 import { useFileSystem } from '../../providers/FileSystemProvider';
 import { useSftp } from '../../providers/SftpProvider';
 import './pathBreadcrumb.css';
+import { focusItemPane } from '../../utils/explorerFocus';
+import useFileDropTarget from '../../hooks/useFileDropTarget';
 
 /**
  * PathBreadcrumb component - Displays the current file path as interactive breadcrumbs
@@ -14,6 +16,7 @@ import './pathBreadcrumb.css';
  * @returns {React.ReactElement} PathBreadcrumb component
  */
 const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
+    const dropTargetProps = useFileDropTarget();
     const { currentPath, navigateTo } = useHistory();
     const { loadDirectory, currentDirData } = useFileSystem();
     const { isSftpPath, parseSftpPath, createSftpUrl, createSftpPath, sftpConnections } = useSftp();
@@ -23,6 +26,24 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const inputRef = useRef(null);
     const searchInputRef = useRef(null);
+
+    useEffect(() => {
+        const shortcuts = event => {
+            if (event.defaultPrevented || event.isComposing || document.querySelector('[role="dialog"], .modal-overlay')) return;
+            const primary = event.ctrlKey || event.metaKey;
+            if (primary && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'l') {
+                event.preventDefault(); handleClick();
+            } else if (primary && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'f') {
+                event.preventDefault(); setIsSearchVisible(true);
+                requestAnimationFrame(() => searchInputRef.current?.focus());
+            } else if (primary && event.shiftKey && !event.altKey && event.key.toLowerCase() === 'c' &&
+                !event.target.closest?.('input, textarea, select, [contenteditable="true"]')) {
+                event.preventDefault(); onCopyPath?.();
+            }
+        };
+        document.addEventListener('keydown', shortcuts);
+        return () => document.removeEventListener('keydown', shortcuts);
+    });
 
     /**
      * Parses the current path into segments for breadcrumb navigation
@@ -50,10 +71,10 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
                 // Parse the remote path and add segments
                 if (parsed.remotePath && parsed.remotePath !== '.') {
                     const pathParts = parsed.remotePath.split('/').filter(part => part && part !== '.');
-                    let buildPath = '';
+                    let buildPath = parsed.remotePath.startsWith('/') ? '/' : '';
                     
                     for (let i = 0; i < pathParts.length; i++) {
-                        buildPath += (buildPath ? '/' : '') + pathParts[i];
+                        buildPath += (buildPath && !buildPath.endsWith('/') ? '/' : '') + pathParts[i];
                         segments.push({
                             name: pathParts[i],
                             path: `sftp:${parsed.connectionName}:${buildPath}`,
@@ -181,6 +202,7 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
         if (e.key === 'Enter') {
             e.preventDefault();
             setIsEditing(false);
+            requestAnimationFrame(focusItemPane);
 
             if (editValue && editValue !== currentPath) {
                 // Convert standard SFTP URL to internal format if needed
@@ -191,6 +213,7 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
             e.preventDefault();
             setIsEditing(false);
             setEditValue(currentPath || '');
+            requestAnimationFrame(focusItemPane);
         }
     };
 
@@ -214,6 +237,7 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
                 onSearch('');
             }
             setIsSearchVisible(false);
+            requestAnimationFrame(focusItemPane);
             setIsEditing(false); // Ensure we're not in editing mode
         } else {
             // Show search overlay and focus input
@@ -260,6 +284,7 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
                 onSearch('');
             }
             setIsSearchVisible(false);
+            requestAnimationFrame(focusItemPane);
         }
     };
 
@@ -269,6 +294,18 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
             inputRef.current.focus();
             inputRef.current.select();
         }
+    }, [isEditing]);
+
+    useEffect(() => {
+        if (!isEditing) return;
+        const dismissOnOutsidePointerDown = (event) => {
+            const input = inputRef.current;
+            if (!input || event.target.closest?.('.path-breadcrumb')) return;
+            input.setSelectionRange(input.selectionEnd, input.selectionEnd);
+            input.blur();
+        };
+        document.addEventListener('pointerdown', dismissOnOutsidePointerDown, true);
+        return () => document.removeEventListener('pointerdown', dismissOnOutsidePointerDown, true);
     }, [isEditing]);
 
     // Update edit value when path changes
@@ -328,6 +365,7 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
                                 {index > 0 && <span className="segment-divider">/</span>}
                                 <button
                                     className={`segment-button ${index === pathSegments.length - 1 ? 'current' : ''}`}
+                                    {...dropTargetProps(segment.path)}
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         handleSegmentClick(segment.path);
@@ -353,7 +391,8 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
                                     e.stopPropagation();
                                     onCopyPath();
                                 }}
-                                title="Copy current path"
+                                title="Copy current path (Ctrl+Shift+C)"
+                                aria-keyshortcuts="Control+Shift+c Meta+Shift+c"
                                 aria-label="Copy current path"
                             >
                                 <span className="icon icon-copy"></span>
@@ -371,7 +410,8 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
                             e.stopPropagation();
                             handleSearchClick();
                         }}
-                        title={isSearchVisible ? "Clear search" : "Search in current folder"}
+                        title={isSearchVisible ? "Clear search (F10)" : "Search in current folder (Ctrl+F)"}
+                        aria-keyshortcuts="Control+f Meta+f"
                         aria-label={isSearchVisible ? "Clear search" : "Search in current folder"}
                     >
                         <span className={`icon ${isSearchVisible ? 'icon-x' : 'icon-search'}`}></span>

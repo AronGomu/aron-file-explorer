@@ -86,21 +86,8 @@ export default function FileSystemProvider({ children }) {
         } catch (err) {
             console.error('Failed to load volumes:', err);
             setError(`Failed to load volumes: ${err.message || err}`);
-            // Fallback to mock data for development
-            const mockVolumes = [
-                {
-                    volume_name: "Local Disk (C:)",
-                    mount_point: "C:\\",
-                    file_system: "NTFS",
-                    size: 500107862016,
-                    available_space: 158148874240,
-                    is_removable: false,
-                    total_written_bytes: 0,
-                    total_read_bytes: 0
-                }
-            ];
-            setVolumes(mockVolumes);
-            return mockVolumes;
+            setVolumes([]);
+            return [];
         }
     }, []);
 
