@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
+import ChooserApp from "./chooser/ChooserApp.jsx";
 import { bootstrapTheme } from "./themes/applyTheme";
 // Wichtig: Hier Tauri API importieren, wenn es irgendwo in der App verwendet wird
 import { invoke } from "@tauri-apps/api/core";
@@ -32,6 +33,15 @@ bootstrapTheme();
 
 // Resolve desktop folder arguments before providers restore their initial tabs.
 async function initialize() {
+    try {
+        const request = await invoke('get_chooser_request');
+        if (request) {
+            ReactDOM.createRoot(document.getElementById('root')).render(<ChooserApp request={request} />);
+            return;
+        }
+    } catch (_) {
+        // The normal explorer binary does not expose chooser commands.
+    }
     try {
         const paths = await invoke('get_launch_directories');
         if (paths.length) {

@@ -558,7 +558,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
             document.removeEventListener('select-item', handleSelectItem);
             document.removeEventListener('clear-selection', handleClearSelection);
         };
-    }, [selectItem, selectMultiple, clearSelection, lastSelectedIndex, sortedItems, focusedItem, setFocusedItem, loadDirectory, viewMode, showError, disableArrowKeys, columnsPerRow, isLoading, data, currentPath, scrollItemIntoView]);
+    }, [selectItem, selectMultiple, clearSelection, lastSelectedIndex, sortedItems, focusedItem, setFocusedItem, loadDirectory, openFile, viewMode, showError, disableArrowKeys, columnsPerRow, isLoading, data, currentPath, scrollItemIntoView]);
 
     // Restore only after the requested folder's listing has finished loading.
     useLayoutEffect(() => {

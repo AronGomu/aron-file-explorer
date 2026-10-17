@@ -5,6 +5,10 @@ use std::sync::LazyLock;
 pub static VERSION: &str = "0.2.3";
 
 pub static CONFIG_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
+    #[cfg(target_os = "linux")]
+    if crate::chooser::active() {
+        return crate::chooser::config_dir();
+    }
     env::current_dir()
         .expect("Could not determine current path")
         .join("config")
@@ -15,6 +19,10 @@ pub static META_DATA_CONFIG_ABS_PATH: LazyLock<PathBuf> =
 
 
 pub static LOG_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
+    #[cfg(target_os = "linux")]
+    if crate::chooser::active() {
+        return crate::chooser::config_dir().join("logs");
+    }
     env::current_dir()
         .expect("Could not determine current path")
         .join("logs")

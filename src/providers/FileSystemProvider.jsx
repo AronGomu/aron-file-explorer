@@ -6,7 +6,7 @@ import { useSftp } from './SftpProvider';
 import { getDirectoryPath } from '../utils/pathUtils';
 
 // Create file system context
-const FileSystemContext = createContext({
+export const FileSystemContext = createContext({
     currentDirData: null,
     isLoading: false,
     selectedItems: [],

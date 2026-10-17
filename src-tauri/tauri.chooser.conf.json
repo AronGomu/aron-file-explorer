@@ -1,0 +1,21 @@
+{
+  "productName": "Explr Chooser",
+  "identifier": "com.explr.chooser",
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Explr Chooser",
+        "width": 1000,
+        "height": 700,
+        "minWidth": 640,
+        "minHeight": 450,
+        "visible": false,
+        "resizable": true
+      }
+    ]
+  },
+  "build": {
+    "beforeBuildCommand": "npx vite build --config vite.chooser.config.js"
+  }
+}

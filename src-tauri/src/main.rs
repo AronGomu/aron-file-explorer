@@ -8,6 +8,8 @@ pub mod models;
 mod search_engine;
 mod state;
 mod themes;
+#[cfg(target_os = "linux")]
+mod chooser;
 
 use crate::commands::{
     command_exec_commands, file_system_operation_commands, hash_commands, meta_data_commands,
@@ -30,6 +32,19 @@ fn get_launch_directories() -> Vec<String> {
 }
 
 fn all_commands() -> fn(Invoke) -> bool {
+    #[cfg(target_os = "linux")]
+    if chooser::active() {
+        return tauri::generate_handler![
+            chooser::get_chooser_request, chooser::chooser_list, chooser::chooser_check,
+            chooser::chooser_finish, chooser::chooser_new_folder,
+            commands::image_commands::get_image_thumbnail,
+            commands::file_preview_commands::get_text_preview,
+            file_system_operation_commands::open_directory,
+            volume_operations_commands::get_system_volumes_information,
+            settings_commands::get_settings_snapshot, settings_commands::get_settings_as_json,
+            theme_commands::get_theme_catalog, theme_commands::set_active_theme_id,
+        ];
+    }
     tauri::generate_handler![
         get_launch_directories,
         commands::deletion_commands::trash_items,
@@ -126,6 +141,11 @@ impl Drop for ThemeHandleOwner {
 
 #[tokio::main]
 async fn main() {
+    #[cfg(target_os = "linux")]
+    if let Err(error) = chooser::initialize() {
+        eprintln!("Chooser: {error}");
+        std::process::exit(2);
+    }
     // External strong owner outlives watcher shutdown; managed state holds only a weak emitter.
     let theme_handle = std::sync::Arc::new(ThemeHandleOwner(std::sync::Mutex::new(None)));
     let setup_theme_handle = theme_handle.clone();
@@ -135,6 +155,10 @@ async fn main() {
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(all_commands())
         .setup(move |app| {
+            #[cfg(target_os = "linux")]
+            if app.config().identifier == "com.explr.chooser" && !chooser::active() {
+                return Err("Launch Explr Chooser through its portal service or --chooser-request".into());
+            }
             app.manage(themes::catalog::ThemeState::new(app));
             let handle = std::sync::Arc::new(app.handle().clone());
             let state = app.state::<themes::catalog::ThemeState>();
@@ -146,6 +170,11 @@ async fn main() {
                     eprintln!("Theme hot reload is unavailable");
                     state.registry.lock().expect("theme registry initialized").watch_issue("Could not start theme watcher");
                 }
+            }
+            #[cfg(target_os = "linux")]
+            if chooser::active() {
+                chooser::configure_window(app)?;
+                return Ok(());
             }
             // Safely show/focus the main window if it exists
             if let Some(window) = app.get_window("main") {

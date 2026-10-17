@@ -24,7 +24,7 @@ const getMaximumPreviewWidth = (panel) => Math.max(MIN_PREVIEW_WIDTH,
  * @param {string} [props.viewMode='grid'] - Active explorer view mode
  * @returns {React.ReactElement} Details panel component
  */
-const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, isCollapsed = false, onOpenChange, viewMode = 'grid' }) => {
+const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, isCollapsed = false, onOpenChange, viewMode = 'grid', autoCopy = true }) => {
     const [showInformation, setShowInformation] = usePersistedState('fileExplorerDetailsVisible', false);
     const [splitRatio, setSplitRatio] = usePersistedState('fileExplorerPreviewSplit', 0.6);
     const [isSplitting, setIsSplitting] = useState(false);
@@ -202,7 +202,7 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, isCollaps
                         : 'minmax(0, 1fr)'
                 }}>
                     <section id="explorer-file-preview" className="details-preview-area" aria-label="File preview">
-                        <FileContentPreview key={`${item.path}:${revision}`} item={item} viewMode={viewMode} />
+                        <FileContentPreview key={`${item.path}:${revision}`} item={item} viewMode={viewMode} autoCopy={autoCopy} />
                     </section>
                     {showInformation && <>
                         <div className="details-split-handle" role="separator"

@@ -8,7 +8,7 @@ import { showError, showSuccess } from '../../utils/NotificationSystem';
 import FileIcon from './FileIcon';
 import FolderContentsPreview from './FolderContentsPreview';
 
-const FileContentPreview = ({ item, viewMode }) => {
+const FileContentPreview = ({ item, viewMode, autoCopy = true }) => {
     const { isSftpPath, parseSftpPath } = useSftp();
     const [result, setResult] = useState(null);
     const [playbackError, setPlaybackError] = useState(false);
@@ -89,7 +89,7 @@ const FileContentPreview = ({ item, viewMode }) => {
     }, []);
 
     useEffect(() => {
-        if (typeof result?.text !== 'string') return;
+        if (!autoCopy || typeof result?.text !== 'string') return;
         let timer;
         let cancelled = false;
         let copyQueue = Promise.resolve();
@@ -116,7 +116,7 @@ const FileContentPreview = ({ item, viewMode }) => {
             clearTimeout(timer);
             document.removeEventListener('selectionchange', handleSelectionChange);
         };
-    }, [result?.text, getSelectedText]);
+    }, [result?.text, getSelectedText, autoCopy]);
 
     const handleTextCopy = (event) => {
         const text = getSelectedText();

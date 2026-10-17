@@ -34,3 +34,11 @@
 | graph | persistent code knowledge graph | `graphify-out/graph.json` |
 | adapter | stable boundary for replaceable engines | target architecture in `docs/PRODUCT_VISION.md` |
 | transport | filesystem source normalized for explorer | `FileSystemProvider`, `SftpProvider` |
+
+## File chooser
+
+| word | short description | ref in code |
+| --- | --- | --- |
+| chooser | request-scoped file selection UI returning local URIs | `src/chooser/ChooserApp.jsx`, `src-tauri/src/chooser.rs` |
+| portal backend | D-Bus implementation used by the desktop broker | `linux/chooser-portal.py` |
+| chooser catalog | user catalog retaining system portal implementations | `linux/chooser-catalog.py` |

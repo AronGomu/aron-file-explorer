@@ -7,7 +7,7 @@ import { useHistory } from './HistoryProvider';
 import { useSftp } from './SftpProvider';
 import { showNotification, showError, showSuccess, showConfirm } from '../utils/NotificationSystem';
 
-const ContextMenuContext = createContext({
+export const ContextMenuContext = createContext({
     isOpen: false,
     position: { x: 0, y: 0 },
     target: null,

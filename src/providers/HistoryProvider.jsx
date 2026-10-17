@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { readExplorerSession, LAST_LOCATION_KEY } from '../utils/explorerSession';
 
 // Create history context
-const HistoryContext = createContext({
+export const HistoryContext = createContext({
     history: [],
     currentIndex: -1,
     currentPath: null,
