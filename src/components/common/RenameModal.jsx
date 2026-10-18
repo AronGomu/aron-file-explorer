@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
+import { isValidItemName } from '../../utils/pathUtils';
+import { showError } from '../../utils/NotificationSystem';
 
 /**
  * Modal component for renaming files and folders
@@ -48,6 +50,7 @@ const RenameModal = ({ isOpen, onClose, item, onRename }) => {
      */
     const handleSubmit = (e) => {
         e.preventDefault();
+        if (!isValidItemName(newName)) { showError('Enter a name without slashes, “.” or “..”.'); return; }
         console.log('RenameModal handleSubmit called with:', { newName, itemName: item?.name });
         
         if (newName && newName.trim() && newName.trim() !== item.name) {

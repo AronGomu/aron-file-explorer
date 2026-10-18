@@ -26,6 +26,7 @@ import ThisPCView from '../components/thisPc/ThisPCView';
 import NetworkView from '../components/network/NetworkView';
 import TemplateList from '../components/templates/TemplateList';
 import WindowControls from '../components/common/WindowControls';
+import CreateFileButton from '../components/explorer/CreateFileButton';
 
 // Hash Modals
 import HashFileModal from '../components/common/HashFileModal.jsx';
@@ -624,6 +625,7 @@ const MainLayout = () => {
             onClickCapture={restoreItemPaneAfterPointer}>
             {/* Settings Applier - applies settings to DOM */}
             <SettingsApplier />
+            <CreateFileButton dialogsOnly />
             <InterfaceShortcuts />
 
             {/* Full-width tabs at the top */}

@@ -5,13 +5,14 @@ import SettingsProvider from '../providers/SettingsProvider';
 import ThemeProvider, { useTheme } from '../providers/ThemeProvider';
 import { FileSystemContext } from '../providers/FileSystemProvider';
 import { HistoryContext } from '../providers/HistoryProvider';
-import { ContextMenuContext } from '../providers/ContextMenuProvider';
+import ContextMenuProvider, { ContextMenuContext } from '../providers/ContextMenuProvider';
 import FileList from '../components/explorer/FileList';
 import DetailsPanel from '../components/explorer/DetailsPanel';
 import PathBreadcrumb from '../components/explorer/PathBreadcrumb';
 import Modal from '../components/common/Modal';
 import WindowControls from '../components/common/WindowControls';
 import ChooserSidebar from './ChooserSidebar';
+import ChooserFileActions from './ChooserFileActions';
 import usePersistedState from '../hooks/usePersistedState';
 import { getDirectoryPath } from '../utils/pathUtils';
 import { focusItemPane, isEditingTarget, restoreItemPaneAfterPointer } from '../utils/explorerFocus';
@@ -35,6 +36,8 @@ function Chooser({ request }) {
     const [error, setError] = useState('');
     const [busy, setBusy] = useState(false);
     const busyRef = useRef(false);
+    const actionsBusy = useRef(false);
+    const setActionsBusy = useCallback(value => { actionsBusy.current = value; }, []);
     const [revision, refresh] = useState(0);
     const [viewMode, setViewMode] = usePersistedState('chooserViewMode', 'list');
     const [preview, setPreview] = usePersistedState('chooserPreviewOpen', true);
@@ -86,7 +89,7 @@ function Chooser({ request }) {
 
     const cancel = useCallback(() => invoke('chooser_finish', { selection: null, overwriteConfirmed: false }).catch(e => setError(String(e))), []);
     const accept = async (explicitPath) => {
-        if (busyRef.current || isLoading) return;
+        if (busyRef.current || actionsBusy.current || isLoading) return;
         busyRef.current = true; setBusy(true); setError('');
         const selection = {
             paths: explicitPath ? [explicitPath] : selectionPaths(selectedItems, request, currentPath),
@@ -117,7 +120,7 @@ function Chooser({ request }) {
 
     useEffect(() => {
         const keyboard = event => {
-            if (event.defaultPrevented || event.isComposing || busyRef.current || settingsOpen || document.querySelector('[role="dialog"]')) return;
+            if (event.defaultPrevented || event.isComposing || busyRef.current || actionsBusy.current || settingsOpen || document.querySelector('[role="dialog"], .context-menu')) return;
             if ((event.ctrlKey || event.metaKey) && event.key === ',') {
                 event.preventDefault(); setSettingsOpen(true);
             } else if (event.key === 'Escape') {
@@ -144,8 +147,20 @@ function Chooser({ request }) {
     const listing = useMemo(() => chooserListing(data, request, currentPath, hidden, query), [data, request, currentPath, hidden, query]);
     const paths = selectionPaths(selectedItems, request, currentPath);
     const canAccept = !busy && !isLoading && !!data && (request.mode === 'OpenFile' ? paths.length > 0 : request.mode === 'SaveFiles' || !!name.trim());
-    const context = { selectedItems, focusedItem, isLoading, currentDirData: listing, volumes, loadVolumes,
-        selectItem, selectMultiple, clearSelection, setFocusedItem, loadDirectory, openFile };
+    const removeDeletedItems = useCallback(paths => {
+        const removed = new Set(paths);
+        setSelectedItems(items => items.filter(item => !removed.has(item.path)));
+        setFocusedItem(item => removed.has(item?.path) ? null : item);
+    }, []);
+    const createFile = useCallback(async (folderPathAbs, fileName) => {
+        await invoke('create_file', { folderPathAbs, fileName }); loadDirectory(folderPathAbs);
+    }, [loadDirectory]);
+    const createDirectory = useCallback(async (folderPathAbs, folderName) => {
+        await invoke('create_directory', { folderPathAbs, folderName }); loadDirectory(folderPathAbs);
+    }, [loadDirectory]);
+    const showProperties = useCallback(item => { if (item) setFocusedItem(item); setPreview(true); }, [setPreview]);
+    const context = { selectedItems, focusedItem, isLoading: isLoading || busy, currentDirData: listing, volumes, loadVolumes,
+        selectItem, selectMultiple, clearSelection, setFocusedItem, loadDirectory, openFile, removeDeletedItems, createFile, createDirectory };
     const acceptLabel = (request.acceptLabel || (request.mode === 'OpenFile' ? 'Open' : 'Save')).replace(/_([^_])/g, '$1');
     const closeSettings = useCallback(() => { setSettingsOpen(false); requestAnimationFrame(focusItemPane); }, []);
     const trapSettingsFocus = event => {
@@ -160,8 +175,7 @@ function Chooser({ request }) {
     };
 
     return <FileSystemContext.Provider value={context}><HistoryContext.Provider value={{ currentPath, navigateTo: loadDirectory, getDirectoryViewState, saveDirectoryViewState }}>
-        <ContextMenuContext.Provider value={{ openContextMenu: event => event.preventDefault(), clipboard: { items: [], operation: null },
-            draggedItems: [], beginItemDrag: event => event.preventDefault(), endItemDrag: () => {} }}>
+        <ContextMenuProvider basicOnly><ContextMenuContext.Consumer>{actions =>
         <main className="chooser-shell" aria-label="File chooser" onPointerUpCapture={restoreItemPaneAfterPointer}
             onBlurCapture={() => requestAnimationFrame(() => { if (document.activeElement === document.body) focusItemPane(); })}>
             <div className="chooser-navigation" data-tauri-drag-region>
@@ -182,14 +196,15 @@ function Chooser({ request }) {
                 <button type="button" className="icon-button" aria-label="File chooser settings" title="Settings (Ctrl+,)" onClick={() => setSettingsOpen(true)}>
                     <span className="icon icon-settings" aria-hidden="true" />
                 </button>
-                <WindowControls onClose={cancel} closeDisabled={busy} />
+                <WindowControls onClose={cancel} closeDisabled={busy || actions.isProcessing} />
             </div>
             <div className="chooser-content">
                 <ChooserSidebar startingFolder={request.currentFolder} onError={setError} />
-                <div className="chooser-list"><FileList data={listing} isLoading={isLoading} viewMode={viewMode} isSearching={!!query} searchTerm={query} disableArrowKeys={settingsOpen} /></div>
+                <div className="chooser-list"><FileList data={listing} isLoading={isLoading} viewMode={viewMode} isSearching={!!query} searchTerm={query} disableArrowKeys={settingsOpen || actions.isProcessing} /></div>
                 <DetailsPanel item={focusedItem?.isParentNavigation ? null : focusedItem || selectedItems[0] || null} isMultipleSelection={selectedItems.length > 1} isCollapsed={!preview} onOpenChange={setPreview} onCollapse={() => setPreview(open => !open)} viewMode={viewMode} autoCopy={false} />
             </div>
             {error && <p className="chooser-error" role="alert">{error}</p>}
+            <ChooserFileActions onProperties={showProperties} onError={setError} onProcessingChange={setActionsBusy} />
             <footer className="chooser-footer">
                 {request.mode === 'SaveFile' && <label className="chooser-filename">File name<input autoFocus aria-label="File name" value={name} onChange={e => setName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); accept(); } }} /></label>}
                 {request.mode === 'SaveFiles' && <p>Save {request.files.length} files in this folder. Existing names receive a numbered suffix.</p>}
@@ -197,8 +212,8 @@ function Chooser({ request }) {
                     {availableFilters.length > 0 && <label>File type<select aria-label="File type" value={filterIndex} onChange={e => setFilterIndex(Number(e.target.value))}>{availableFilters.map((f, i) => <option key={i} value={i}>{f[0]}</option>)}<option value={-1}>All files</option></select></label>}
                     {request.choices.map(([id, label, options]) => <label key={id}>{label}{options.length ? <select value={choices[id]} onChange={e => setChoices(c => ({ ...c, [id]: e.target.value }))}>{options.map(([value, title]) => <option key={value} value={value}>{title}</option>)}</select> : <input type="checkbox" checked={choices[id] === 'true'} onChange={e => setChoices(c => ({ ...c, [id]: String(e.target.checked) }))} />}</label>)}
                     <span className="chooser-count">{selectedItems.length} selected</span>
-                    <button onClick={cancel} disabled={busy}>Cancel</button>
-                    <button className="chooser-accept" onClick={() => accept()} disabled={!canAccept}>{busy ? 'Checking…' : acceptLabel}</button>
+                    <button onClick={cancel} disabled={busy || actions.isProcessing}>Cancel</button>
+                    <button className="chooser-accept" onClick={() => accept()} disabled={!canAccept || actions.isProcessing}>{busy ? 'Checking…' : acceptLabel}</button>
                 </div>
             </footer>
             <Modal isOpen={settingsOpen} onClose={closeSettings} title="File chooser settings" size="sm" className="chooser-settings" onKeyDown={trapSettingsFocus}>
@@ -208,5 +223,5 @@ function Chooser({ request }) {
                 </select></label>
             </Modal>
         </main>
-        </ContextMenuContext.Provider></HistoryContext.Provider></FileSystemContext.Provider>;
+        }</ContextMenuContext.Consumer></ContextMenuProvider></HistoryContext.Provider></FileSystemContext.Provider>;
 }

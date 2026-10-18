@@ -13,6 +13,8 @@ Frequent actions also have direct shortcuts. Use Command in place of Ctrl for le
 | Global search | Ctrl+Shift+F |
 | Copy current location | Ctrl+Shift+C |
 | Copy selected item's path | Ctrl+Alt+C |
+| Copy / Cut / Paste files | Ctrl+C / Ctrl+X / Ctrl+V |
+| Select all visible items | Ctrl+A |
 | Icons / List view | Ctrl+Shift+1 / Ctrl+Shift+2 |
 | New tab / Close active tab | Ctrl+T / Ctrl+W (closing the last tab closes the window) |
 | Toggle left panel | Ctrl+B |
@@ -25,6 +27,8 @@ Frequent actions also have direct shortcuts. Use Command in place of Ctrl for le
 | Select a range | Shift+Arrow; reverse direction to remove items from the range |
 | View zoom | Ctrl+Plus / Ctrl+Minus; Ctrl+mouse wheel |
 
+The file chooser shares Explorer's copy, cut, paste, rename, creation, trash, undo, properties, and drag-and-drop actions. Copy and cut work between Explorer and chooser windows. Creation and rename are available through their dialogs and context menus; file action shortcuts leave text inputs and dialogs to handle editing. Select All includes only visible results and excludes the chooser's `..` navigation entry.
+
 View zoom is shared between icon and list modes and saved across application restarts. Each folder's vertical and horizontal scroll offsets are also saved; the 100 most recently saved folder positions remain available across sessions. Restoring a folder keeps its scroll position even when the focused item is offscreen. Arrow navigation brings that item back into view. These preferences stay in the application's local storage and survive application updates.
 
 Pointer interactions with the toolbar, tabs, side-panel buttons, or resize handles return keyboard focus to the item pane after the action. Clicking an item also focuses the pane, including after column resizing. Text inputs, editable content, dialogs, context menus, and native media controls retain their required keyboard interaction. Normal Tab navigation remains available for controls; plain arrows from toolbar buttons or preview text return to item navigation. Selecting a button through F10 returns focus to the pane unless it opens an input or dialog.
@@ -33,6 +37,6 @@ Clicking outside the location bar cancels path editing, clears its text selectio
 
 Resize handles remain keyboard accessible: focus a list column separator and use Left/Right; focus a side-panel separator and use Alt+Shift+Left/Right; focus the preview split and use Alt+Shift+Up/Down. Home/End on panel handles choose their endpoints. Returning to an item restores file navigation.
 
-Shortcut routing lives in `MainLayout.jsx`, `NavigationButtons.jsx`, `PathBreadcrumb.jsx`, `DetailsPanel.jsx`, `TabManager.jsx`, and `InterfaceShortcuts.jsx`. Text fields and dialogs suppress file-action shortcuts to protect editing.
+Shortcut routing lives in `ContextMenuProvider.jsx`, `FileList.jsx`, `MainLayout.jsx`, `NavigationButtons.jsx`, `PathBreadcrumb.jsx`, `DetailsPanel.jsx`, `TabManager.jsx`, and `InterfaceShortcuts.jsx`. Text fields and dialogs suppress file-action shortcuts to protect editing.
 
 Ctrl+W also closes the active tab while a location/search input or another text field has focus. When another tab remains, it becomes active and keyboard focus returns to its items. Closing the final tab closes the native window; reopening Explr restores that folder. Modal dialogs retain their keyboard interaction. Held-key repeats do not close additional tabs. Ctrl+T remains suppressed while typing in a text field.

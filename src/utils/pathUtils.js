@@ -2,6 +2,9 @@
  * Path utility functions for cross-platform path handling
  */
 
+export const isValidItemName = name => typeof name === 'string' && name.trim().length > 0 &&
+    !['.', '..'].includes(name.trim()) && !/[\\/\0]/.test(name);
+
 /**
  * Detect the path separator based on the given path or platform.
  * @param {string} path - A sample path to detect the separator from.

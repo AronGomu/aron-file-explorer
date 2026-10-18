@@ -3,13 +3,15 @@ import { useFileSystem } from '../../providers/FileSystemProvider';
 import { useHistory } from '../../providers/HistoryProvider';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
+import { isValidItemName } from '../../utils/pathUtils';
+import { showConfirm, showError } from '../../utils/NotificationSystem';
 import './createFileButton.css';
 
 /**
  * Component for creating new files and folders
  * @returns {React.ReactElement} Create file button component with dropdown
  */
-const CreateFileButton = () => {
+const CreateFileButton = ({ dialogsOnly = false }) => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [creationType, setCreationType] = useState(''); // 'file' or 'folder'
@@ -17,6 +19,7 @@ const CreateFileButton = () => {
     const dropdownRef = useRef(null);
     const inputRef = useRef(null);
     const skipNextToggle = useRef(false);
+    const creating = useRef(false);
 
     const { createFile, createDirectory } = useFileSystem();
     const { currentPath } = useHistory();
@@ -103,8 +106,9 @@ const CreateFileButton = () => {
      * Handles creating the file or folder
      */
     const handleCreate = async () => {
-        if (!itemName.trim()) return;
-
+        if (!isValidItemName(itemName)) { showError('Enter a name without slashes, “.” or “..”.'); return; }
+        if (creating.current) return;
+        creating.current = true;
         try {
             if (creationType === 'file') {
                 await createFile(currentPath, itemName);
@@ -119,7 +123,7 @@ const CreateFileButton = () => {
 
             // Check for specific error types
             if (error.message && error.message.includes('already exists')) {
-                const shouldCreateCopy = confirm(
+                const shouldCreateCopy = await showConfirm(
                     `An item named "${itemName}" already exists. Would you like to create a copy instead?`
                 );
 
@@ -131,9 +135,9 @@ const CreateFileButton = () => {
                     return; // Don't close modal, let user try again
                 }
             } else {
-                alert(`Failed to create ${creationType}: ${error.message || error}`);
+                showError(`Failed to create ${creationType}: ${error.message || error}`);
             }
-        }
+        } finally { creating.current = false; }
     };
 
     /**
@@ -167,7 +171,7 @@ const CreateFileButton = () => {
 
     return (
         <>
-            <div className="create-file-container">
+            {!dialogsOnly && <div className="create-file-container">
                 <button
                     className="create-button"
                     onClick={toggleDropdown}
@@ -220,7 +224,7 @@ const CreateFileButton = () => {
                         </ul>
                     </div>
                 )}
-            </div>
+            </div>}
 
             <Modal
                 isOpen={isCreateModalOpen}

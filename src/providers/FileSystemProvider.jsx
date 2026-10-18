@@ -369,6 +369,7 @@ export default function FileSystemProvider({ children }) {
         } catch (err) {
             console.error(`Failed to create file: ${fileName}`, err);
             setError(`Failed to create file: ${err.message || err}`);
+            throw err;
         } finally {
             setIsLoading(false);
         }
@@ -395,6 +396,7 @@ export default function FileSystemProvider({ children }) {
         } catch (err) {
             console.error(`Failed to create directory: ${directoryName}`, err);
             setError(`Failed to create directory: ${err.message || err}`);
+            throw err;
         } finally {
             setIsLoading(false);
         }
@@ -428,6 +430,7 @@ export default function FileSystemProvider({ children }) {
         } catch (err) {
             console.error(`Failed to rename item: ${oldPath}`, err);
             setError(`Failed to rename item: ${err.message || err}`);
+            throw err;
         } finally {
             setIsLoading(false);
         }
