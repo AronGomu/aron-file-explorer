@@ -50,6 +50,8 @@ fn all_commands() -> fn(Invoke) -> bool {
         file_system_operation_commands::unzip,
         commands::image_commands::get_image_thumbnail,
         commands::video_commands::get_video_thumbnail,
+        commands::video_commands::get_video_preview,
+        commands::media_preview_commands::get_media_preview_url,
         commands::file_move_commands::move_items,
         sftp_file_system_operation_commands::move_items_sftp,
         commands::file_preview_commands::get_text_preview,

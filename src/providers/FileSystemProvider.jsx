@@ -5,6 +5,19 @@ import { useSettings } from './SettingsProvider';
 import { useSftp } from './SftpProvider';
 import { getDirectoryPath } from '../utils/pathUtils';
 
+// Keep unchanged item objects so background scans do not restart previews.
+function reconcileDirectoryItems(previous = [], next = []) {
+    const byPath = new Map(previous.map(item => [item.path, item]));
+    const items = next.map(item => {
+        const old = byPath.get(item.path);
+        const keys = Object.keys(item).filter(key => key !== 'accessed');
+        return old && keys.length === Object.keys(old).filter(key => key !== 'accessed').length &&
+            keys.every(key => old[key] === item[key]) ? old : item;
+    });
+    return items.length === previous.length && items.every(item => byPath.get(item.path) === item)
+        ? previous : items;
+}
+
 // Create file system context
 const FileSystemContext = createContext({
     currentDirData: null,
@@ -287,7 +300,6 @@ export default function FileSystemProvider({ children }) {
 
     // Open a file - enhanced with SFTP support
     const openFile = useCallback(async (filePath) => {
-        setIsLoading(true);
         setError(null);
 
         try {
@@ -301,10 +313,40 @@ export default function FileSystemProvider({ children }) {
         } catch (err) {
             console.error(`Failed to open file: ${filePath}`, err);
             setError(`Failed to open file: ${err.message || err}`);
-        } finally {
-            setIsLoading(false);
         }
     }, [isSftpPath, downloadAndOpenSftpFile]);
+
+    // Refresh local folders without replacing the pane with a loading screen.
+    // Schedule after completion so slow directory reads never overlap.
+    useEffect(() => {
+        if (!currentPath || isLoading || isSftpPath(currentPath)) return;
+        let cancelled = false;
+        let timer;
+        const refresh = async () => {
+            const loadId = directoryLoadId.current;
+            try {
+                const result = await invoke('open_directory', { path: currentPath });
+                if (cancelled || directoryLoadId.current !== loadId) return;
+                const next = filterDirectoryData(JSON.parse(result));
+                setCurrentDirData(previous => {
+                    if (cancelled || directoryLoadId.current !== loadId || previous?.directory !== currentPath) return previous;
+                    const directories = reconcileDirectoryItems(previous.directories, next.directories);
+                    const files = reconcileDirectoryItems(previous.files, next.files);
+                    return directories === previous.directories && files === previous.files
+                        ? previous : { ...next, directory: currentPath, directories, files };
+                });
+            } catch {
+                // Transient filesystem changes must not erase the last usable listing.
+            } finally {
+                if (!cancelled) timer = setTimeout(refresh, 2000);
+            }
+        };
+        timer = setTimeout(refresh, 2000);
+        return () => {
+            cancelled = true;
+            clearTimeout(timer);
+        };
+    }, [currentPath, isLoading, isSftpPath, filterDirectoryData]);
 
     // Create a new file - enhanced with SFTP support
     const createFile = useCallback(async (folderPath, fileName) => {

@@ -13,6 +13,8 @@ serde = { version = "1", features = ["derive"] }
 sysinfo = "0.33.1"
 walkdir = "2.3.3"
 tokio = { version = "1.28.2", features = ["full"] }
+axum = { version = "0.8", default-features = false, features = ["http1", "tokio"] }
+tower-http = { version = "0.6", features = ["fs"] }
 tauri-plugin-shell = "2.3.6"
 tauri-plugin-dialog = "2.7.3"
 tauri-plugin-clipboard-manager = "=2.3.2"

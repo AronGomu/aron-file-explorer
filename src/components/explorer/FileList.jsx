@@ -578,8 +578,22 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
         }
         if (!data || (path && path !== currentPath)) return;
         if (previousListing.current?.data === data && previousListing.current.path === path) return;
+        const backgroundRefresh = !isSearching && previousListing.current?.path === path;
         previousListing.current = { data, path };
         restoringSelection.current = true;
+
+        if (backgroundRefresh) {
+            const byPath = new Map(sortedItems.map(item => [item.path, item]));
+            const selection = selectedItems.map(item => byPath.get(item.path)).filter(Boolean);
+            if (selection.length !== selectedItems.length || selection.some((item, index) => item !== selectedItems[index])) {
+                selectMultiple(selection);
+            }
+            const focus = byPath.get(focusedItem?.path) || null;
+            if (focus !== focusedItem) setFocusedItem(focus);
+            const anchorPath = getDirectoryViewState(path)?.anchorPath;
+            setLastSelectedIndex(sortedItems.findIndex(item => item.path === anchorPath));
+            return;
+        }
 
         let launch;
         try { launch = JSON.parse(sessionStorage.getItem('fileExplorerLaunchSelection') || 'null'); } catch { /* No launch selection. */ }
@@ -608,7 +622,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
             if (!saved || !Number.isFinite(saved.scrollTop)) scrollItemIntoView(focusIndex);
         }
     }, [data, isLoading, isSearching, currentPath, sortedItems, getDirectoryViewState,
-        selectMultiple, setFocusedItem, scrollItemIntoView]);
+        selectMultiple, setFocusedItem, scrollItemIntoView, selectedItems, focusedItem]);
 
     useLayoutEffect(() => {
         if (restoringSelection.current) {

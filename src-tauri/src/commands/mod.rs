@@ -11,6 +11,7 @@ pub mod permission_commands;
 pub mod theme_commands;
 pub mod image_commands;
 pub mod video_commands;
+pub mod media_preview_commands;
 pub mod file_preview_commands;
 pub mod file_move_commands;
 mod text_highlighting;

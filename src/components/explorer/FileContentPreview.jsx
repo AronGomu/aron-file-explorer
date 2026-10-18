@@ -12,6 +12,9 @@ const FileContentPreview = ({ item, viewMode }) => {
     const { isSftpPath, parseSftpPath } = useSftp();
     const [result, setResult] = useState(null);
     const [playbackError, setPlaybackError] = useState(false);
+    // Normalize legacy containers up front: native demuxers can play them yet fail to seek.
+    const [compatibleVideo, setCompatibleVideo] = useState(() => getFileIconType(item.name) === 'video' &&
+        !['mp4', 'm4v', 'webm'].includes(item.name.split('.').pop().toLowerCase()));
     const mediaRef = useRef(null);
     const codeRef = useRef(null);
     const lineNumbers = useMemo(() => {
@@ -34,8 +37,14 @@ const FileContentPreview = ({ item, viewMode }) => {
                 if (isSftpPath(item.path) && !remote?.connection) throw new Error('Connection unavailable');
                 let preview;
                 if (isMedia || category === 'pdf') {
-                    const path = await getPreviewFilePath(item.path, revision, remote);
-                    preview = { url: `${convertFileSrc(path)}?v=${encodeURIComponent(revision)}` };
+                    let path = await getPreviewFilePath(item.path, revision, remote);
+                    if (category === 'video' && compatibleVideo) {
+                        path = await invoke('get_video_preview', { path });
+                    }
+                    const media = isMedia
+                        ? await invoke('get_media_preview_url', { path, video: category === 'video' })
+                        : { url: convertFileSrc(path) };
+                    preview = { ...media, url: `${media.url}?v=${encodeURIComponent(revision)}` };
                 } else if (remote) {
                     const { connection, remotePath } = remote;
                     preview = await invoke('get_text_preview_sftp', {
@@ -46,18 +55,39 @@ const FileContentPreview = ({ item, viewMode }) => {
                     preview = await invoke('get_text_preview', { path: item.path });
                 }
                 if (!cancelled) setResult(preview);
-            } catch {
-                if (!cancelled) setResult({ error: 'Could not load this file’s preview.' });
+            } catch (error) {
+                if (!cancelled) setResult({ error: compatibleVideo ? String(error) : 'Could not load this file’s preview.' });
             }
         };
         load();
         return () => { cancelled = true; };
-    }, [item.path, revision, isDirectory, category, isMedia, isSftpPath, parseSftpPath]);
+    }, [item.path, revision, isDirectory, category, isMedia, compatibleVideo, isSftpPath, parseSftpPath]);
 
     useEffect(() => {
         const media = mediaRef.current;
         return () => { media?.pause(); };
     }, [result?.url]);
+
+    useEffect(() => {
+        if (category !== 'video' || compatibleVideo || !result?.url) return;
+        const media = mediaRef.current;
+        // Some missing decoders stall the pipeline instead of emitting a media error.
+        const fallbackIfStalled = () => {
+            if (media && (media.readyState === 0 || (!media.paused && media.readyState < 2))) {
+                setCompatibleVideo(true);
+            }
+        };
+        let timer = setTimeout(fallbackIfStalled, 5000);
+        const waiting = () => {
+            clearTimeout(timer);
+            timer = setTimeout(fallbackIfStalled, 5000);
+        };
+        media?.addEventListener('waiting', waiting);
+        return () => {
+            clearTimeout(timer);
+            media?.removeEventListener('waiting', waiting);
+        };
+    }, [category, compatibleVideo, result?.url]);
 
     const handleTextKeyDown = (event) => {
         if (!(event.ctrlKey || event.metaKey) || event.altKey || event.key.toLowerCase() !== 'a') return;
@@ -133,14 +163,26 @@ const FileContentPreview = ({ item, viewMode }) => {
                 isDirectory={false} size="large" thumbnailSize={1024} />
         </div>;
     }
-    if (!result) return <p className="preview-status" role="status">Loading preview…</p>;
+    if (!result) return <p className="preview-status" role="status">
+        {compatibleVideo ? 'Preparing video preview…' : 'Loading preview…'}
+    </p>;
     if (result.error) return <p className="preview-status" role="alert">{result.error}</p>;
 
     if (isMedia) {
         const Player = category === 'video' ? 'video' : 'audio';
         return <div className="preview-media">
             <Player ref={mediaRef} src={result.url} controls preload="metadata" playsInline
-                aria-label={`Play ${item.name}`} onError={() => setPlaybackError(true)} />
+                onLoadedMetadata={(event) => {
+                    const media = event.currentTarget;
+                    if (category === 'video' && !compatibleVideo &&
+                        (media.videoWidth === 0 || (result.hasAudio && media.audioTracks?.length === 0))) {
+                        setCompatibleVideo(true);
+                    }
+                }}
+                aria-label={`Play ${item.name}`} onError={() => {
+                    if (category === 'video' && !compatibleVideo) setCompatibleVideo(true);
+                    else setPlaybackError(true);
+                }} />
             {playbackError && <p className="preview-status" role="alert">This media format could not be played.</p>}
         </div>;
     }
