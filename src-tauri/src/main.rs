@@ -42,6 +42,7 @@ fn all_commands() -> fn(Invoke) -> bool {
             commands::file_preview_commands::get_text_preview,
             file_system_operation_commands::open_directory,
             volume_operations_commands::get_system_volumes_information,
+            volume_operations_commands::mount_volume,
             settings_commands::get_settings_snapshot, settings_commands::get_settings_as_json,
             theme_commands::get_theme_catalog, theme_commands::set_active_theme_id,
         ];

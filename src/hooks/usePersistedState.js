@@ -5,7 +5,8 @@ export default function usePersistedState(key, initialValue) {
         const fallback = typeof initialValue === 'function' ? initialValue() : initialValue;
         try {
             const saved = JSON.parse(localStorage.getItem(key));
-            if (typeof saved === typeof fallback &&
+            if (saved !== null && typeof saved === typeof fallback &&
+                Array.isArray(saved) === Array.isArray(fallback) &&
                 (typeof saved !== 'number' || Number.isFinite(saved))) return saved;
         } catch (error) {
             console.error(`Failed to restore ${key}:`, error);

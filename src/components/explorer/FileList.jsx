@@ -397,6 +397,8 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
 
         // Always put directories first
         const sortedItems = [...combinedItems].sort((a, b) => {
+            if (a.isParentNavigation) return -1;
+            if (b.isParentNavigation) return 1;
             // Directories always come before files
             if (a.isDirectory && !b.isDirectory) return -1;
             if (!a.isDirectory && b.isDirectory) return 1;

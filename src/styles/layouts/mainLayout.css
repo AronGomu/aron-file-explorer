@@ -25,10 +25,10 @@
     padding: 0 var(--space-md);
     background-color: var(--surface);
     border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
 }
 
 .toolbar-left,
-.toolbar-center,
 .toolbar-right {
     display: flex;
     align-items: center;
@@ -39,10 +39,6 @@
     flex: 1;
     overflow: hidden;
     min-width: 0;
-}
-
-.toolbar-center {
-    flex: 0 0 auto;
 }
 
 .toolbar-right {
@@ -236,40 +232,15 @@
 }
 
 /* Responsive layout adjustments */
-@media (max-width: 1024px) {
-    .toolbar-center {
-        flex: 0 0 220px;
-    }
-}
-
 @media (max-width: 768px) {
     .toolbar {
-        flex-direction: column;
-        height: auto;
-        padding: var(--space-sm);
-        gap: var(--space-sm);
+        padding: 0 var(--space-sm);
+        gap: var(--space-xs);
     }
 
     .toolbar-left,
-    .toolbar-center,
     .toolbar-right {
-        width: 100%;
-        justify-content: space-between;
-    }
-
-    .toolbar-center {
-        flex: 1;
-        order: -1;
-    }
-
-    .toolbar-left {
-        order: 1;
-        justify-content: flex-start;
-    }
-
-    .toolbar-right {
-        order: 2;
-        justify-content: flex-end;
+        gap: var(--space-xs);
     }
 
     .copy-path-button span:not(.icon) {

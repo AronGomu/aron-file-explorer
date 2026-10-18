@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { confirm } from '@tauri-apps/plugin-dialog';
-import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import SettingsProvider from '../providers/SettingsProvider';
 import ThemeProvider, { useTheme } from '../providers/ThemeProvider';
 import { FileSystemContext } from '../providers/FileSystemProvider';
@@ -9,8 +8,17 @@ import { HistoryContext } from '../providers/HistoryProvider';
 import { ContextMenuContext } from '../providers/ContextMenuProvider';
 import FileList from '../components/explorer/FileList';
 import DetailsPanel from '../components/explorer/DetailsPanel';
+import PathBreadcrumb from '../components/explorer/PathBreadcrumb';
+import Modal from '../components/common/Modal';
+import WindowControls from '../components/common/WindowControls';
+import ChooserSidebar from './ChooserSidebar';
+import usePersistedState from '../hooks/usePersistedState';
 import { getDirectoryPath } from '../utils/pathUtils';
-import { constrainSelection, initialChoices, selectionPaths } from './selection';
+import { focusItemPane, isEditingTarget, restoreItemPaneAfterPointer } from '../utils/explorerFocus';
+import { chooserListing, constrainSelection, initialChoices, selectionPaths } from './selection';
+import '../styles/layouts/mainLayout.css';
+import '../components/explorer/navigationButtons.css';
+import '../components/explorer/viewModes.css';
 import './chooser.css';
 
 export default function ChooserApp({ request }) {
@@ -18,11 +26,8 @@ export default function ChooserApp({ request }) {
 }
 
 function Chooser({ request }) {
-    const [tabs, setTabs] = useState([{ id: 'initial', history: [request.currentFolder], index: 0 }]);
-    const [activeTab, setActiveTab] = useState('initial');
-    const tab = tabs.find(t => t.id === activeTab) || tabs[0];
-    const currentPath = tab.history[tab.index];
-    const [pathInput, setPathInput] = useState(currentPath);
+    const [navigation, setNavigation] = useState({ history: [request.currentFolder], index: 0 });
+    const currentPath = navigation.history[navigation.index];
     const [data, setData] = useState(null);
     const [selectedItems, setSelectedItems] = useState([]);
     const [focusedItem, setFocusedItem] = useState(null);
@@ -31,9 +36,10 @@ function Chooser({ request }) {
     const [busy, setBusy] = useState(false);
     const busyRef = useRef(false);
     const [revision, refresh] = useState(0);
-    const [viewMode, setViewMode] = useState('list');
-    const [preview, setPreview] = useState(true);
-    const [hidden, setHidden] = useState(false);
+    const [viewMode, setViewMode] = usePersistedState('chooserViewMode', 'list');
+    const [preview, setPreview] = usePersistedState('chooserPreviewOpen', true);
+    const [hidden, setHidden] = usePersistedState('chooserShowHidden', false);
+    const [settingsOpen, setSettingsOpen] = useState(false);
     const [query, setQuery] = useState('');
     const [name, setName] = useState(request.currentName || '');
     const [choices, setChoices] = useState(() => initialChoices(request.choices));
@@ -41,24 +47,18 @@ function Chooser({ request }) {
     const [filterIndex, setFilterIndex] = useState(() => Math.max(0, availableFilters.findIndex(f => JSON.stringify(f) === JSON.stringify(request.currentFilter))));
     const filter = availableFilters[filterIndex] || null;
     const [volumes, setVolumes] = useState([]);
-    const [favorites, setFavorites] = useState(() => {
-        try { return JSON.parse(localStorage.getItem('chooserFavorites') || '[]').filter(p => typeof p === 'string' && p.startsWith('/')); }
-        catch { return []; }
-    });
-    const [folderDialog, setFolderDialog] = useState(false);
-    const [folderName, setFolderName] = useState('');
     const viewStates = useRef(new Map());
-    const pathRef = useRef(null);
-    const searchRef = useRef(null);
-    const { themes, activeThemeId, setTheme } = useTheme();
+    const { themes, activeThemeId, setTheme, isSaving: themeSaving } = useTheme();
 
     const clearSelection = useCallback(() => { setSelectedItems([]); setFocusedItem(null); }, []);
     const loadDirectory = useCallback(path => {
         if (!path?.startsWith('/')) { setError('Choose a local folder or a locally mounted drive.'); return; }
-        setTabs(previous => previous.map(t => t.id === activeTab
-            ? { ...t, history: [...t.history.slice(0, t.index + 1), path], index: t.index + 1 } : t));
+        setNavigation(previous => previous.history[previous.index] === path ? previous : {
+            history: [...previous.history.slice(0, previous.index + 1), path], index: previous.index + 1,
+        });
         setQuery('');
-    }, [activeTab]);
+        refresh(n => n + 1);
+    }, []);
     const selectMultiple = useCallback(items => setSelectedItems(constrainSelection(items, request)), [request]);
     const selectItem = useCallback((item, multiple = false) => {
         setSelectedItems(previous => constrainSelection(multiple
@@ -66,21 +66,23 @@ function Chooser({ request }) {
             : [item], request));
         if (request.mode === 'SaveFile' && !item.isDirectory) setName(item.name);
     }, [request]);
-    const getDirectoryViewState = useCallback(path => viewStates.current.get(`${activeTab}:${path}`), [activeTab]);
-    const saveDirectoryViewState = useCallback((path, state) => viewStates.current.set(`${activeTab}:${path}`, state), [activeTab]);
+    const getDirectoryViewState = useCallback(path => viewStates.current.get(path), []);
+    const saveDirectoryViewState = useCallback((path, state) => viewStates.current.set(path, state), []);
+    const loadVolumes = useCallback(async () => {
+        try { setVolumes(await invoke('get_system_volumes_information')); }
+        catch (failure) { setError(String(failure)); }
+    }, []);
 
     useEffect(() => {
         let cancelled = false;
-        setPathInput(currentPath); clearSelection(); setLoading(true); setError(''); setData(null);
+        clearSelection(); setLoading(true); setError(''); setData(null);
         invoke('chooser_list', { path: currentPath, filter }).then(entries => {
             if (!cancelled) setData({ ...entries, directory: currentPath });
         }).catch(e => { if (!cancelled) setError(String(e)); }).finally(() => { if (!cancelled) setLoading(false); });
         return () => { cancelled = true; };
-    }, [currentPath, activeTab, filterIndex, revision]);
+    }, [currentPath, filterIndex, revision, clearSelection]);
 
-    useEffect(() => {
-        invoke('get_system_volumes_information').then(setVolumes).catch(() => {});
-    }, []);
+    useEffect(() => { loadVolumes(); }, [loadVolumes]);
 
     const cancel = useCallback(() => invoke('chooser_finish', { selection: null, overwriteConfirmed: false }).catch(e => setError(String(e))), []);
     const accept = async (explicitPath) => {
@@ -88,7 +90,8 @@ function Chooser({ request }) {
         busyRef.current = true; setBusy(true); setError('');
         const selection = {
             paths: explicitPath ? [explicitPath] : selectionPaths(selectedItems, request, currentPath),
-            folder: request.mode === 'SaveFiles' && selectedItems[0]?.isDirectory ? selectedItems[0].path : currentPath, name: explicitPath && request.mode === 'SaveFile' ? explicitPath.split('/').pop() : name,
+            folder: request.mode === 'SaveFiles' && selectedItems[0]?.isDirectory ? selectedItems[0].path : currentPath,
+            name: explicitPath && request.mode === 'SaveFile' ? explicitPath.split('/').pop() : name,
             choices: Object.entries(choices), currentFilter: filter,
         };
         try {
@@ -107,82 +110,83 @@ function Chooser({ request }) {
         const selected = selectedItems.some(item => item.path === path);
         accept(request.multiple && selected ? undefined : path);
     };
+    const backForward = useCallback(step => {
+        setNavigation(previous => ({ ...previous, index: Math.max(0, Math.min(previous.history.length - 1, previous.index + step)) }));
+        setQuery('');
+    }, []);
 
     useEffect(() => {
         const keyboard = event => {
-            if (event.defaultPrevented || event.isComposing || busyRef.current) return;
-            if (event.key === 'Escape') {
+            if (event.defaultPrevented || event.isComposing || busyRef.current || settingsOpen || document.querySelector('[role="dialog"]')) return;
+            if ((event.ctrlKey || event.metaKey) && event.key === ',') {
+                event.preventDefault(); setSettingsOpen(true);
+            } else if (event.key === 'Escape') {
+                if (isEditingTarget(event.target)) return;
                 event.preventDefault(); event.stopPropagation();
-                if (folderDialog) setFolderDialog(false);
-                else if (query) setQuery('');
-                else cancel();
-            } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'l') {
-                event.preventDefault(); pathRef.current?.focus(); pathRef.current?.select();
-            } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
-                event.preventDefault(); searchRef.current?.focus();
+                if (query) setQuery(''); else cancel();
             } else if (event.altKey && event.key === 'ArrowUp') {
                 event.preventDefault(); loadDirectory(getDirectoryPath(currentPath));
-            } else if (event.key === 'F5') { event.preventDefault(); refresh(n => n + 1); }
+            } else if (event.altKey && ['ArrowLeft', 'ArrowRight'].includes(event.key)) {
+                event.preventDefault(); backForward(event.key === 'ArrowLeft' ? -1 : 1);
+            } else if (event.key === 'Backspace' && !isEditingTarget(event.target)) {
+                event.preventDefault(); backForward(event.shiftKey ? 1 : -1);
+            } else if (event.key === 'F5') { event.preventDefault(); refresh(n => n + 1); loadVolumes(); }
+            else if (event.code === 'Space' && !isEditingTarget(event.target) && !event.target.closest?.('button, [role="button"], [role="separator"]')) {
+                event.preventDefault(); if (!event.repeat) setPreview(open => !open);
+            }
         };
+        const restoreFocus = () => { if (!isEditingTarget(document.activeElement)) focusItemPane(); };
         window.addEventListener('keydown', keyboard, true);
-        return () => window.removeEventListener('keydown', keyboard, true);
-    }, [folderDialog, query, currentPath, loadDirectory, cancel]);
+        window.addEventListener('focus', restoreFocus);
+        return () => { window.removeEventListener('keydown', keyboard, true); window.removeEventListener('focus', restoreFocus); };
+    }, [settingsOpen, query, currentPath, loadDirectory, cancel, backForward, loadVolumes, setPreview]);
 
-    const visible = item => (hidden || !item.name.startsWith('.')) && (!query || item.name.toLowerCase().includes(query.toLowerCase()));
-    const listing = useMemo(() => data && { ...data, files: request.directory || request.mode === 'SaveFiles' ? [] : data.files.filter(visible), directories: data.directories.filter(visible) }, [data, hidden, query, request.directory, request.mode]);
+    const listing = useMemo(() => chooserListing(data, request, currentPath, hidden, query), [data, request, currentPath, hidden, query]);
     const paths = selectionPaths(selectedItems, request, currentPath);
     const canAccept = !busy && !isLoading && !!data && (request.mode === 'OpenFile' ? paths.length > 0 : request.mode === 'SaveFiles' || !!name.trim());
-    const backForward = step => setTabs(previous => previous.map(t => t.id === activeTab ? { ...t, index: Math.max(0, Math.min(t.history.length - 1, t.index + step)) } : t));
-    const newTab = () => { const id = crypto.randomUUID(); setTabs(t => [...t, { id, history: [currentPath], index: 0 }]); setActiveTab(id); };
-    const toggleFavorite = () => {
-        const next = favorites.includes(currentPath) ? favorites.filter(p => p !== currentPath) : [...favorites, currentPath];
-        setFavorites(next); localStorage.setItem('chooserFavorites', JSON.stringify(next));
-    };
-    const copyPath = () => writeText(selectedItems.map(item => item.path).join('\n') || currentPath).catch(e => setError(String(e)));
-    const createFolder = async event => {
-        event.preventDefault();
-        try { const path = await invoke('chooser_new_folder', { folder: currentPath, name: folderName }); setFolderDialog(false); setFolderName(''); loadDirectory(path); }
-        catch (e) { setError(String(e)); }
-    };
-    const context = { selectedItems, focusedItem, isLoading, currentDirData: listing, selectItem, selectMultiple, clearSelection, setFocusedItem, loadDirectory, openFile };
+    const context = { selectedItems, focusedItem, isLoading, currentDirData: listing, volumes, loadVolumes,
+        selectItem, selectMultiple, clearSelection, setFocusedItem, loadDirectory, openFile };
     const acceptLabel = (request.acceptLabel || (request.mode === 'OpenFile' ? 'Open' : 'Save')).replace(/_([^_])/g, '$1');
+    const closeSettings = useCallback(() => { setSettingsOpen(false); requestAnimationFrame(focusItemPane); }, []);
+    const trapSettingsFocus = event => {
+        if (event.key !== 'Tab') return;
+        const controls = [...event.currentTarget.querySelectorAll('button:not(:disabled), input, select:not(:disabled)')];
+        const first = controls[0], last = controls.at(-1);
+        if (event.shiftKey && (document.activeElement === first || document.activeElement === event.currentTarget)) {
+            event.preventDefault(); last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault(); first?.focus();
+        }
+    };
 
-    return <FileSystemContext.Provider value={context}><HistoryContext.Provider value={{ currentPath, getDirectoryViewState, saveDirectoryViewState }}>
+    return <FileSystemContext.Provider value={context}><HistoryContext.Provider value={{ currentPath, navigateTo: loadDirectory, getDirectoryViewState, saveDirectoryViewState }}>
         <ContextMenuContext.Provider value={{ openContextMenu: event => event.preventDefault(), clipboard: { items: [], operation: null } }}>
-        <main className="chooser-shell">
-            <header className="chooser-heading"><strong>{request.title || 'Choose a file'}</strong><span>{request.appId}</span></header>
-            <div className="chooser-tabs" role="tablist" aria-label="Folders">
-                {tabs.map(t => <span key={t.id} className={t.id === activeTab ? 'active' : ''}>
-                    <button role="tab" aria-selected={t.id === activeTab} onClick={() => setActiveTab(t.id)}>{t.history[t.index].split('/').filter(Boolean).at(-1) || '/'}</button>
-                    {tabs.length > 1 && <button aria-label="Close tab" onClick={() => { const next = tabs.filter(x => x.id !== t.id); setTabs(next); if (activeTab === t.id) setActiveTab(next[0].id); }}>×</button>}
-                </span>)}<button onClick={newTab} aria-label="New tab">＋</button>
-            </div>
-            <div className="chooser-navigation">
-                <button aria-label="Back" disabled={!tab.index} onClick={() => backForward(-1)}>←</button>
-                <button aria-label="Forward" disabled={tab.index === tab.history.length - 1} onClick={() => backForward(1)}>→</button>
-                <button aria-label="Parent folder" onClick={() => loadDirectory(getDirectoryPath(currentPath))}>↑</button>
-                <form onSubmit={event => { event.preventDefault(); loadDirectory(pathInput); }}><input aria-label="Folder path" ref={pathRef} value={pathInput} onChange={e => setPathInput(e.target.value)} /></form>
-                <button aria-label="Refresh" onClick={() => refresh(n => n + 1)}>↻</button>
-            </div>
-            <div className="chooser-tools">
-                <input ref={searchRef} aria-label="Search this folder" placeholder="Search this folder" value={query} onChange={e => { setQuery(e.target.value); clearSelection(); }} />
-                <select aria-label="View" value={viewMode} onChange={e => setViewMode(e.target.value)}><option value="list">List</option><option value="grid">Grid</option><option value="details">Details</option></select>
-                <label><input type="checkbox" checked={hidden} onChange={e => { setHidden(e.target.checked); clearSelection(); }} />Hidden</label>
-                <button aria-pressed={preview} onClick={() => setPreview(p => !p)}>Preview</button>
-                <button onClick={() => setFolderDialog(true)}>New Folder</button>
-                <button onClick={copyPath}>Copy Path</button>
-                <select aria-label="Theme" value={activeThemeId} onChange={e => setTheme(e.target.value)}><option value="system">System theme</option>{themes.map(theme => <option key={theme.id} value={theme.id}>{theme.name}</option>)}</select>
+        <main className="chooser-shell" aria-label="File chooser" onPointerUpCapture={restoreItemPaneAfterPointer}
+            onBlurCapture={() => requestAnimationFrame(() => { if (document.activeElement === document.body) focusItemPane(); })}>
+            <div className="chooser-navigation" data-tauri-drag-region>
+                <div className="navigation-buttons">
+                    <button className="nav-button" aria-label="Go back" title="Go back (Backspace)" disabled={!navigation.index} onClick={() => backForward(-1)}><span className="icon icon-arrow-left" aria-hidden="true" /></button>
+                    <button className="nav-button" aria-label="Go forward" title="Go forward (Shift+Backspace)" disabled={navigation.index === navigation.history.length - 1} onClick={() => backForward(1)}><span className="icon icon-arrow-right" aria-hidden="true" /></button>
+                </div>
+                <PathBreadcrumb onSearch={setQuery} />
+                <div className="toolbar-drag-region" data-tauri-drag-region aria-hidden="true" />
+                <div className="view-modes" role="group" aria-label="View mode">
+                    {[{ id: 'grid', label: 'Icons view', icon: 'grid' }, { id: 'list', label: 'List view', icon: 'list' }].map(mode => (
+                        <button key={mode.id} type="button" className={`view-mode-button ${viewMode === mode.id ? 'active' : ''}`}
+                            onClick={() => setViewMode(mode.id)} aria-label={mode.label} aria-pressed={viewMode === mode.id} title={mode.label}>
+                            <span className={`icon icon-${mode.icon}`} aria-hidden="true" />
+                        </button>
+                    ))}
+                </div>
+                <button type="button" className="icon-button" aria-label="File chooser settings" title="Settings (Ctrl+,)" onClick={() => setSettingsOpen(true)}>
+                    <span className="icon icon-settings" aria-hidden="true" />
+                </button>
+                <WindowControls onClose={cancel} closeDisabled={busy} />
             </div>
             <div className="chooser-content">
-                <aside className="chooser-sidebar" aria-label="Locations">
-                    <button onClick={() => loadDirectory(request.currentFolder)}>Starting folder</button>
-                    <button onClick={() => loadDirectory('/')}>Filesystem</button>
-                    {favorites.map(path => <button key={path} title={path} onClick={() => loadDirectory(path)}>{path.split('/').filter(Boolean).at(-1) || '/'}</button>)}
-                    <button onClick={toggleFavorite}>{favorites.includes(currentPath) ? 'Remove favorite' : 'Favorite this folder'}</button>
-                    <hr />{volumes.map(volume => <button key={volume.mount_point} title={volume.mount_point} onClick={() => loadDirectory(volume.mount_point)}>{volume.volume_name || volume.mount_point}</button>)}
-                </aside>
-                <div className="chooser-list"><FileList key={activeTab} data={listing} isLoading={isLoading} viewMode={viewMode} isSearching={!!query} searchTerm={query} /></div>
-                <DetailsPanel item={focusedItem || selectedItems[0] || null} isMultipleSelection={selectedItems.length > 1} isCollapsed={!preview} onOpenChange={setPreview} viewMode={viewMode} autoCopy={false} />
+                <ChooserSidebar startingFolder={request.currentFolder} onError={setError} />
+                <div className="chooser-list"><FileList data={listing} isLoading={isLoading} viewMode={viewMode} isSearching={!!query} searchTerm={query} disableArrowKeys={settingsOpen} /></div>
+                <DetailsPanel item={focusedItem?.isParentNavigation ? null : focusedItem || selectedItems[0] || null} isMultipleSelection={selectedItems.length > 1} isCollapsed={!preview} onOpenChange={setPreview} onCollapse={() => setPreview(open => !open)} viewMode={viewMode} autoCopy={false} />
             </div>
             {error && <p className="chooser-error" role="alert">{error}</p>}
             <footer className="chooser-footer">
@@ -196,10 +200,12 @@ function Chooser({ request }) {
                     <button className="chooser-accept" onClick={() => accept()} disabled={!canAccept}>{busy ? 'Checking…' : acceptLabel}</button>
                 </div>
             </footer>
-            {folderDialog && <div className="chooser-overlay"><form role="dialog" aria-modal="true" aria-label="New folder" onSubmit={createFolder}>
-                <label>Folder name<input autoFocus value={folderName} onChange={e => setFolderName(e.target.value)} /></label>
-                <button type="button" onClick={() => setFolderDialog(false)}>Cancel</button><button type="submit" disabled={!folderName.trim()}>Create</button>
-            </form></div>}
+            <Modal isOpen={settingsOpen} onClose={closeSettings} title="File chooser settings" size="sm" className="chooser-settings" onKeyDown={trapSettingsFocus}>
+                <label className="chooser-settings-field"><input type="checkbox" checked={hidden} onChange={event => { setHidden(event.target.checked); clearSelection(); }} />Show hidden files and folders</label>
+                <label className="chooser-settings-field">Theme<select aria-label="File chooser theme" value={activeThemeId} disabled={themeSaving} onChange={event => setTheme(event.target.value)}>
+                    <option value="system">System theme</option>{themes.map(theme => <option key={theme.id} value={theme.id}>{theme.name}</option>)}
+                </select></label>
+            </Modal>
         </main>
         </ContextMenuContext.Provider></HistoryContext.Provider></FileSystemContext.Provider>;
 }

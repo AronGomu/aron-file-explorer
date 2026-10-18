@@ -77,6 +77,12 @@
     box-shadow: inset 0 0 0 1px var(--border-strong);
 }
 
+.root-segment {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .segment-button.current {
     color: var(--text-primary);
     font-weight: var(--font-weight-medium);

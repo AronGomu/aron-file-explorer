@@ -10,7 +10,7 @@ export function focusItemPane() {
 }
 
 export function restoreItemPaneAfterPointer(event) {
-    if (isEditingTarget(event.target) || event.target.closest?.('video, audio, object, iframe')) return;
+    if (isEditingTarget(event.target) || event.target.closest?.('video, audio, object, iframe, [role="separator"]')) return;
     requestAnimationFrame(() => {
         if (!isEditingTarget(document.activeElement)) focusItemPane();
     });
