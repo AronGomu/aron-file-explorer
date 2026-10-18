@@ -160,7 +160,8 @@ function Chooser({ request }) {
     };
 
     return <FileSystemContext.Provider value={context}><HistoryContext.Provider value={{ currentPath, navigateTo: loadDirectory, getDirectoryViewState, saveDirectoryViewState }}>
-        <ContextMenuContext.Provider value={{ openContextMenu: event => event.preventDefault(), clipboard: { items: [], operation: null } }}>
+        <ContextMenuContext.Provider value={{ openContextMenu: event => event.preventDefault(), clipboard: { items: [], operation: null },
+            draggedItems: [], beginItemDrag: event => event.preventDefault(), endItemDrag: () => {} }}>
         <main className="chooser-shell" aria-label="File chooser" onPointerUpCapture={restoreItemPaneAfterPointer}
             onBlurCapture={() => requestAnimationFrame(() => { if (document.activeElement === document.body) focusItemPane(); })}>
             <div className="chooser-navigation" data-tauri-drag-region>
