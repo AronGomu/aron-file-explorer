@@ -1,7 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useId } from 'react';
+import { createPortal } from 'react-dom';
+import { invoke } from '@tauri-apps/api/core';
 import { useHistory } from '../../providers/HistoryProvider';
 import { useFileSystem } from '../../providers/FileSystemProvider';
 import { useSftp } from '../../providers/SftpProvider';
+import { useSettings } from '../../providers/SettingsProvider';
 import './pathBreadcrumb.css';
 import { focusItemPane } from '../../utils/explorerFocus';
 import useFileDropTarget from '../../hooks/useFileDropTarget';
@@ -15,10 +18,12 @@ import useFileDropTarget from '../../hooks/useFileDropTarget';
  * @param {boolean} [props.isVisible=true] - Whether the breadcrumb is visible
  * @returns {React.ReactElement} PathBreadcrumb component
  */
-const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
+const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch, showHidden, directoriesOnly = false }) => {
     const dropTargetProps = useFileDropTarget();
     const { currentPath, navigateTo } = useHistory();
-    const { loadDirectory, currentDirData } = useFileSystem();
+    const { loadDirectory, currentDirData, openFile } = useFileSystem();
+    const { settings } = useSettings();
+    const showHiddenPaths = showHidden ?? settings.show_hidden_files_and_folders;
     const { isSftpPath, parseSftpPath, createSftpUrl, createSftpPath, sftpConnections } = useSftp();
     const [isEditing, setIsEditing] = useState(false);
     const [editValue, setEditValue] = useState('');
@@ -26,6 +31,79 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const inputRef = useRef(null);
     const searchInputRef = useRef(null);
+    const listRef = useRef(null);
+    const listId = useId();
+    const [completion, setCompletion] = useState({ input: null, entries: [], resolvedPath: '', error: '' });
+    const [activeSuggestion, setActiveSuggestion] = useState(0);
+    const [popupBounds, setPopupBounds] = useState(null);
+    const [recentPaths, setRecentPaths] = useState(() => {
+        try {
+            const saved = JSON.parse(localStorage.getItem('pathBarRecentFolders') || '[]');
+            return Array.isArray(saved) ? saved.filter(path => typeof path === 'string').slice(0, 30) : [];
+        } catch { return []; }
+    });
+    const suggestions = completion.input === editValue ? completion.entries : [];
+
+    useEffect(() => {
+        if (!currentPath || currentDirData?.directory !== currentPath || isSftpPath(currentPath)) return;
+        setRecentPaths(previous => {
+            const next = [currentPath, ...previous.filter(path => path !== currentPath)].slice(0, 30);
+            try { localStorage.setItem('pathBarRecentFolders', JSON.stringify(next)); } catch { /* Storage may be unavailable. */ }
+            return next;
+        });
+    }, [currentPath, currentDirData?.directory, isSftpPath]);
+
+    useEffect(() => {
+        if (!isEditing || !isVisible) return;
+        let cancelled = false;
+        setActiveSuggestion(0);
+        const timer = setTimeout(async () => {
+            try {
+                // Remote paths retain their existing navigation; never send them to the local filesystem.
+                if (isSftpPath(editValue)) {
+                    if (!cancelled) setCompletion({ input: editValue, entries: [], resolvedPath: editValue, error: '' });
+                    return;
+                }
+                const result = await invoke('complete_path', { input: editValue, currentPath, showHidden: showHiddenPaths, directoriesOnly });
+                if (cancelled) return;
+                const query = editValue.toLowerCase();
+                const recent = !/[\\/]/.test(editValue) ? recentPaths.filter(path =>
+                    (showHiddenPaths || !path.split(/[\\/]/).some(part => part.startsWith('.'))) &&
+                    (!query || path.split(/[\\/]/).at(-1).toLowerCase().includes(query))
+                ).map(path => ({
+                    path, name: path.split(/[\\/]/).filter(Boolean).at(-1) || path, isDirectory: true, recent: true,
+                })) : [];
+                const seen = new Set();
+                const entries = [...recent, ...result.entries].filter(entry => {
+                    if (seen.has(entry.path)) return false;
+                    seen.add(entry.path); return true;
+                });
+                setCompletion({ input: editValue, entries, resolvedPath: result.resolvedPath, error: '' });
+            } catch {
+                if (!cancelled) setCompletion({ input: editValue, entries: [], resolvedPath: '', error: 'Folder unavailable. Check the path or permissions.' });
+            }
+        }, 70);
+        return () => { cancelled = true; clearTimeout(timer); };
+    }, [isEditing, isVisible, editValue, currentPath, showHiddenPaths, directoriesOnly, recentPaths, isSftpPath]);
+
+    useLayoutEffect(() => {
+        if (!isEditing || !isVisible) return;
+        const position = () => {
+            const rect = inputRef.current?.closest('.path-breadcrumb')?.getBoundingClientRect();
+            if (rect) setPopupBounds({ left: rect.left, top: rect.bottom + 4, width: rect.width,
+                maxHeight: Math.max(80, Math.min(360, window.innerHeight - rect.bottom - 12)) });
+        };
+        position();
+        window.addEventListener('resize', position);
+        window.addEventListener('scroll', position, true);
+        const observer = new ResizeObserver(position);
+        observer.observe(inputRef.current.closest('.path-breadcrumb'));
+        return () => { window.removeEventListener('resize', position); window.removeEventListener('scroll', position, true); observer.disconnect(); };
+    }, [isEditing, isVisible]);
+
+    useEffect(() => {
+        listRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
+    }, [activeSuggestion, completion]);
 
     useEffect(() => {
         if (!isVisible) return;
@@ -35,11 +113,8 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
             if (primary && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'l') {
                 event.preventDefault(); handleClick();
             } else if (primary && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'f') {
-                event.preventDefault(); setIsSearchVisible(true);
+                event.preventDefault(); setIsEditing(false); setIsSearchVisible(true);
                 requestAnimationFrame(() => searchInputRef.current?.focus());
-            } else if (primary && event.shiftKey && !event.altKey && event.key.toLowerCase() === 'c' &&
-                !event.target.closest?.('input, textarea, select, [contenteditable="true"]')) {
-                event.preventDefault(); onCopyPath?.();
             }
         };
         document.addEventListener('keydown', shortcuts);
@@ -200,22 +275,49 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
      * @param {React.KeyboardEvent} e - Keyboard event
      */
     const handleKeyDown = (e) => {
-        if (e.key === 'Enter') {
+        if (e.nativeEvent.isComposing) return;
+        if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && suggestions.length) {
+            e.preventDefault(); e.stopPropagation();
+            setActiveSuggestion(index => (index + (e.key === 'ArrowDown' ? 1 : -1) + suggestions.length) % suggestions.length);
+        } else if (e.key === 'Tab' && !e.shiftKey && suggestions.length) {
+            e.preventDefault(); e.stopPropagation();
+            const entry = suggestions[activeSuggestion];
+            const separator = entry.path.includes('\\') ? '\\' : '/';
+            setEditValue(entry.path + (entry.isDirectory && !entry.path.endsWith(separator) ? separator : ''));
+            setActiveSuggestion(0);
+        } else if (e.key === 'Enter') {
             e.preventDefault();
-            setIsEditing(false);
-            requestAnimationFrame(focusItemPane);
-
-            if (editValue && editValue !== currentPath) {
-                // Convert standard SFTP URL to internal format if needed
-                const internalPath = convertToInternalPath(editValue);
-                loadDirectory(internalPath);
-            }
+            e.stopPropagation();
+            openSuggestion(suggestions[activeSuggestion]);
         } else if (e.key === 'Escape') {
             e.preventDefault();
+            e.stopPropagation();
             setIsEditing(false);
             setEditValue(currentPath || '');
             requestAnimationFrame(focusItemPane);
         }
+    };
+
+    const openSuggestion = async entry => {
+        let path = entry?.path;
+        if (!path && editValue) {
+            path = convertToInternalPath(editValue);
+            if (!isSftpPath(path)) {
+                try {
+                    const result = completion.input === editValue && completion.resolvedPath ? completion :
+                        await invoke('complete_path', { input: editValue, currentPath, showHidden: showHiddenPaths, directoriesOnly });
+                    path = result.resolvedPath;
+                } catch {
+                    setCompletion({ input: editValue, entries: [], resolvedPath: '', error: 'Folder unavailable. Check the path or permissions.' });
+                    return;
+                }
+            }
+        }
+        if (!path || !inputRef.current || inputRef.current.value !== editValue || document.activeElement !== inputRef.current) return;
+        setIsEditing(false);
+        if (entry && !entry.isDirectory) openFile(path);
+        else if (path !== currentPath) loadDirectory(path);
+        requestAnimationFrame(focusItemPane);
     };
 
     /**
@@ -302,7 +404,7 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
         if (!isEditing) return;
         const dismissOnOutsidePointerDown = (event) => {
             const input = inputRef.current;
-            if (!input || event.target.closest?.('.path-breadcrumb')) return;
+            if (!input || event.target.closest?.('.path-breadcrumb, .path-completions')) return;
             input.setSelectionRange(input.selectionEnd, input.selectionEnd);
             input.blur();
         };
@@ -361,6 +463,13 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
                         onKeyDown={handleKeyDown}
                         onBlur={() => setIsEditing(false)}
                         aria-label="Path input"
+                        role="combobox"
+                        aria-autocomplete="list"
+                        aria-expanded={Boolean(popupBounds)}
+                        aria-controls={listId}
+                        aria-activedescendant={suggestions.length ? `${listId}-${activeSuggestion}` : undefined}
+                        autoComplete="off"
+                        spellCheck={false}
                     />
                 ) : (
                     <div className="breadcrumb-segments">
@@ -402,8 +511,7 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
                                     e.stopPropagation();
                                     onCopyPath();
                                 }}
-                                title="Copy current path (Ctrl+Shift+C)"
-                                aria-keyshortcuts="Control+Shift+c Meta+Shift+c"
+                                title="Copy current path"
                                 aria-label="Copy current path"
                             >
                                 <span className="icon icon-copy"></span>
@@ -429,6 +537,34 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
                     </button>
                 </div>
             </div>
+            {isEditing && popupBounds && createPortal(
+                <div className="path-completions" style={popupBounds}
+                    onPointerDown={event => { if (event.target.closest('.path-completion-option')) event.preventDefault(); }}>
+                    <div className="path-completions-list" id={listId} role="listbox" aria-label="Path suggestions" ref={listRef}>
+                        {suggestions.map((entry, index) => (
+                            <div key={entry.path} id={`${listId}-${index}`} role="option"
+                                aria-selected={index === activeSuggestion}
+                                className="path-completion-option"
+                                onPointerMove={() => setActiveSuggestion(index)}
+                                onClick={() => openSuggestion(entry)}>
+                                <span className={`icon ${entry.isDirectory ? 'icon-folder' : 'icon-file'}`} aria-hidden="true" />
+                                <span className="path-completion-name">{entry.name}</span>
+                                <span className="path-completion-parent">{entry.path}</span>
+                                {entry.recent && <span className="path-completion-tag">Recent</span>}
+                            </div>
+                        ))}
+                    </div>
+                    {!suggestions.length && <div className="path-completion-status" role="status">
+                        {completion.input !== editValue ? 'Finding paths…' : completion.error || 'No matching paths'}
+                    </div>}
+                    <div className="path-completion-help">
+                        <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+                        <span><kbd>Enter</kbd> open</span>
+                        <span><kbd>Tab</kbd> expand</span>
+                        <span><kbd>Esc</kbd> dismiss</span>
+                    </div>
+                </div>, document.body
+            )}
         </div>
     );
 };

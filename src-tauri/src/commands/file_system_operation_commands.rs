@@ -267,8 +267,16 @@ pub async fn open_directory(path: String) -> Result<String, String> {
 ///     Err(err) => println!("Error creating file: {}", err),
 /// }
 /// ```
+fn validate_item_name(name: &str) -> Result<(), String> {
+    if name.trim().is_empty() || matches!(name, "." | "..") || name.contains(['/', '\\', '\0']) {
+        return Err(Error::new(ErrorCode::InvalidInput, "Enter a single file or folder name".into()).to_json());
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn create_file(folder_path_abs: &str, file_name: &str) -> Result<(), String> {
+    validate_item_name(file_name)?;
     // Check if the folder path exists and is valid
     let path = Path::new(folder_path_abs);
     if !path.exists() {
@@ -293,7 +301,7 @@ pub async fn create_file(folder_path_abs: &str, file_name: &str) -> Result<(), S
     let file_path = path.join(file_name);
 
     // Create the file
-    match fs::File::create(&file_path) {
+    match fs::OpenOptions::new().write(true).create_new(true).open(&file_path) {
         Ok(_) => Ok(()),
         Err(err) => {
             log_error!(
@@ -301,7 +309,7 @@ pub async fn create_file(folder_path_abs: &str, file_name: &str) -> Result<(), S
                 folder_path_abs, err
             );
             Err(Error::new(
-                ErrorCode::InternalError,
+                if err.kind() == std::io::ErrorKind::AlreadyExists { ErrorCode::ResourceAlreadyExists } else { ErrorCode::InternalError },
                 format!(
                     "File could not be created: {} error: {}",
                     folder_path_abs, err
@@ -332,6 +340,7 @@ pub async fn create_file(folder_path_abs: &str, file_name: &str) -> Result<(), S
 /// ```
 #[tauri::command]
 pub async fn create_directory(folder_path_abs: &str, folder_name: &str) -> Result<(), String> {
+    validate_item_name(folder_name)?;
     // Check if the folder path exists and is valid
     let parent_path = Path::new(folder_path_abs);
     if !parent_path.exists() {
@@ -540,6 +549,15 @@ pub async fn copy_file_or_dir(source_path: &str, destination_path: &str) -> Resu
             format!("Source path does not exist: {}", source_path),
         )
         .to_json());
+    }
+
+    let source = Path::new(source_path).canonicalize().map_err(|error| error.to_string())?;
+    if source.is_dir() {
+        let parent = Path::new(destination_path).parent().ok_or("Missing destination folder")?
+            .canonicalize().map_err(|error| error.to_string())?;
+        if parent.starts_with(&source) {
+            return Err(Error::new(ErrorCode::InvalidInput, "A folder cannot be copied into itself or its subfolders".into()).to_json());
+        }
     }
 
     // Generate a unique destination path if the original already exists
@@ -2287,5 +2305,38 @@ mod tests_file_system_operation_commands {
             result.unwrap_err().contains("ResourceNotFound"),
             "Error message does not match expected value"
         );
+    }
+}
+
+#[cfg(test)]
+mod basic_file_actions_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn creation_never_truncates_existing_files_or_accepts_parent_paths() {
+        let temporary = tempfile::tempdir().unwrap();
+        let root = temporary.path().to_str().unwrap();
+        fs::write(temporary.path().join("keep.txt"), "preserve me").unwrap();
+        assert!(create_file(root, "keep.txt").await.is_err());
+        assert_eq!(fs::read_to_string(temporary.path().join("keep.txt")).unwrap(), "preserve me");
+        for name in ["", ".", "..", "../escape", "/absolute", "bad\\name"] {
+            assert!(create_file(root, name).await.is_err());
+            assert!(create_directory(root, name).await.is_err());
+        }
+        create_file(root, "new.txt").await.unwrap();
+        create_directory(root, "new folder").await.unwrap();
+        assert!(temporary.path().join("new.txt").is_file());
+        assert!(temporary.path().join("new folder").is_dir());
+    }
+
+    #[tokio::test]
+    async fn folder_copy_rejects_its_own_descendants_and_keeps_sources() {
+        let temporary = tempfile::tempdir().unwrap();
+        let source = temporary.path().join("source");
+        fs::create_dir(&source).unwrap();
+        fs::write(source.join("keep.txt"), "preserve me").unwrap();
+        assert!(copy_file_or_dir(source.to_str().unwrap(), source.join("copy").to_str().unwrap()).await.is_err());
+        assert!(!source.join("copy").exists());
+        assert_eq!(fs::read_to_string(source.join("keep.txt")).unwrap(), "preserve me");
     }
 }

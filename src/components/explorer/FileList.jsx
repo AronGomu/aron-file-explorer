@@ -349,9 +349,11 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
     // Calculate columns on mount and resize
     useEffect(() => {
         calculateColumnsPerRow();
+        let resizeTimer;
         
         const handleResize = () => {
-            setTimeout(calculateColumnsPerRow, 100);
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(calculateColumnsPerRow, 100);
         };
         
         window.addEventListener('resize', handleResize);
@@ -360,12 +362,14 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
         let resizeObserver;
         if (containerRef.current && window.ResizeObserver) {
             resizeObserver = new ResizeObserver(() => {
-                setTimeout(calculateColumnsPerRow, 50);
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(calculateColumnsPerRow, 50);
             });
             resizeObserver.observe(containerRef.current);
         }
         
         return () => {
+            clearTimeout(resizeTimer);
             window.removeEventListener('resize', handleResize);
             if (resizeObserver) {
                 resizeObserver.disconnect();
@@ -375,7 +379,8 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
 
     // Also recalculate when view mode changes or data changes
     useEffect(() => {
-        setTimeout(calculateColumnsPerRow, 100);
+        const timer = setTimeout(calculateColumnsPerRow, 100);
+        return () => clearTimeout(timer);
     }, [viewMode, data, viewZoom, calculateColumnsPerRow]);
 
     /**
@@ -556,18 +561,28 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
             setLastSelectedIndex(-1);
         };
 
+        const handleSelectAll = () => {
+            if (isLoading || disableArrowKeys) return;
+            const items = sortedItems.filter(item => !item.isParentNavigation);
+            selectMultiple(items);
+            setFocusedItem(items[0] || null);
+            setLastSelectedIndex(items.length ? sortedItems.indexOf(items[0]) : -1);
+        };
+
         // Use passive listeners where possible to improve scroll performance
         // Note: keydown cannot be passive because we need preventDefault for arrow keys
         window.addEventListener('keydown', handleKeyDown, { passive: false });
         window.addEventListener('mousedown', preventDefaultContextMenu, { passive: false });
         document.addEventListener('select-item', handleSelectItem);
         document.addEventListener('clear-selection', handleClearSelection);
+        document.addEventListener('select-all-items', handleSelectAll);
 
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('mousedown', preventDefaultContextMenu);
             document.removeEventListener('select-item', handleSelectItem);
             document.removeEventListener('clear-selection', handleClearSelection);
+            document.removeEventListener('select-all-items', handleSelectAll);
         };
     }, [selectItem, selectMultiple, clearSelection, lastSelectedIndex, sortedItems, focusedItem, setFocusedItem, loadDirectory, openFile, viewMode, showError, disableArrowKeys, columnsPerRow, isLoading, data, currentPath, scrollItemIntoView]);
 

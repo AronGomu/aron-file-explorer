@@ -2,7 +2,7 @@ import React from 'react';
 import { formatFileSize, formatDate, getFileType } from '../../utils/formatters';
 import { getDirectoryPath } from '../../utils/pathUtils';
 
-const FileDetails = ({ item }) => {
+const FileDetails = ({ item, duration = null }) => {
     const isDirectory = item.isDirectory || 'sub_file_count' in item;
     const fileType = isDirectory ? 'Folder' : getFileType(item.name);
     const size = Number.isFinite(item.size_in_bytes) ? formatFileSize(item.size_in_bytes) : 'Unknown';
@@ -31,6 +31,10 @@ const FileDetails = ({ item }) => {
                 <span className="details-label">Type:</span>
                 <span className="details-value">{fileType}</span>
             </div>
+            {duration !== null && <div className="details-row">
+                <span className="details-label">Duration:</span>
+                <span className="details-value">{duration}</span>
+            </div>}
         </div>
         <div className="details-section">
             <h4 className="details-section-title">Dates</h4>

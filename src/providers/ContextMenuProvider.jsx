@@ -3,7 +3,8 @@ import { deleteSelection } from '../utils/fileDeletion';
 import { canMoveSelection, dragSelection, FILE_DRAG_TYPE } from '../utils/fileDrag';
 import { focusItemPane } from '../utils/explorerFocus';
 import { invoke } from '@tauri-apps/api/core';
-import { writeText } from '@tauri-apps/plugin-clipboard-manager';
+import { readText, writeText } from '@tauri-apps/plugin-clipboard-manager';
+import { encodeFileClipboard, decodeFileClipboard } from '../utils/fileClipboard';
 import { useFileSystem } from './FileSystemProvider';
 import { useHistory } from './HistoryProvider';
 import { useSftp } from './SftpProvider';
@@ -24,7 +25,7 @@ export const ContextMenuContext = createContext({
     dropItems: () => {},
 });
 
-export default function ContextMenuProvider({ children }) {
+export default function ContextMenuProvider({ children, basicOnly = false }) {
     const [isOpen, setIsOpen] = useState(false);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [target, setTarget] = useState(null);
@@ -35,9 +36,11 @@ export default function ContextMenuProvider({ children }) {
     const draggedSelection = useRef([]);
     const dropValidity = useRef(new Map());
     const moveBusy = useRef(false);
+    const pasteBusy = useRef(false);
+    const clipboardWrite = useRef(Promise.resolve());
 
     const deletionBusy = useRef(false);
-    const { selectedItems, isLoading, loadDirectory, clearSelection, removeDeletedItems, currentDirData, setFocusedItem } = useFileSystem();
+    const { selectedItems, isLoading, loadDirectory, clearSelection, removeDeletedItems, currentDirData, setFocusedItem, selectMultiple, openFile } = useFileSystem();
     const { currentPath } = useHistory();
     const { isSftpPath, parseSftpPath, copySftpItem, moveSftpItem, downloadAndOpenSftpFile, deleteSftpItem } = useSftp();
     const activePath = useRef(currentPath);
@@ -51,7 +54,7 @@ export default function ContextMenuProvider({ children }) {
     }, []);
 
     const beginItemDrag = useCallback((event, item) => {
-        if (isProcessing || isLoading || moveBusy.current) { event.preventDefault(); return; }
+        if (item.isParentNavigation || isProcessing || isLoading || moveBusy.current) { event.preventDefault(); return; }
         const items = dragSelection(item, selectedItems);
         if (!selectedItems.some(selected => selected.path === item.path)) {
             document.dispatchEvent(new CustomEvent('select-item', { detail: { item } }));
@@ -188,24 +191,28 @@ export default function ContextMenuProvider({ children }) {
     }, []);
 
     // Copy path to clipboard
-    const copyPath = useCallback(async (item) => {
+    const copyPath = useCallback(async (items) => {
+        const targets = items.filter(item => !item.isParentNavigation);
+        if (!targets.length) return;
         try {
-            let pathToCopy = item.path;
-            
-            // Convert SFTP paths to standard format
-            if (isSftpPath(item.path)) {
-                const parsed = parseSftpPath(item.path);
-                if (parsed && parsed.connection) {
-                    const remotePath = parsed.remotePath || '/';
-                    // Ensure path starts with forward slash
-                    const formattedPath = remotePath.startsWith('/') ? remotePath : `/${remotePath}`;
-                    pathToCopy = `sftp://${parsed.connection.username}@${parsed.connection.host}:${parsed.connection.port}${formattedPath}`;
+            const paths = targets.map(item => {
+                let pathToCopy = item.path;
+
+                // Convert SFTP paths to standard format
+                if (isSftpPath(item.path)) {
+                    const parsed = parseSftpPath(item.path);
+                    if (parsed && parsed.connection) {
+                        const remotePath = parsed.remotePath || '/';
+                        // Ensure path starts with forward slash
+                        const formattedPath = remotePath.startsWith('/') ? remotePath : `/${remotePath}`;
+                        pathToCopy = `sftp://${parsed.connection.username}@${parsed.connection.host}:${parsed.connection.port}${formattedPath}`;
+                    }
                 }
-            }
-            
-            if (pathToCopy.includes(' ')) pathToCopy = `"${pathToCopy}"`;
+                return JSON.stringify(pathToCopy);
+            });
+            const pathToCopy = paths.join(' ');
             await writeText(pathToCopy);
-            showSuccess(`Path copied to clipboard: ${pathToCopy}`);
+            showSuccess(`Copied ${paths.length} path(s) to clipboard.`);
         } catch (error) {
             console.error('Failed to copy path:', error);
             showError('Failed to copy path to clipboard.');
@@ -217,16 +224,12 @@ export default function ContextMenuProvider({ children }) {
             if (event.defaultPrevented || event.isComposing || document.querySelector('[role="dialog"], .modal-overlay, .interface-keytips') ||
                 event.target.isContentEditable ||
                 event.target.closest?.('input, textarea, select')) return;
-            if ((event.ctrlKey || event.metaKey) && event.altKey && !event.shiftKey &&
+            if ((event.ctrlKey || event.metaKey) && ((event.shiftKey && !event.altKey) || (event.altKey && !event.shiftKey)) &&
                 (event.code === 'KeyC' || event.key.toLowerCase() === 'c')) {
                 event.preventDefault();
                 event.stopPropagation();
                 if (event.repeat || isProcessing) return;
-                if (selectedItems.length !== 1) {
-                    showError('Select one file or folder to copy its path.');
-                    return;
-                }
-                copyPath(selectedItems[0]);
+                copyPath(selectedItems);
             }
         };
 
@@ -279,26 +282,40 @@ export default function ContextMenuProvider({ children }) {
 
     // Copy items to clipboard
     const copyToClipboard = useCallback(async (items) => {
+        items = items.filter(item => !item.isParentNavigation);
+        if (!items.length) return;
         setClipboard({ items, operation: 'copy' });
-        // Copy paths to system clipboard as well
-        const paths = items.map(item => item.path).join('\n');
-        try {
-            await navigator.clipboard.writeText(paths);
-        } catch (err) {
-            console.warn('Failed to copy to system clipboard:', err);
-        }
+        clipboardWrite.current = writeText(encodeFileClipboard(items, 'copy')).catch(error => console.warn('Could not write file clipboard:', error));
+        await clipboardWrite.current;
     }, []);
 
     // Cut items to clipboard
     const cutToClipboard = useCallback(async (items) => {
+        items = items.filter(item => !item.isParentNavigation);
+        if (!items.length) return;
         setClipboard({ items, operation: 'cut' });
-        const paths = items.map(item => item.path).join('\n');
-        try {
-            await navigator.clipboard.writeText(paths);
-        } catch (err) {
-            console.warn('Failed to copy to system clipboard:', err);
-        }
+        clipboardWrite.current = writeText(encodeFileClipboard(items, 'cut')).catch(error => console.warn('Could not write file clipboard:', error));
+        await clipboardWrite.current;
     }, []);
+
+    const readFileClipboard = useCallback(async () => {
+        await clipboardWrite.current;
+        try {
+            const text = await readText();
+            const value = decodeFileClipboard(text);
+            if (value) { setClipboard(value); return value; }
+            if (clipboard.items.length && clipboard.items.every(item => !item.path.startsWith('/')) &&
+                text === clipboard.items.map(item => item.path).join('\n')) return clipboard;
+            const empty = { items: [], operation: null };
+            setClipboard(empty); return empty;
+        } catch { return clipboard; }
+    }, [clipboard]);
+
+    useEffect(() => {
+        const update = () => { readFileClipboard(); };
+        window.addEventListener('focus', update);
+        return () => window.removeEventListener('focus', update);
+    }, [readFileClipboard]);
 
     // Helper function to generate unique destination path
     const generateUniqueDestPath = useCallback(async (basePath, fileName) => {
@@ -343,26 +360,37 @@ export default function ContextMenuProvider({ children }) {
     }, [currentDirData]);
 
     // Paste items from clipboard - enhanced with SFTP support
-    const pasteFromClipboard = useCallback(async () => {
-        if (!clipboard.items.length || !currentPath) return;
-
+    const pasteFromClipboard = useCallback(async (destination = currentPath) => {
+        if (!destination || pasteBusy.current || isProcessing || isLoading) return;
+        pasteBusy.current = true;
         setIsProcessing(true);
         try {
+            const clipboard = await readFileClipboard();
+            if (!clipboard.items.length) return;
+            if (clipboard.operation === 'cut' && !isSftpPath(destination) && clipboard.items.every(item => !isSftpPath(item.path))) {
+                const result = await invoke('move_items', { paths: clipboard.items.map(item => item.path), destination });
+                removeDeletedItems(result.moved);
+                for (const [path, error] of result.failed) showError(`Could not move “${path}”: ${error}`);
+                const remaining = clipboard.items.filter(item => !result.moved.includes(item.path));
+                setClipboard({ items: remaining, operation: remaining.length ? 'cut' : null });
+                await writeText(remaining.length ? encodeFileClipboard(remaining, 'cut') : '');
+                return;
+            }
             for (const item of clipboard.items) {
                 const fileName = item.name;
                 const sourcePath = item.path;
 
                 // Check if source and/or destination are SFTP paths
                 const sourceIsSftp = isSftpPath(sourcePath);
-                const destIsSftp = isSftpPath(currentPath);
+                const destIsSftp = isSftpPath(destination);
 
                 if (clipboard.operation === 'cut') {
                     // For move operations, use original filename (no duplicates)
-                    const destPath = `${currentPath}/${fileName}`;
+                    const destPath = `${destination.replace(/\/$/, '')}/${fileName}`;
                     
                     // Check if we're trying to paste in the same directory
                     const sourceDir = sourcePath.substring(0, sourcePath.lastIndexOf('/')) || '/';
-                    const destDir = currentPath;
+                    const destDir = destination;
                     
                     if (sourceDir === destDir) {
                         continue;
@@ -386,7 +414,7 @@ export default function ContextMenuProvider({ children }) {
                     }
                 } else {
                     // Copy operation - generate unique destination path to allow duplicates
-                    const destPath = await generateUniqueDestPath(currentPath, fileName);
+                    const destPath = sourceIsSftp || destIsSftp ? await generateUniqueDestPath(destination, fileName) : `${destination.replace(/\/$/, '')}/${fileName}`;
                     
                     if (sourceIsSftp || destIsSftp) {
                         if (sourceIsSftp && destIsSftp) {
@@ -413,17 +441,21 @@ export default function ContextMenuProvider({ children }) {
             // Clear clipboard if it was a cut operation
             if (clipboard.operation === 'cut') {
                 setClipboard({ items: [], operation: null });
+                await writeText('');
             }
 
-            // Reload directory
-            await loadDirectory(currentPath);
         } catch (error) {
             console.error('Paste operation failed:', error);
             showError(`Failed to paste: ${error.message || error}`);
         } finally {
-            setIsProcessing(false);
+            try {
+                if (activePath.current) await loadDirectory(activePath.current);
+            } finally {
+                pasteBusy.current = false;
+                setIsProcessing(false);
+            }
         }
-    }, [clipboard, currentPath, loadDirectory, isSftpPath, copySftpItem, moveSftpItem, generateUniqueDestPath]);
+    }, [currentPath, loadDirectory, isSftpPath, copySftpItem, moveSftpItem, generateUniqueDestPath, readFileClipboard, isLoading, isProcessing, removeDeletedItems]);
 
     const refreshAfterDeletion = useCallback(async (paths) => {
         if (!paths.length) return;
@@ -432,6 +464,7 @@ export default function ContextMenuProvider({ children }) {
     }, [loadDirectory, removeDeletedItems]);
 
     const deleteItems = useCallback(async (items) => {
+        items = items.filter(item => !item.isParentNavigation);
         if (!items.length || deletionBusy.current || isProcessing || isLoading) return;
         deletionBusy.current = true;
         setIsProcessing(true);
@@ -468,8 +501,8 @@ export default function ContextMenuProvider({ children }) {
     useEffect(() => {
         const handleDeletionShortcut = (event) => {
             if (event.defaultPrevented || event.isComposing || event.repeat || event.altKey ||
-                event.target.isContentEditable || event.target.closest?.('input, textarea, select, button, [role="textbox"], #explorer-preview-panel') ||
-                document.querySelector('[role="dialog"], .modal-overlay')) return;
+                event.target.isContentEditable || event.target.closest?.('input, textarea, select, button, [role="button"], [role="textbox"], [role="separator"], #explorer-preview-panel') ||
+                document.querySelector('[role="dialog"], .modal-overlay, .context-menu')) return;
             if (event.key === 'Delete' && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
                 if (!selectedItems.length) return;
                 event.preventDefault();
@@ -482,6 +515,29 @@ export default function ContextMenuProvider({ children }) {
         window.addEventListener('keydown', handleDeletionShortcut);
         return () => window.removeEventListener('keydown', handleDeletionShortcut);
     }, [deleteItems, undoDeletion, selectedItems]);
+
+    useEffect(() => {
+        const handleFileShortcut = event => {
+            if (event.defaultPrevented || event.isComposing || event.repeat || event.altKey || isProcessing || isLoading ||
+                event.target.isContentEditable || event.target.closest?.('input, textarea, select, button, [role="button"], [role="textbox"], [role="separator"], #explorer-preview-panel') ||
+                document.querySelector('[role="dialog"], .modal-overlay, .context-menu')) return;
+            const primary = event.ctrlKey || event.metaKey;
+            const key = event.key.toLowerCase();
+            if (primary && !event.shiftKey && ['c', 'x', 'v', 'a'].includes(key)) {
+                event.preventDefault();
+                if (key === 'c') copyToClipboard(selectedItems);
+                else if (key === 'x') cutToClipboard(selectedItems);
+                else if (key === 'v') pasteFromClipboard();
+                else document.dispatchEvent(new CustomEvent('select-all-items'));
+            } else if (!primary && !event.shiftKey && event.key === 'F2' && selectedItems.length === 1) {
+                event.preventDefault(); document.dispatchEvent(new CustomEvent('open-rename-modal', { detail: { item: selectedItems[0] } }));
+            } else if (primary && key === 'n') {
+                event.preventDefault(); document.dispatchEvent(new CustomEvent(event.shiftKey ? 'create-folder' : 'create-file'));
+            }
+        };
+        window.addEventListener('keydown', handleFileShortcut);
+        return () => window.removeEventListener('keydown', handleFileShortcut);
+    }, [basicOnly, selectedItems, currentDirData, selectMultiple, copyToClipboard, cutToClipboard, pasteFromClipboard, isProcessing, isLoading]);
 
     // Rename item - dispatch event to open rename modal
     const renameItem = useCallback((item) => {
@@ -888,6 +944,7 @@ export default function ContextMenuProvider({ children }) {
 
     // Generate menu items
     const getMenuItemsForContext = useCallback((contextTarget) => {
+        if (contextTarget?.isParentNavigation) return [];
         const isDirectory = contextTarget && (contextTarget.isDirectory || ('sub_file_count' in contextTarget));
         const isFile = contextTarget && !isDirectory;
         const hasClipboard = clipboard.items.length > 0;
@@ -938,7 +995,7 @@ export default function ContextMenuProvider({ children }) {
         }
 
         // File/folder context menu
-        const targetItems = selectedItems.length > 1 ? selectedItems : [contextTarget];
+        const targetItems = selectedItems.some(item => item.path === contextTarget.path) ? selectedItems.filter(item => !item.isParentNavigation) : [contextTarget];
         const itemIsInFavorites = isInFavorites(contextTarget);
 
         const menuItems = [
@@ -951,6 +1008,8 @@ export default function ContextMenuProvider({ children }) {
                     if (isDirectory) {
                         await loadDirectory(contextTarget.path);
                         updateNavigationHistory(contextTarget.path);
+                    } else if (basicOnly) {
+                        openFile(contextTarget.path);
                     } else {
                         try {
                             // Handle SFTP files differently - download and open locally
@@ -986,16 +1045,16 @@ export default function ContextMenuProvider({ children }) {
                 id: 'paste',
                 label: 'Paste',
                 icon: 'paste',
-                disabled: !hasClipboard || !isDirectory || isProcessing,
-                action: pasteFromClipboard
+                disabled: !hasClipboard || isProcessing,
+                action: () => pasteFromClipboard(isDirectory ? contextTarget.path : currentPath)
             },
             { type: 'separator' },
             {
                 id: 'copy-path',
                 label: 'Copy Path',
                 icon: 'copy',
-                disabled: selectedItems.length > 1 || isProcessing,
-                action: () => copyPath(contextTarget)
+                disabled: isProcessing,
+                action: () => copyPath(targetItems)
             },
             { type: 'separator' },
             {
@@ -1013,6 +1072,9 @@ export default function ContextMenuProvider({ children }) {
                 action: () => deleteItems(targetItems)
             }
         ];
+
+        if (basicOnly) return [...menuItems, { type: 'separator' },
+            { id: 'properties', label: 'Properties', icon: 'properties', action: () => showProperties(contextTarget) }];
 
         // Add "Add as Template" for files only
         if (isFile && selectedItems.length === 1) {
@@ -1131,11 +1193,17 @@ export default function ContextMenuProvider({ children }) {
         );
 
         return menuItems;
-    }, [selectedItems, clipboard, isProcessing, currentPath, copyToClipboard, cutToClipboard, pasteFromClipboard, deleteItems, renameItem, loadDirectory, showProperties, addToFavorites, removeFromFavorites, updateNavigationHistory, zipItems, unzipItem, isInFavorites, getCurrentFolderMetadata, generateHash, generateHashToFile, compareHash, copyPath, addAsTemplate, isSftpPath, downloadAndOpenSftpFile, parseSftpPath]);
+    }, [selectedItems, clipboard, isProcessing, currentPath, copyToClipboard, cutToClipboard, pasteFromClipboard, deleteItems, renameItem, loadDirectory, showProperties, addToFavorites, removeFromFavorites, updateNavigationHistory, zipItems, unzipItem, isInFavorites, getCurrentFolderMetadata, generateHash, generateHashToFile, compareHash, copyPath, addAsTemplate, isSftpPath, downloadAndOpenSftpFile, parseSftpPath, basicOnly, openFile]);
 
     // Open context menu
     const openContextMenu = useCallback((e, contextTarget = null) => {
         e.preventDefault();
+        if (contextTarget?.isParentNavigation) { setIsOpen(false); return; }
+        if (contextTarget && !selectedItems.some(item => item.path === contextTarget.path)) {
+            selectMultiple([contextTarget]);
+            setFocusedItem(contextTarget);
+        }
+        readFileClipboard();
 
         console.log('🎯 Opening context menu for:', contextTarget?.name || 'empty space');
 
@@ -1145,7 +1213,11 @@ export default function ContextMenuProvider({ children }) {
         setTarget(contextTarget);
         setItems(menuItems);
         setIsOpen(true);
-    }, [getMenuItemsForContext]);
+    }, [getMenuItemsForContext, readFileClipboard, selectedItems, selectMultiple, setFocusedItem]);
+
+    useEffect(() => {
+        if (isOpen) setItems(getMenuItemsForContext(target));
+    }, [isOpen, target, getMenuItemsForContext]);
 
     // Close context menu
     const closeContextMenu = useCallback(() => {

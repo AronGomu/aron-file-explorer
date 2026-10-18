@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import FileIcon from './FileIcon';
 import { formatFileSize, formatDate, getFileType } from '../../utils/formatters';
-import { replaceFileName } from '../../utils/pathUtils.js';
+import { replaceFileName, getDirectoryPath } from '../../utils/pathUtils.js';
 import { getFileIconType } from '../../utils/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { useFileSystem } from '../../providers/FileSystemProvider';
@@ -52,6 +52,16 @@ const FileItem = ({
 
     // Format modified date
     const modified = item.isParentNavigation ? '' : formatDate(item.last_modified);
+    const tooltip = item.isParentNavigation ? `Parent folder\n${item.path}` : [
+        item.name,
+        `Type: ${fileType}`,
+        isDirectory ? [
+            Number.isFinite(item.sub_file_count) ? `${item.sub_file_count} files` : null,
+            Number.isFinite(item.sub_dir_count) ? `${item.sub_dir_count} folders` : null,
+        ].filter(Boolean).join(', ') : `Size: ${Number.isFinite(item.size_in_bytes) ? formatFileSize(item.size_in_bytes) : 'Unknown'}`,
+        `Modified: ${formatDate(item.last_modified, true)}`,
+        `Location: ${getDirectoryPath(item.path)}`,
+    ].filter(Boolean).join('\n');
 
 
     /**
@@ -141,7 +151,7 @@ const FileItem = ({
                 {...dropTargetProps(isDirectory ? item.path : null)}
                 onContextMenu={handleContextMenu}
                 data-path={item.path}
-                title={hideImageName ? item.name : undefined}
+                title={tooltip}
                 aria-label={hideImageName ? item.name : undefined}
                 role={viewMode === 'list' ? 'row' : undefined}
             >
@@ -152,7 +162,7 @@ const FileItem = ({
                         </div>
 
                         {!hideImageName && (
-                            <div className="file-name truncate" title={item.name}>
+                            <div className="file-name">
                                 {item.name}
                             </div>
                         )}
@@ -165,17 +175,17 @@ const FileItem = ({
                             <div className="file-icon-container">
                                 <FileIcon filename={item.name} path={item.path} revision={imageRevision} isDirectory={isDirectory} />
                             </div>
-                            <div className="file-name truncate" title={item.name}>
+                            <div className="file-name">
                                 {item.name}
                             </div>
                         </div>
-                        <div className="file-column column-size" role="cell" title={isDirectory ? undefined : size}>
+                        <div className="file-column column-size" role="cell">
                             {isDirectory ? '—' : size}
                         </div>
-                        <div className="file-column column-type" role="cell" title={fileType}>
+                        <div className="file-column column-type" role="cell">
                             {fileType}
                         </div>
-                        <div className="file-column column-modified" role="cell" title={modified}>
+                        <div className="file-column column-modified" role="cell">
                             {modified}
                         </div>
                     </div>
@@ -188,7 +198,7 @@ const FileItem = ({
                                 <FileIcon filename={item.name} path={item.path} revision={imageRevision} isDirectory={isDirectory} />
                             </div>
 
-                            <div className="file-name truncate" title={item.name}>
+                            <div className="file-name">
                                 {item.name}
                             </div>
                         </div>

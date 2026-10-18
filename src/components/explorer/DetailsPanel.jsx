@@ -3,13 +3,18 @@ import usePersistedState from '../../hooks/usePersistedState';
 import FileContentPreview from './FileContentPreview';
 import FileDetails from './FileDetails';
 import IconButton from '../common/IconButton';
-import { formatFileSize, formatDate, getFileType } from '../../utils/formatters';
+import { formatFileSize, formatDate, getFileType, formatDuration } from '../../utils/formatters';
+import { invoke } from '@tauri-apps/api/core';
+import { useSftp } from '../../providers/SftpProvider';
+import { getFileIconType } from '../../utils/icons';
+import { getPreviewFilePath } from '../../utils/imageThumbnails';
 import { getDirectoryPath } from '../../utils/pathUtils';
 import './detailsPanel.css';
 
 const MIN_PREVIEW_WIDTH = 200;
 const COLLAPSED_PREVIEW_WIDTH = 48;
 const COLLAPSE_RESISTANCE = 100;
+const mediaDurations = new Map();
 const getMaximumPreviewWidth = (panel) => Math.max(MIN_PREVIEW_WIDTH,
     Math.floor((panel?.parentElement?.clientWidth || window.innerWidth) * 0.75));
 
@@ -36,6 +41,8 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, isCollaps
     const [isResizing, setIsResizing] = useState(false);
     const panelRef = useRef(null);
     const resizeStart = useRef(null);
+    const { isSftpPath, parseSftpPath } = useSftp();
+    const [durationResult, setDurationResult] = useState(null);
 
     useEffect(() => {
         const shortcuts = event => {
@@ -181,7 +188,35 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, isCollaps
     const hasItem = item && !isMultipleSelection;
     const revision = item ? `${item.last_modified || ''}:${item.size_in_bytes ?? ''}` : '';
     const isDirectory = hasItem && (item.isDirectory || 'sub_file_count' in item);
+    const isMedia = hasItem && !isDirectory && ['audio', 'video'].includes(getFileIconType(item.name));
+    const durationKey = JSON.stringify([item?.path, revision]);
+    const duration = isMedia ? (durationResult?.key === durationKey ? durationResult.text : 'Loading…') : null;
+
+    useEffect(() => {
+        if (!isMedia || isCollapsed) return;
+        let cancelled = false;
+        let pending = mediaDurations.get(durationKey);
+        if (!pending) {
+            pending = (async () => {
+                const remote = isSftpPath(item.path) ? parseSftpPath(item.path) : null;
+                if (isSftpPath(item.path) && !remote?.connection) throw new Error('Connection unavailable');
+                const path = await getPreviewFilePath(item.path, revision, remote);
+                return invoke('get_media_duration', { path });
+            })();
+            if (mediaDurations.size >= 128) mediaDurations.delete(mediaDurations.keys().next().value);
+            mediaDurations.set(durationKey, pending);
+        }
+        pending.then(seconds => {
+            if (!cancelled) setDurationResult({ key: durationKey, text: formatDuration(seconds) });
+        }).catch(() => {
+            if (mediaDurations.get(durationKey) === pending) mediaDurations.delete(durationKey);
+            if (!cancelled) setDurationResult({ key: durationKey, text: 'Unavailable' });
+        });
+        return () => { cancelled = true; };
+    }, [isMedia, isCollapsed, durationKey, item?.path, revision, isSftpPath, parseSftpPath]);
+
     const footerSummary = hasItem ? [
+        duration ? `Duration ${duration}` : null,
         item.name,
         isDirectory ? 'Folder' : getFileType(item.name),
         isDirectory ? [
@@ -229,7 +264,7 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, isCollaps
                             onPointerUp={handleSplitEnd} onPointerCancel={handleSplitEnd}
                             onLostPointerCapture={handleSplitEnd} onKeyDown={handleSplitKeyDown} />
                         <section id="explorer-file-information" className="details-information" aria-label="File information">
-                            <FileDetails item={item} />
+                            <FileDetails item={item} duration={duration} />
                         </section>
                     </>}
                 </div>

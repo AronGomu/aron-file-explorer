@@ -18,6 +18,20 @@
     -ms-user-select: none;
 }
 
+.file-item .file-name {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    text-overflow: ellipsis;
+    font-size: 0.9em;
+    line-height: 1.2;
+}
+
 .file-item::selection,
 .file-item *::selection {
     background: transparent;
@@ -98,7 +112,7 @@
 
 .file-item.view-mode-grid .file-name {
     max-width: 100%;
-    font-size: calc(var(--font-size-xs) * var(--file-grid-zoom, 1));
+    font-size: calc(var(--font-size-xs) * 0.9 * var(--file-grid-zoom, 1));
 }
 
 .file-item.view-mode-grid.image-item {
