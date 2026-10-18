@@ -49,7 +49,7 @@ const FileItem = ({
                   clipboard.items.some(clipItem => clipItem.path === item.path);
 
     // Format modified date
-    const modified = formatDate(item.last_modified);
+    const modified = item.isParentNavigation ? '' : formatDate(item.last_modified);
 
 
     /**

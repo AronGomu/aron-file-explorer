@@ -65,6 +65,12 @@ const SidebarItem = ({
     return (
         <li
             className={`sidebar-item ${isActive ? 'active' : ''}`}
+            role="button"
+            tabIndex={0}
+            onKeyDown={event => {
+                if (event.target !== event.currentTarget || !['Enter', ' '].includes(event.key)) return;
+                event.preventDefault(); onClick?.();
+            }}
             onClick={onClick}
             onDoubleClick={handleDoubleClick}
             onMouseDown={handleMouseDown}

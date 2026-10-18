@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import usePersistedState from '../hooks/usePersistedState';
+import { restoreItemPaneAfterPointer } from '../utils/explorerFocus';
 import { useFileSystem } from '../providers/FileSystemProvider';
 import { useContextMenu } from '../providers/ContextMenuProvider';
 import { useHistory } from '../providers/HistoryProvider';
@@ -25,6 +26,7 @@ import SettingsPanel from '../components/settings/SettingsPanel';
 import ThisPCView from '../components/thisPc/ThisPCView';
 import NetworkView from '../components/network/NetworkView';
 import TemplateList from '../components/templates/TemplateList';
+import WindowControls from '../components/common/WindowControls';
 
 // Hash Modals
 import HashFileModal from '../components/common/HashFileModal.jsx';
@@ -542,6 +544,7 @@ const MainLayout = () => {
 
     useEffect(() => {
         const handlePreviewToggle = (event) => {
+            if (event.target.closest?.('.window-controls')) return;
             if ((event.key !== ' ' && event.code !== 'Space') || event.ctrlKey || event.metaKey ||
                 event.altKey || event.shiftKey || event.isComposing) return;
             const field = event.target.closest?.('input, textarea');
@@ -605,14 +608,14 @@ const MainLayout = () => {
     // Removed renderSftpFileList - now handled seamlessly by the regular explorer view
 
     return (
-        <div className="main-layout">
+        <div className="main-layout" onPointerUpCapture={restoreItemPaneAfterPointer}>
             {/* Settings Applier - applies settings to DOM */}
             <SettingsApplier />
 
             {/* Full-width tabs at the top */}
             <TabManager>
                 {/* Full-width toolbar */}
-                <div className="toolbar">
+                <div className="toolbar" data-tauri-drag-region>
                         <div className="toolbar-left">
                             <NavigationButtons />
                             <PathBreadcrumb
@@ -621,8 +624,7 @@ const MainLayout = () => {
                                 onSearch={handleSearch}
                             />
                         </div>
-                        <div className="toolbar-center">
-                        </div>
+                        <div className="toolbar-drag-region" data-tauri-drag-region aria-hidden="true" />
                         <div className="toolbar-right">
                             {currentView === 'explorer' && (
                                 <div className="view-modes" role="group" aria-label="File view">
@@ -653,6 +655,7 @@ const MainLayout = () => {
                             >
                                 <span className="icon icon-settings" aria-hidden="true"></span>
                             </button>
+                            <WindowControls />
                         </div>
                 </div>
 

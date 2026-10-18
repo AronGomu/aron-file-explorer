@@ -115,18 +115,20 @@ def main():
             assert not (fixture / 'saved.txt').exists()
             passed.append('Save returns a destination without creating a file')
             process, request_dir, wid = launch('open')
-            xdo('key', 'Down', 'Return')
+            xdo('key', 'Down', 'Down', 'Return')
             assert result(process, request_dir)['uris'] == [(fixture / 'alpha.txt').as_uri()]
             passed.append('Keyboard selection returns the selected file')
             process, request_dir, wid = launch('multi', multiple=True)
-            xdo('key', 'Down', 'shift+Down', 'Return')
+            xdo('key', 'Down', 'Down', 'shift+Down', 'Return')
             assert result(process, request_dir)['uris'] == [(fixture / 'alpha.txt').as_uri(), (fixture / 'bravo.txt').as_uri()]
             passed.append('Multiple selection returns both files')
             process, request_dir, wid = launch('folder', directory=True)
+            xdo('key', 'Down')
             xdo('mousemove', '--window', wid, 960, 668, 'click', 1)
             assert result(process, request_dir)['uris'] == [(fixture / 'folder').as_uri()]
             passed.append('Folder mode returns a directory')
             process, request_dir, wid = launch('batch', mode='SaveFiles', files=['alpha.txt', 'alpha.txt'])
+            xdo('key', 'Down')
             xdo('mousemove', '--window', wid, 960, 668, 'click', 1)
             batch = result(process, request_dir)
             assert [unquote(urlsplit(uri).path) for uri in batch['uris']] == [str(fixture / 'folder/alpha.txt'), str(fixture / 'folder/alpha (1).txt')], batch

@@ -1,0 +1,41 @@
+.window-controls {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    gap: 2px;
+    padding-left: var(--space-sm);
+    border-left: 1px solid var(--border);
+}
+
+.window-control {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 32px;
+    padding: 0;
+    flex-shrink: 0;
+    border: none;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--text-secondary);
+}
+
+.window-control:hover:not(:disabled) {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+}
+
+.window-control-close:hover:not(:disabled) {
+    background: var(--error-surface);
+    color: var(--error);
+}
+
+.window-control svg { pointer-events: none; }
+
+.toolbar-drag-region {
+    flex: 0 0 24px;
+    align-self: stretch;
+    min-height: 32px;
+    user-select: none;
+}

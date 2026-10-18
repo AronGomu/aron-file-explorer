@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { arrowSelection } from '../../utils/fileSelection';
+import { focusItemPane, isEditingTarget } from '../../utils/explorerFocus';
 import { getFileType } from '../../utils/formatters';
 import { useFileSystem } from '../../providers/FileSystemProvider';
 import { useContextMenu } from '../../providers/ContextMenuProvider';
@@ -50,6 +51,11 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
     const suppressDragClick = useRef(false);
     const previousListing = useRef(null);
     const restoringSelection = useRef(false);
+
+    useEffect(() => {
+        if (!isLoading && data?.directory === currentPath && !isEditingTarget(document.activeElement) &&
+            !document.activeElement.closest?.('video, audio, object, iframe')) focusItemPane();
+    }, [isLoading, data?.directory, currentPath]);
 
     const scrollItemIntoView = useCallback((index) => {
         const container = containerRef.current;
@@ -388,6 +394,8 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
 
         // Always put directories first
         const sortedItems = [...combinedItems].sort((a, b) => {
+            if (a.isParentNavigation) return -1;
+            if (b.isParentNavigation) return 1;
             // Directories always come before files
             if (a.isDirectory && !b.isDirectory) return -1;
             if (!a.isDirectory && b.isDirectory) return 1;
@@ -462,9 +470,11 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (isLoading || (data?.directory && data.directory !== currentPath)) return;
+            const isArrow = ['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft'].includes(e.key);
             // Don't handle arrow keys if user is typing in an input or textarea
             if (e.defaultPrevented || document.querySelector('[role="dialog"], .modal-overlay') ||
-                e.altKey || e.target.closest?.('select, button, [role="dialog"]') ||
+                e.isComposing || e.altKey || e.target.closest?.('select, [role="dialog"], video, audio, object, iframe') ||
+                (!isArrow && e.target.closest?.('button, [role="button"]')) ||
                 e.target instanceof HTMLInputElement ||
                 e.target instanceof HTMLTextAreaElement || 
                 e.target.isContentEditable ||
@@ -480,7 +490,6 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
                     ? sortedItems.findIndex(item => item.path === focusedItem.path)
                     : -1;
 
-                const isArrow = ['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft'].includes(e.key);
                 const range = isArrow ? arrowSelection({
                     current: currentFocusedIndex, anchor: lastSelectedIndex, key: e.key,
                     columns: viewMode === 'grid' ? columnsPerRow : 1, count: sortedItems.length,
@@ -488,6 +497,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
 
                 if (range) {
                     e.preventDefault();
+                    focusItemPane();
                     const item = sortedItems[range.index];
                     if (e.shiftKey) {
                         selectMultiple(sortedItems.slice(range.start, range.end + 1));
@@ -614,7 +624,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
     if (isLoading) {
         return (
             <div className="file-list-wrapper">
-                <div className="file-list-container">
+                <div className="file-list-container" tabIndex={-1}>
                     <div className="loading-state">
                         <div className="loading-spinner"></div>
                         <p>Loading...</p>
@@ -628,7 +638,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
     if (!data || (!data.directories?.length && !data.files?.length)) {
         return (
             <div className="file-list-wrapper">
-                <div className="file-list-container">
+                <div className="file-list-container" tabIndex={-1}>
                     <div
                         className="empty-state-container"
                         onClick={handleContainerClick}
@@ -673,6 +683,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
      * @param {boolean} [isDoubleClick=false] - Whether this is a double-click
      */
     const handleItemClick = (item, index, event, isDoubleClick = false) => {
+        focusItemPane();
         // Always set the focused item when clicking on it
         setFocusedItem(item);
 
@@ -726,6 +737,7 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
         <div className="file-list-wrapper">
             <div
                 ref={containerRef}
+                tabIndex={-1}
                 className={`file-list-container view-mode-${viewMode.toLowerCase()} scrollable-content`}
                 style={{
                     '--file-grid-zoom': viewZoom / 100,

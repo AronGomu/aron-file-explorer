@@ -3,6 +3,7 @@ import { useHistory } from '../../providers/HistoryProvider';
 import { useFileSystem } from '../../providers/FileSystemProvider';
 import { useSftp } from '../../providers/SftpProvider';
 import './pathBreadcrumb.css';
+import { focusItemPane } from '../../utils/explorerFocus';
 
 /**
  * PathBreadcrumb component - Displays the current file path as interactive breadcrumbs
@@ -181,6 +182,7 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
         if (e.key === 'Enter') {
             e.preventDefault();
             setIsEditing(false);
+            requestAnimationFrame(focusItemPane);
 
             if (editValue && editValue !== currentPath) {
                 // Convert standard SFTP URL to internal format if needed
@@ -191,6 +193,7 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
             e.preventDefault();
             setIsEditing(false);
             setEditValue(currentPath || '');
+            requestAnimationFrame(focusItemPane);
         }
     };
 
@@ -214,6 +217,7 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
                 onSearch('');
             }
             setIsSearchVisible(false);
+            requestAnimationFrame(focusItemPane);
             setIsEditing(false); // Ensure we're not in editing mode
         } else {
             // Show search overlay and focus input
@@ -254,12 +258,14 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
      */
     const handleSearchKeyDown = (e) => {
         if (e.key === 'Escape') {
+            e.preventDefault();
             // Clear search completely and return to breadcrumb view
             setSearchQuery('');
             if (onSearch) {
                 onSearch('');
             }
             setIsSearchVisible(false);
+            requestAnimationFrame(focusItemPane);
         }
     };
 
@@ -271,9 +277,30 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
         }
     }, [isEditing]);
 
+    // Keep address and search shortcuts on the shared path component.
+    useEffect(() => {
+        if (!isVisible) return;
+        const shortcuts = event => {
+            if (event.isComposing || document.querySelector('[role="dialog"]')) return;
+            if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey) {
+                if (event.key.toLowerCase() === 'l') {
+                    event.preventDefault(); setIsSearchVisible(false); handleClick();
+                } else if (event.key.toLowerCase() === 'f') {
+                    event.preventDefault();
+                    if (isSearchVisible) searchInputRef.current?.focus();
+                    else handleSearchClick();
+                }
+            }
+        };
+        window.addEventListener('keydown', shortcuts);
+        return () => window.removeEventListener('keydown', shortcuts);
+    });
+
     // Update edit value when path changes
     useEffect(() => {
         setEditValue(currentPath || '');
+        setSearchQuery('');
+        setIsSearchVisible(false);
     }, [currentPath]);
 
     // Don't render full component if not visible
@@ -327,13 +354,20 @@ const PathBreadcrumb = ({ onCopyPath, isVisible = true, onSearch }) => {
                             <React.Fragment key={segment.path}>
                                 {index > 0 && <span className="segment-divider">/</span>}
                                 <button
-                                    className={`segment-button ${index === pathSegments.length - 1 ? 'current' : ''}`}
+                                    className={`segment-button ${segment.path === '/' ? 'root-segment' : ''} ${index === pathSegments.length - 1 ? 'current' : ''}`}
+                                    aria-label={segment.path === '/' ? 'System root' : undefined}
+                                    title={segment.path === '/' ? 'System root (/)' : undefined}
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         handleSegmentClick(segment.path);
                                     }}
                                 >
-                                    {segment.name}
+                                    {segment.path === '/' ? (
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+                                            <path d="M22 12H2M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11Z" />
+                                            <path d="M6 16h.01M10 16h.01" />
+                                        </svg>
+                                    ) : segment.name}
                                 </button>
                             </React.Fragment>
                         ))}
