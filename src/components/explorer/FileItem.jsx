@@ -152,7 +152,7 @@ const FileItem = ({
                         </div>
 
                         {!hideImageName && (
-                            <div className="file-name truncate" title={item.name}>
+                            <div className="file-name" title={item.name}>
                                 {item.name}
                             </div>
                         )}
@@ -165,7 +165,7 @@ const FileItem = ({
                             <div className="file-icon-container">
                                 <FileIcon filename={item.name} path={item.path} revision={imageRevision} isDirectory={isDirectory} />
                             </div>
-                            <div className="file-name truncate" title={item.name}>
+                            <div className="file-name" title={item.name}>
                                 {item.name}
                             </div>
                         </div>
@@ -188,7 +188,7 @@ const FileItem = ({
                                 <FileIcon filename={item.name} path={item.path} revision={imageRevision} isDirectory={isDirectory} />
                             </div>
 
-                            <div className="file-name truncate" title={item.name}>
+                            <div className="file-name" title={item.name}>
                                 {item.name}
                             </div>
                         </div>
