@@ -191,24 +191,28 @@ export default function ContextMenuProvider({ children, basicOnly = false }) {
     }, []);
 
     // Copy path to clipboard
-    const copyPath = useCallback(async (item) => {
+    const copyPath = useCallback(async (items) => {
+        const targets = items.filter(item => !item.isParentNavigation);
+        if (!targets.length) return;
         try {
-            let pathToCopy = item.path;
-            
-            // Convert SFTP paths to standard format
-            if (isSftpPath(item.path)) {
-                const parsed = parseSftpPath(item.path);
-                if (parsed && parsed.connection) {
-                    const remotePath = parsed.remotePath || '/';
-                    // Ensure path starts with forward slash
-                    const formattedPath = remotePath.startsWith('/') ? remotePath : `/${remotePath}`;
-                    pathToCopy = `sftp://${parsed.connection.username}@${parsed.connection.host}:${parsed.connection.port}${formattedPath}`;
+            const paths = targets.map(item => {
+                let pathToCopy = item.path;
+
+                // Convert SFTP paths to standard format
+                if (isSftpPath(item.path)) {
+                    const parsed = parseSftpPath(item.path);
+                    if (parsed && parsed.connection) {
+                        const remotePath = parsed.remotePath || '/';
+                        // Ensure path starts with forward slash
+                        const formattedPath = remotePath.startsWith('/') ? remotePath : `/${remotePath}`;
+                        pathToCopy = `sftp://${parsed.connection.username}@${parsed.connection.host}:${parsed.connection.port}${formattedPath}`;
+                    }
                 }
-            }
-            
-            if (pathToCopy.includes(' ')) pathToCopy = `"${pathToCopy}"`;
+                return JSON.stringify(pathToCopy);
+            });
+            const pathToCopy = paths.join(' ');
             await writeText(pathToCopy);
-            showSuccess(`Path copied to clipboard: ${pathToCopy}`);
+            showSuccess(`Copied ${paths.length} path(s) to clipboard.`);
         } catch (error) {
             console.error('Failed to copy path:', error);
             showError('Failed to copy path to clipboard.');
@@ -220,16 +224,12 @@ export default function ContextMenuProvider({ children, basicOnly = false }) {
             if (event.defaultPrevented || event.isComposing || document.querySelector('[role="dialog"], .modal-overlay, .interface-keytips') ||
                 event.target.isContentEditable ||
                 event.target.closest?.('input, textarea, select')) return;
-            if ((event.ctrlKey || event.metaKey) && event.altKey && !event.shiftKey &&
+            if ((event.ctrlKey || event.metaKey) && ((event.shiftKey && !event.altKey) || (event.altKey && !event.shiftKey)) &&
                 (event.code === 'KeyC' || event.key.toLowerCase() === 'c')) {
                 event.preventDefault();
                 event.stopPropagation();
                 if (event.repeat || isProcessing) return;
-                if (selectedItems.length !== 1) {
-                    showError('Select one file or folder to copy its path.');
-                    return;
-                }
-                copyPath(selectedItems[0]);
+                copyPath(selectedItems);
             }
         };
 
@@ -1053,8 +1053,8 @@ export default function ContextMenuProvider({ children, basicOnly = false }) {
                 id: 'copy-path',
                 label: 'Copy Path',
                 icon: 'copy',
-                disabled: selectedItems.length > 1 || isProcessing,
-                action: () => copyPath(contextTarget)
+                disabled: isProcessing,
+                action: () => copyPath(targetItems)
             },
             { type: 'separator' },
             {

@@ -7,7 +7,7 @@ use axum::{
     Router,
 };
 use std::{collections::VecDeque, path::PathBuf, sync::Arc};
-use tokio::sync::{Mutex, OnceCell};
+use tokio::sync::{Mutex, OnceCell, Semaphore};
 use tower_http::services::ServeFile;
 
 type MediaFiles = Arc<Mutex<VecDeque<(String, PathBuf)>>>;
@@ -18,6 +18,41 @@ struct MediaServer {
 }
 
 static MEDIA_SERVER: OnceCell<MediaServer> = OnceCell::const_new();
+static MEDIA_METADATA_WORKERS: Semaphore = Semaphore::const_new(2);
+
+#[tauri::command]
+pub async fn get_media_duration(path: String) -> Result<Option<f64>, String> {
+    let _permit = MEDIA_METADATA_WORKERS.acquire().await.map_err(|error| error.to_string())?;
+    let path = tokio::fs::canonicalize(path).await.map_err(|error| error.to_string())?;
+    if !tokio::fs::metadata(&path).await.map_err(|error| error.to_string())?.is_file() {
+        return Err("Media duration requires a regular file".into());
+    }
+    let mut command = tokio::process::Command::new("ffprobe");
+    command.args([
+        "-v", "error", "-protocol_whitelist", "file,pipe",
+        "-show_entries", "format=duration:stream=duration,codec_type", "-of", "json", "-i",
+    ]).arg(path)
+        .stdin(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .kill_on_drop(true);
+    #[cfg(windows)]
+    command.creation_flags(0x08000000);
+    let output = tokio::time::timeout(std::time::Duration::from_secs(5), command.output())
+        .await.map_err(|_| "Reading media duration timed out".to_string())?
+        .map_err(|error| error.to_string())?;
+    if !output.status.success() { return Ok(None); }
+    let metadata: serde_json::Value = serde_json::from_slice(&output.stdout).map_err(|error| error.to_string())?;
+    let duration = |value: &serde_json::Value| value.as_str().and_then(|text| text.parse::<f64>().ok())
+        .filter(|seconds| seconds.is_finite() && *seconds >= 0.0);
+    let streams = metadata["streams"].as_array();
+    if !streams.is_some_and(|streams| streams.iter().any(|stream| matches!(stream["codec_type"].as_str(), Some("audio" | "video")))) {
+        return Ok(None);
+    }
+    Ok(duration(&metadata["format"]["duration"]).or_else(|| streams?.iter()
+        .filter(|stream| matches!(stream["codec_type"].as_str(), Some("audio" | "video")))
+        .filter_map(|stream| duration(&stream["duration"]))
+        .max_by(f64::total_cmp)))
+}
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]

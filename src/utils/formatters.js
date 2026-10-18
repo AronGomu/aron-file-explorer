@@ -16,6 +16,15 @@ export const formatFileSize = (bytes, decimals = 1) => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 };
 
+export const formatDuration = seconds => {
+    if (!Number.isFinite(seconds) || seconds < 0) return 'Unavailable';
+    const total = Math.floor(seconds);
+    const hours = Math.floor(total / 3600);
+    const minutes = Math.floor(total / 60) % 60;
+    const remainder = String(total % 60).padStart(2, '0');
+    return hours ? `${hours}:${String(minutes).padStart(2, '0')}:${remainder}` : `${minutes}:${remainder}`;
+};
+
 /**
  * Format a date string to a human-readable format.
  * @param {string} dateString - The date string to format.

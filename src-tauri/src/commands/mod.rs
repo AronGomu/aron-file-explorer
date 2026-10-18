@@ -16,3 +16,4 @@ pub mod file_preview_commands;
 pub mod file_move_commands;
 mod text_highlighting;
 pub mod deletion_commands;
+pub mod path_completion_commands;

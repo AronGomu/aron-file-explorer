@@ -11,8 +11,7 @@ Frequent actions also have direct shortcuts. Use Command in place of Ctrl for le
 | Edit location | Ctrl+L |
 | Search current folder | Ctrl+F |
 | Global search | Ctrl+Shift+F |
-| Copy current location | Ctrl+Shift+C |
-| Copy selected item's path | Ctrl+Alt+C |
+| Copy selected items' paths | Ctrl+Shift+C or Ctrl+Alt+C |
 | Copy / Cut / Paste files | Ctrl+C / Ctrl+X / Ctrl+V |
 | Select all visible items | Ctrl+A |
 | Icons / List view | Ctrl+Shift+1 / Ctrl+Shift+2 |
@@ -28,6 +27,10 @@ Frequent actions also have direct shortcuts. Use Command in place of Ctrl for le
 | View zoom | Ctrl+Plus / Ctrl+Minus; Ctrl+mouse wheel |
 
 The file chooser shares Explorer's copy, cut, paste, rename, creation, trash, undo, properties, and drag-and-drop actions. Copy and cut work between Explorer and chooser windows. Creation and rename are available through their dialogs and context menus; file action shortcuts leave text inputs and dialogs to handle editing. Select All includes only visible results and excludes the chooser's `..` navigation entry.
+
+Copy Path works for single and multiple selections in Explorer and the file chooser. It copies quoted paths separated by spaces, for example `"/path/to/file/1" "/path/to/file/2" "/path/to/file/3"`. Quotes, backslashes, and control characters within paths are escaped. With no selected items, the clipboard stays unchanged. The shortcut leaves text inputs and dialogs to handle editing.
+
+The shared location input (Ctrl+L) offers a dropdown of local path completions. The first match is selected; Up/Down chooses another, Tab completes a folder and lists its children, Enter opens the selected result, and Escape dismisses editing. Clicking a suggestion also opens it. Empty input offers recent folders and common locations. Partial names match prefixes, substrings, then fuzzy letter sequences; `~/` expands to the home folder, and relative paths start in the current folder. Hidden paths follow each window's hidden-file setting; explicitly typing a dot prefix also reveals matching hidden entries. Save and folder-only choosers suggest only directories. Existing SFTP path navigation remains available without local autocomplete.
 
 View zoom is shared between icon and list modes and saved across application restarts. Each folder's vertical and horizontal scroll offsets are also saved; the 100 most recently saved folder positions remain available across sessions. Restoring a folder keeps its scroll position even when the focused item is offscreen. Arrow navigation brings that item back into view. These preferences stay in the application's local storage and survive application updates.
 

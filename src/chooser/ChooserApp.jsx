@@ -183,7 +183,7 @@ function Chooser({ request }) {
                     <button className="nav-button" aria-label="Go back" title="Go back (Backspace)" disabled={!navigation.index} onClick={() => backForward(-1)}><span className="icon icon-arrow-left" aria-hidden="true" /></button>
                     <button className="nav-button" aria-label="Go forward" title="Go forward (Shift+Backspace)" disabled={navigation.index === navigation.history.length - 1} onClick={() => backForward(1)}><span className="icon icon-arrow-right" aria-hidden="true" /></button>
                 </div>
-                <PathBreadcrumb onSearch={setQuery} />
+                <PathBreadcrumb onSearch={setQuery} showHidden={hidden} directoriesOnly={request.directory || request.mode !== 'OpenFile'} />
                 <div className="toolbar-drag-region" data-tauri-drag-region aria-hidden="true" />
                 <div className="view-modes" role="group" aria-label="View mode">
                     {[{ id: 'grid', label: 'Icons view', icon: 'grid' }, { id: 'list', label: 'List view', icon: 'list' }].map(mode => (

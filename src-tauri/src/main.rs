@@ -48,7 +48,9 @@ fn all_commands() -> fn(Invoke) -> bool {
             file_system_operation_commands::create_directory,
             commands::image_commands::get_image_thumbnail,
             commands::file_preview_commands::get_text_preview,
+            commands::media_preview_commands::get_media_duration,
             file_system_operation_commands::open_directory,
+            commands::path_completion_commands::complete_path,
             volume_operations_commands::get_system_volumes_information,
             volume_operations_commands::mount_volume,
             settings_commands::get_settings_snapshot, settings_commands::get_settings_as_json,
@@ -57,6 +59,7 @@ fn all_commands() -> fn(Invoke) -> bool {
     }
     tauri::generate_handler![
         get_launch_directories,
+        commands::path_completion_commands::complete_path,
         launch_requests::get_launch_request,
         commands::deletion_commands::trash_items,
         commands::deletion_commands::undo_last_deletion,
@@ -76,6 +79,7 @@ fn all_commands() -> fn(Invoke) -> bool {
         commands::video_commands::get_video_thumbnail,
         commands::video_commands::get_video_preview,
         commands::media_preview_commands::get_media_preview_url,
+        commands::media_preview_commands::get_media_duration,
         commands::file_move_commands::move_items,
         sftp_file_system_operation_commands::move_items_sftp,
         commands::file_preview_commands::get_text_preview,
