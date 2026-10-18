@@ -43,8 +43,14 @@ async function initialize() {
         // The normal explorer binary does not expose chooser commands.
     }
     try {
-        const paths = await invoke('get_launch_directories');
+        const request = await invoke('get_launch_request');
+        const paths = request.directories;
+        sessionStorage.setItem('fileExplorerLaunchSelection', JSON.stringify(request));
         if (paths.length) {
+            if (request.properties) {
+                localStorage.setItem('fileExplorerDetailsPanelOpen', 'true');
+                localStorage.setItem('fileExplorerDetailsVisible', 'true');
+            }
             const session = readExplorerSession();
             for (const path of paths) {
                 let tab = session.tabs.find(tab => tab.path === path);

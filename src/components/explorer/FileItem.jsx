@@ -7,6 +7,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { useFileSystem } from '../../providers/FileSystemProvider';
 import { useHistory } from '../../providers/HistoryProvider';
 import { useContextMenu } from '../../providers/ContextMenuProvider';
+import useFileDropTarget from '../../hooks/useFileDropTarget';
 import { showError, showConfirm } from '../../utils/NotificationSystem';
 import './fileItem.css';
 
@@ -34,7 +35,8 @@ const FileItem = ({
                   }) => {
     const { loadDirectory } = useFileSystem();
     const { currentPath } = useHistory();
-    const { clipboard } = useContextMenu();
+    const { clipboard, isProcessing, draggedItems, beginItemDrag, endItemDrag } = useContextMenu();
+    const dropTargetProps = useFileDropTarget();
 
     const isDirectory = item.isDirectory || 'sub_file_count' in item;
     const hideImageName = viewMode === 'grid' && !isDirectory && getFileIconType(item.name) === 'image';
@@ -102,15 +104,6 @@ const FileItem = ({
     };
 
     /**
-     * Handles mouse down events to prevent text selection
-     * @param {React.MouseEvent} e - The mouse down event
-     */
-    const handleMouseDown = (e) => {
-        // Prevent text selection on mouse down
-        e.preventDefault();
-    };
-
-    /**
      * Handles double-click events on the file item
      * @param {React.MouseEvent} e - The double-click event
      */
@@ -141,7 +134,11 @@ const FileItem = ({
                 className={`file-item view-mode-${viewMode.toLowerCase()} ${isSelected ? 'selected' : ''} ${isFocused ? 'focused' : ''} ${isDirectory ? 'directory' : 'file'} ${isCut ? 'cut' : ''} ${hideImageName ? 'image-item' : ''}`}
                 onClick={handleClick}
                 onDoubleClick={handleDoubleClick}
-                onMouseDown={handleMouseDown}
+                draggable={!isProcessing}
+                onDragStart={event => beginItemDrag(event, item)}
+                onDragEnd={endItemDrag}
+                data-file-drag-source={draggedItems.some(dragged => dragged.path === item.path) ? 'true' : undefined}
+                {...dropTargetProps(isDirectory ? item.path : null)}
                 onContextMenu={handleContextMenu}
                 data-path={item.path}
                 title={hideImageName ? item.name : undefined}

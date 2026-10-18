@@ -124,7 +124,18 @@ const NavigationButtons = () => {
 
     useEffect(() => {
         const handleKeyDown = (event) => {
-            if ((event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'r') {
+            if (event.defaultPrevented || event.isComposing || document.querySelector('[role="dialog"], .modal-overlay') ||
+                event.target.closest?.('input, textarea, select, [contenteditable="true"], [role="textbox"]')) return;
+            if (event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey &&
+                ['ArrowLeft', 'ArrowRight'].includes(event.key)) {
+                event.preventDefault();
+                if (event.repeat) return;
+                if (event.key === 'ArrowLeft' && canGoBack) goBack();
+                else if (event.key === 'ArrowRight' && canGoForward) goForward();
+                return;
+            }
+            if ((event.key === 'F5' && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) ||
+                ((event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'r')) {
                 event.preventDefault();
                 if (!event.repeat) handleRefresh();
             }
@@ -152,8 +163,8 @@ const NavigationButtons = () => {
                 onClick={goBack}
                 disabled={!canGoBack}
                 aria-label="Go back"
-                aria-keyshortcuts="Backspace"
-                title="Go back (Backspace)"
+                aria-keyshortcuts="Backspace Alt+ArrowLeft"
+                title="Go back (Alt+Left / Backspace)"
             >
                 <span className="icon icon-arrow-left"></span>
             </button>
@@ -163,8 +174,8 @@ const NavigationButtons = () => {
                 onClick={goForward}
                 disabled={!canGoForward}
                 aria-label="Go forward"
-                aria-keyshortcuts="Shift+Backspace"
-                title="Go forward (Shift+Backspace)"
+                aria-keyshortcuts="Shift+Backspace Alt+ArrowRight"
+                title="Go forward (Alt+Right / Shift+Backspace)"
             >
                 <span className="icon icon-arrow-right"></span>
             </button>
@@ -173,8 +184,8 @@ const NavigationButtons = () => {
                 className="nav-button"
                 onClick={handleRefresh}
                 aria-label="Refresh"
-                aria-keyshortcuts="Control+r Meta+r"
-                title="Refresh current directory (Ctrl+R)"
+                aria-keyshortcuts="Control+r Meta+r F5"
+                title="Refresh current directory (Ctrl+R / F5)"
             >
                 <span className="icon icon-refresh"></span>
             </button>

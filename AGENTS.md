@@ -10,8 +10,16 @@ Tauri 2 desktop file explorer: React 19/Vite frontend, Rust backend. Frontend en
 - Desktop dev: `npm run tauri dev`
 - Frontend build: `npm run build`
 - Rust tests: `cargo test` from `src-tauri/`
-- CI reference: `.github/workflows/test-only.yml`
+- Validation runs locally; no GitHub Actions workflows.
 - Tauri config: `src-tauri/tauri.conf.json`
+
+## Synchronization and local installation
+
+- S1. On every explicit synchronization of a validated, functional version, rebuild and reinstall the native Linux application for the current user. Run `npm run install:linux` after synchronization, then verify the installed executable and desktop integration. A successful Git push alone does not complete synchronization.
+- S2. Before replacing the working installation, run checks appropriate to the changes (`npm run test:desktop` for desktop integration) and build the native release. Known unrelated test failures must remain documented; new failures or missing functional evidence block installation. Keep recoverable backups of the previous executable and desktop files; preserve user settings, tabs, templates, themes, and unrelated MIME associations.
+- S3. Use the project installer for `~/.local/lib/explr/explr`, the desktop entry, icon, OS directory association, and the user `org.freedesktop.FileManager1` activation service. Preserve an existing dotfiles-managed `~/.local/bin/explr` launcher and its graphics settings. Never use a privileged system-wide apply for this installation.
+- S4. Validate `xdg-mime query default inode/directory`, `gio mime inode/directory`, the installed/build executable SHA-256 match, and a native launch showing the requested folder. Verify `ShowFolders`, `ShowItems` (selection), and `ShowItemProperties` through D-Bus when desktop integration changes. Follow U1 and global application-testing rules; keep automated launches off the user's current workspace.
+- S5. Report the synchronized revision, installed binary checksum, validation results, and any installation failure. Do not claim the installed version is updated until the rebuild, installation, and native checks finish. This rule runs during agent-mediated sync; it does not authorize background watchers, automatic Git hooks, or publication of portable dotfiles.
 
 ## UI Testing
 

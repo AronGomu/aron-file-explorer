@@ -37,6 +37,18 @@ pub(crate) fn set_active_theme_id_impl(
     Ok(SelectionResult { active_theme_id: id })
 }
 
+pub(crate) fn restore_active_theme_id(
+    themes: &ThemeState, settings: &Arc<Mutex<SettingsState>>,
+) -> Result<(), ThemeFailure> {
+    let registry = themes.registry.lock().map_err(|_| ThemeFailure::io())?;
+    let settings = settings.lock().map_err(|_| ThemeFailure::save())?;
+    let id = settings.0.lock().map_err(|_| ThemeFailure::save())?.active_theme_id.clone();
+    if id != "system" && !registry.catalog.themes.iter().any(|theme| theme.id == id) {
+        settings.save_active_theme_id("system").map_err(|_| ThemeFailure::save())?;
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -44,6 +56,20 @@ mod tests {
     use crate::state::THEME_SELECTION_COMMAND;
     use serde_json::{json, Value};
     use std::fs;
+
+    #[test]
+    fn unavailable_saved_theme_falls_back_to_system_and_persists_across_sessions() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("settings.json");
+        let settings = Arc::new(Mutex::new(SettingsState::new_with_path(path.clone())));
+        settings.lock().unwrap().save_active_theme_id("missing-theme").unwrap();
+        let themes = ThemeState::at(temp.path().join("themes"));
+        restore_active_theme_id(&themes, &settings).unwrap();
+        assert_eq!(SettingsState::new_with_path(path).0.lock().unwrap().active_theme_id, "system");
+        set_active_theme_id_impl("catppuccin-mocha".into(), &themes, &settings).unwrap();
+        restore_active_theme_id(&themes, &settings).unwrap();
+        assert_eq!(settings.lock().unwrap().0.lock().unwrap().active_theme_id, "catppuccin-mocha");
+    }
 
     #[test]
     fn theme_switch_reload_race() {

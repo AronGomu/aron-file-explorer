@@ -136,7 +136,7 @@ test('theme_watch_delete_active: root and child identity survive; inactive copy 
     await act(async () => theme.setTheme(latte.id));
     await publish(changed(2, [latte, mocha, { ...mocha, id: 'copy' }])); expect(color()).toBe(latte.tokens.background);
     await publish(changed(3, [mocha]));
-    expect(theme.activeThemeId).toBe(latte.id); expect(theme.resolvedThemeId).toBe(latte.id);
+    expect(theme.activeThemeId).toBe('system'); expect(theme.resolvedThemeId).toBe(latte.id);
     expect(container.querySelector('input')).toBe(input); expect(input.value).toBe('typed draft');
 });
 
@@ -144,14 +144,14 @@ test.each(['save', 'unavailable', 'success'])('theme_switch_reload_race: pending
     await mount(); const pending = deferred(); invoke.mockImplementationOnce(() => pending.promise);
     let save; await act(async () => { save = theme.setTheme(mocha.id); });
     const edit = { ...latte, tokens: { ...latte.tokens, background: '#abcdef' } };
-    await publish(changed(2, [edit])); expect(theme.activeThemeId).toBe(mocha.id);
+    await publish(changed(2, [edit])); expect(theme.activeThemeId).toBe('system');
     await act(async () => {
         if (outcome === 'success') pending.resolve({ active_theme_id: mocha.id });
         else pending.reject({ code: outcome });
         await save;
     });
-    expect(theme.activeThemeId).toBe(outcome === 'success' ? mocha.id : 'system');
-    expect(color()).toBe(outcome === 'success' ? mocha.tokens.background : '#abcdef');
+    expect(theme.activeThemeId).toBe('system');
+    expect(color()).toBe('#abcdef');
     expect(theme.themes).toEqual([edit]); expect(theme.isSaving).toBe(false);
 });
 

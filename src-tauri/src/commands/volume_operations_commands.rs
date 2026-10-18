@@ -1,5 +1,8 @@
 use crate::models::VolumeInformation;
 use sysinfo::Disks;
+#[cfg(target_os = "linux")]
+#[path = "volume_discovery.rs"]
+mod volume_discovery;
 
 /// Retrieves information about all system volumes/disks and returns it as a JSON string.
 /// The information includes volume names, mount points, file systems, size, available space, etc.
@@ -80,8 +83,20 @@ pub fn get_system_volumes_information() -> Vec<VolumeInformation> {
             is_removable: disk.is_removable(),
             total_written_bytes: disk.usage().total_written_bytes,
             total_read_bytes: disk.usage().total_read_bytes,
+            device: None,
+            is_mounted: true,
+            drive_size: None,
         });
     }
+
+    #[cfg(target_os = "linux")]
+    if let Some(physical) = volume_discovery::discover(&volume_information_vec) {
+        return physical;
+    }
+
+    #[cfg(target_os = "linux")]
+    volume_information_vec.retain(|volume| volume.volume_name.starts_with("/dev/") &&
+        !volume.volume_name.starts_with("/dev/loop") && !volume.volume_name.starts_with("/dev/zram"));
 
     // Create a new vector to store non-duplicate items
     let mut result = Vec::new();
@@ -132,6 +147,15 @@ pub fn get_system_volumes_information() -> Vec<VolumeInformation> {
     }
 
     result
+}
+
+#[tauri::command]
+pub async fn mount_volume(device: String) -> Result<String, String> {
+    #[cfg(target_os = "linux")]
+    return tauri::async_runtime::spawn_blocking(move || volume_discovery::mount(&device))
+        .await.map_err(|_| "Could not complete drive mount".to_string())?;
+    #[cfg(not(target_os = "linux"))]
+    { let _ = device; Err("Mounting an unmounted drive is supported on Linux only".into()) }
 }
 
 #[cfg(test)]

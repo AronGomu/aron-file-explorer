@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { deleteSelection } from '../utils/fileDeletion';
+import { canMoveSelection, dragSelection, FILE_DRAG_TYPE } from '../utils/fileDrag';
+import { focusItemPane } from '../utils/explorerFocus';
 import { invoke } from '@tauri-apps/api/core';
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { useFileSystem } from './FileSystemProvider';
@@ -15,6 +17,11 @@ export const ContextMenuContext = createContext({
     openContextMenu: () => {},
     closeContextMenu: () => {},
     clipboard: { items: [], operation: null }, // 'copy' or 'cut'
+    draggedItems: [],
+    beginItemDrag: () => {},
+    endItemDrag: () => {},
+    canDropItems: () => false,
+    dropItems: () => {},
 });
 
 export default function ContextMenuProvider({ children }) {
@@ -24,13 +31,82 @@ export default function ContextMenuProvider({ children }) {
     const [items, setItems] = useState([]);
     const [clipboard, setClipboard] = useState({ items: [], operation: null });
     const [isProcessing, setIsProcessing] = useState(false);
+    const [draggedItems, setDraggedItems] = useState([]);
+    const draggedSelection = useRef([]);
+    const dropValidity = useRef(new Map());
+    const moveBusy = useRef(false);
 
     const deletionBusy = useRef(false);
-    const { selectedItems, isLoading, loadDirectory, clearSelection, removeDeletedItems, currentDirData } = useFileSystem();
+    const { selectedItems, isLoading, loadDirectory, clearSelection, removeDeletedItems, currentDirData, setFocusedItem } = useFileSystem();
     const { currentPath } = useHistory();
     const { isSftpPath, parseSftpPath, copySftpItem, moveSftpItem, downloadAndOpenSftpFile, deleteSftpItem } = useSftp();
     const activePath = useRef(currentPath);
     activePath.current = currentPath;
+
+    const endItemDrag = useCallback(() => {
+        draggedSelection.current = [];
+        dropValidity.current.clear();
+        setDraggedItems([]);
+        requestAnimationFrame(focusItemPane);
+    }, []);
+
+    const beginItemDrag = useCallback((event, item) => {
+        if (isProcessing || isLoading || moveBusy.current) { event.preventDefault(); return; }
+        const items = dragSelection(item, selectedItems);
+        if (!selectedItems.some(selected => selected.path === item.path)) {
+            document.dispatchEvent(new CustomEvent('select-item', { detail: { item } }));
+        }
+        setFocusedItem(item);
+        draggedSelection.current = items;
+        dropValidity.current.clear();
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData(FILE_DRAG_TYPE, 'move');
+        setDraggedItems(items);
+    }, [selectedItems, isProcessing, isLoading, setFocusedItem]);
+
+    const canDropItems = useCallback(destination => {
+        if (isProcessing || isLoading || moveBusy.current) return false;
+        if (!dropValidity.current.has(destination)) {
+            dropValidity.current.set(destination, canMoveSelection(draggedSelection.current, destination, parseSftpPath));
+        }
+        return dropValidity.current.get(destination);
+    }, [isProcessing, isLoading, parseSftpPath]);
+
+    const dropItems = useCallback(async destination => {
+        if (!canDropItems(destination)) return;
+        const items = draggedSelection.current;
+        endItemDrag();
+        moveBusy.current = true;
+        setIsProcessing(true);
+        try {
+            let result;
+            if (isSftpPath(destination)) {
+                const target = parseSftpPath(destination);
+                const sources = items.map(item => ({ item, parsed: parseSftpPath(item.path) }));
+                result = await invoke('move_items_sftp', {
+                    host: target.connection.host, port: Number.parseInt(target.connection.port, 10),
+                    username: target.connection.username, password: target.connection.password,
+                    destination: target.remotePath, paths: sources.map(source => source.parsed.remotePath),
+                });
+                result.moved = sources.filter(source => result.moved.includes(source.parsed.remotePath)).map(source => source.item.path);
+            } else {
+                result = await invoke('move_items', { paths: items.map(item => item.path), destination });
+            }
+            removeDeletedItems(result.moved);
+            for (const [path, error] of result.failed) showError(`Could not move “${path}”: ${error}`);
+            if (result.moved.length) showSuccess(`Moved ${result.moved.length} item(s).`);
+        } catch (error) {
+            showError(`Could not move items: ${error.message || error}`);
+        } finally {
+            try {
+                if (activePath.current) await loadDirectory(activePath.current);
+            } finally {
+                moveBusy.current = false;
+                setIsProcessing(false);
+                requestAnimationFrame(focusItemPane);
+            }
+        }
+    }, [canDropItems, endItemDrag, isSftpPath, parseSftpPath, removeDeletedItems, loadDirectory]);
 
     // Check if item is in favorites
     const isInFavorites = useCallback((item) => {
@@ -127,6 +203,7 @@ export default function ContextMenuProvider({ children }) {
                 }
             }
             
+            if (pathToCopy.includes(' ')) pathToCopy = `"${pathToCopy}"`;
             await writeText(pathToCopy);
             showSuccess(`Path copied to clipboard: ${pathToCopy}`);
         } catch (error) {
@@ -137,7 +214,8 @@ export default function ContextMenuProvider({ children }) {
 
     useEffect(() => {
         const handleCopyPathShortcut = (event) => {
-            if (event.target.isContentEditable ||
+            if (event.defaultPrevented || event.isComposing || document.querySelector('[role="dialog"], .modal-overlay, .interface-keytips') ||
+                event.target.isContentEditable ||
                 event.target.closest?.('input, textarea, select')) return;
             if ((event.ctrlKey || event.metaKey) && event.altKey && !event.shiftKey &&
                 (event.code === 'KeyC' || event.key.toLowerCase() === 'c')) {
@@ -1081,6 +1159,11 @@ export default function ContextMenuProvider({ children }) {
         items,
         clipboard,
         isProcessing,
+        draggedItems,
+        beginItemDrag,
+        endItemDrag,
+        canDropItems,
+        dropItems,
         openContextMenu,
         closeContextMenu,
         removeFromFavorites, // Export this for Sidebar to use

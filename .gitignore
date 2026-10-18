@@ -81,9 +81,9 @@ app.log
 /config/meta_data.json
 /config/settings.json
 
-# Theme validation generated output
-/.tmp/theme-validation/
-/artifacts/theme-validation/
+# Agent scratch and generated validation output
+/.tmp/
+/artifacts/
 
 # Ignore logs
 /logs/*

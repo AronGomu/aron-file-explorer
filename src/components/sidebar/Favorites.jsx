@@ -96,6 +96,7 @@ const Favorites = ({
                     icon={item.icon || 'star'}
                     name={item.name}
                     path={item.path}
+                    dropPath={item.icon === 'file' ? null : item.path}
                     isCollapsed={isCollapsed}
                     isActive={currentView === 'explorer' && currentPath === item.path}
                     onClick={() => onItemClick(item.path)}

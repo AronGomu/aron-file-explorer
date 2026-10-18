@@ -98,7 +98,7 @@
 
 .file-item.view-mode-grid .file-name {
     max-width: 100%;
-    font-size: calc(var(--font-size-sm) * var(--file-grid-zoom, 1));
+    font-size: calc(var(--font-size-xs) * var(--file-grid-zoom, 1));
 }
 
 .file-item.view-mode-grid.image-item {

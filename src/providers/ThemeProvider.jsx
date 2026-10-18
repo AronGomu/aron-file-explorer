@@ -30,7 +30,9 @@ export default function ThemeProvider({ children }) {
     const [rendered, setRendered] = useState(() => systemTheme(prefersDark));
     const renderedRef = useRef(rendered);
     const notices = useRef(new Set());
-    const activeThemeId = pending ?? settings.active_theme_id;
+    const requestedThemeId = pending ?? settings.active_theme_id ?? 'system';
+    const activeThemeId = !isLoading && requestedThemeId !== 'system' &&
+        !catalog.themes.some(theme => theme.id === requestedThemeId) ? 'system' : requestedThemeId;
     const themes = [...catalog.themes].sort((a, b) => {
         const ar = rank(a.id), br = rank(b.id);
         if (ar !== br && (ar >= 0 || br >= 0)) return (ar < 0 ? 2 : ar) - (br < 0 ? 2 : br);
@@ -102,7 +104,8 @@ export default function ThemeProvider({ children }) {
 
     useLayoutEffect(() => {
         const target = resolveThemeId(activeThemeId, prefersDark);
-        const definition = catalog.themes.find(theme => theme.id === target);
+        const definition = catalog.themes.find(theme => theme.id === target) ||
+            (!isLoading ? systemTheme(prefersDark) : null);
         if (definition) {
             renderedRef.current = definition;
             setRendered(definition);
@@ -110,7 +113,7 @@ export default function ThemeProvider({ children }) {
         } else if (isLoading) {
             applyThemeToDOM(renderedRef.current);
         }
-    }, [activeThemeId, prefersDark, catalog, isLoading]);
+    }, [activeThemeId, prefersDark, catalog, isLoading, pending]);
 
     useEffect(() => {
         if (isLoading || pending !== null) return;
@@ -126,13 +129,12 @@ export default function ThemeProvider({ children }) {
         };
         const issues = bridgeFailure ? [...catalog.issues, { code: bridgeFailure }] : catalog.issues;
         const messages = issues.map(issue => [JSON.stringify(issue), issueMessage(issue)]);
-        const target = resolveThemeId(activeThemeId, prefersDark);
-        if (!catalog.themes.some(theme => theme.id === target)) {
-            messages.push([`missing:${target}`, `Theme "${target}" is unavailable. Keeping "${name}".`]);
+        if (requestedThemeId !== 'system' && !catalog.themes.some(theme => theme.id === requestedThemeId)) {
+            messages.push([`missing:${requestedThemeId}`, `Theme "${requestedThemeId}" is unavailable. Using the System default.`]);
         }
         for (const [key, message] of messages) if (!notices.current.has(key)) showError(message, 5000);
         notices.current = new Set(messages.map(([key]) => key));
-    }, [catalog, activeThemeId, prefersDark, isLoading, pending, bridgeFailure]);
+    }, [catalog, activeThemeId, requestedThemeId, prefersDark, isLoading, pending, bridgeFailure]);
 
     const setTheme = async id => {
         if (busy.current || isLoading || id === activeThemeId) return;

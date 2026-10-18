@@ -1,0 +1,190 @@
+[
+  {
+    "repository": "https://github.com/catppuccin/palette",
+    "revision": "07d02aa110ef9eb7e7427afca5c73ba9cf7f8ebd",
+    "paletteFiles": [
+      "palette.json"
+    ],
+    "license": "MIT",
+    "licenseFile": "LICENSE",
+    "themes": [
+      "catppuccin-latte",
+      "catppuccin-mocha"
+    ]
+  },
+  {
+    "repository": "https://github.com/dracula/visual-studio-code",
+    "revision": "a08a206f2c8420ba3c05f0e8d01d43b2f933fdf8",
+    "paletteFiles": [
+      "src/dracula.yml"
+    ],
+    "license": "MIT",
+    "licenseFile": "licenses/dracula-visual-studio-code.txt",
+    "themes": [
+      "dracula"
+    ]
+  },
+  {
+    "repository": "https://github.com/dracula/cursor",
+    "revision": "21e4edd687bdd5f38e1607c69f19f30cbde22c36",
+    "paletteFiles": [
+      "dev/src/alucard.yml"
+    ],
+    "license": "MIT",
+    "licenseFile": "licenses/dracula-cursor.txt",
+    "themes": [
+      "alucard"
+    ]
+  },
+  {
+    "repository": "https://github.com/nordtheme/nord",
+    "revision": "1cef71605416a222e57225b544540ce0fcec18d4",
+    "paletteFiles": [
+      "src/nord.css"
+    ],
+    "license": "MIT",
+    "licenseFile": "licenses/nordtheme-nord.txt",
+    "themes": [
+      "nord"
+    ]
+  },
+  {
+    "repository": "https://github.com/gruvbox-community/gruvbox",
+    "revision": "180ad85971343df68be3422a5630fa84e45a9ab2",
+    "paletteFiles": [
+      "colors/gruvbox.vim"
+    ],
+    "license": "MIT",
+    "licenseFile": "licenses/gruvbox-community-gruvbox.txt",
+    "themes": [
+      "gruvbox-dark",
+      "gruvbox-light"
+    ]
+  },
+  {
+    "repository": "https://github.com/altercation/solarized",
+    "revision": "62f656a02f93c5190a8753159e34b385588d5ff3",
+    "paletteFiles": [
+      "gimp-palette-solarized/solarized.gpl"
+    ],
+    "license": "MIT",
+    "licenseFile": "licenses/altercation-solarized.txt",
+    "themes": [
+      "solarized-dark",
+      "solarized-light"
+    ]
+  },
+  {
+    "repository": "https://github.com/folke/tokyonight.nvim",
+    "revision": "cdc07ac78467a233fd62c493de29a17e0cf2b2b6",
+    "paletteFiles": [
+      "lua/tokyonight/colors/night.lua",
+      "lua/tokyonight/colors/storm.lua",
+      "lua/tokyonight/colors/moon.lua",
+      "lua/tokyonight/colors/day.lua",
+      "extras/kitty/tokyonight_day.conf"
+    ],
+    "license": "Apache-2.0",
+    "licenseFile": "licenses/folke-tokyonight.nvim.txt",
+    "themes": [
+      "tokyo-night-night",
+      "tokyo-night-storm",
+      "tokyo-night-moon",
+      "tokyo-night-day"
+    ]
+  },
+  {
+    "repository": "https://github.com/rose-pine/palette",
+    "revision": "92af52b465ab6e47437aca223c9b8d3009a2023b",
+    "paletteFiles": [
+      "palette.json"
+    ],
+    "license": "MIT",
+    "licenseFile": "licenses/rose-pine-palette.txt",
+    "themes": [
+      "rose-pine-main",
+      "rose-pine-moon",
+      "rose-pine-dawn"
+    ]
+  },
+  {
+    "repository": "https://github.com/atom/one-dark-syntax",
+    "revision": "9c96f4454362267ac45322063e193ccf9d2debb1",
+    "paletteFiles": [
+      "styles/colors.less"
+    ],
+    "license": "MIT",
+    "licenseFile": "licenses/atom-one-dark-syntax.txt",
+    "themes": [
+      "one-dark"
+    ]
+  },
+  {
+    "repository": "https://github.com/atom/one-light-syntax",
+    "revision": "d84579027410c576086dfca14d934c4bd74b0438",
+    "paletteFiles": [
+      "styles/colors.less"
+    ],
+    "license": "MIT",
+    "licenseFile": "licenses/atom-one-light-syntax.txt",
+    "themes": [
+      "one-light"
+    ]
+  },
+  {
+    "repository": "https://github.com/sainnhe/everforest",
+    "revision": "85a86eb62409e3ec88713bff3d1b9d7374e112e4",
+    "paletteFiles": [
+      "autoload/everforest.vim",
+      "palette.md"
+    ],
+    "license": "MIT",
+    "licenseFile": "licenses/sainnhe-everforest.txt",
+    "themes": [
+      "everforest-dark",
+      "everforest-light"
+    ]
+  },
+  {
+    "repository": "https://github.com/primer/github-vscode-theme",
+    "revision": "cd78e5e4e7bcf132a6f428ae0f32264bb1b729cf",
+    "paletteFiles": [
+      "src/colors.js",
+      "src/theme.js"
+    ],
+    "license": "MIT",
+    "licenseFile": "licenses/primer-github-vscode-theme.txt",
+    "themes": [
+      "github-dark-default",
+      "github-light-default"
+    ],
+    "additionalSource": "https://unpkg.com/@primer/primitives@7.10.0/dist/json/colors/{light,dark}.json"
+  },
+  {
+    "repository": "https://github.com/tanvirtin/monokai.nvim",
+    "revision": "759be78d722e306e4a3aac9cc0738f1be86a1ab8",
+    "paletteFiles": [
+      "extras/alacritty/monokai_classic.yml"
+    ],
+    "license": "MIT",
+    "licenseFile": "licenses/tanvirtin-monokai.nvim.txt",
+    "themes": [
+      "monokai-classic"
+    ]
+  },
+  {
+    "repository": "https://github.com/rebelot/kanagawa.nvim",
+    "revision": "bb85e4bfc8d89b0e62c8fa53ccdd13d12e2f77b3",
+    "paletteFiles": [
+      "lua/kanagawa/colors.lua",
+      "lua/kanagawa/themes.lua"
+    ],
+    "license": "MIT",
+    "licenseFile": "licenses/rebelot-kanagawa.nvim.txt",
+    "themes": [
+      "kanagawa-wave",
+      "kanagawa-dragon",
+      "kanagawa-lotus"
+    ]
+  }
+]

@@ -458,7 +458,8 @@ mod tests {
     fn theme_watch_delete_active() {
         let (_temp, path, state, _watcher) = setup();
         fs::remove_file(path.join("catppuccin-latte.theme.json")).unwrap();
-        wait(&state, |catalog| catalog.themes.len() == 1);
+        wait(&state, |catalog| catalog.themes.len() == SEEDS.len() - 1
+            && !catalog.themes.iter().any(|theme| theme.id == "catppuccin-latte"));
         assert!(!path.join("catppuccin-latte.theme.json").exists());
     }
 

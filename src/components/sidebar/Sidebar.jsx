@@ -13,6 +13,8 @@ import Button from '../common/Button';
 import AddSftpConnectionView from './AddSftpConnectionView';
 import './sidebar.css';
 import {showConfirm, showError, showSuccess} from "../../utils/NotificationSystem.js";
+import { formatFileSize } from '../../utils/formatters';
+import { invoke } from '@tauri-apps/api/core';
 
 const COLLAPSED_WIDTH = 48;
 const MIN_SIDEBAR_WIDTH = 160;
@@ -35,6 +37,21 @@ const getMaximumWidth = () => Math.max(MIN_SIDEBAR_WIDTH,
  */
 const Sidebar = ({ currentView }) => {
     const { volumes, loadDirectory, loadVolumes } = useFileSystem();
+    const [mountingDevice, setMountingDevice] = useState(null);
+    const openVolume = async volume => {
+        if (mountingDevice) return;
+        try {
+            let path = volume.mount_point;
+            if (volume.is_mounted === false) {
+                setMountingDevice(volume.device);
+                path = await invoke('mount_volume', { device: volume.device });
+                await loadVolumes();
+            }
+            handleItemClick(path);
+        } catch (error) {
+            showError(String(error));
+        } finally { setMountingDevice(null); }
+    };
     const { currentPath, navigateTo } = useHistory();
     const { removeFromFavorites } = useContextMenu();
     const { navigateToSftpConnection, createSftpUrl, isSftpPath, parseSftpPath, createSftpPath } = useSftp();
@@ -520,15 +537,18 @@ const Sidebar = ({ currentView }) => {
                             <ul className="sidebar-list">
                                 {volumes.map((volume) => (
                                     <SidebarItem
-                                        key={volume.mount_point}
+                                        key={volume.device || volume.mount_point}
                                         icon={volume.is_removable ? 'usb' : 'drive'}
                                         name={volume.volume_name || volume.mount_point}
                                         path={volume.mount_point}
+                                        dropPath={volume.is_mounted === false ? null : volume.mount_point}
                                         isCollapsed={isSidebarCollapsed}
                                         isActive={currentView === 'explorer' && currentPath === volume.mount_point}
-                                        onClick={() => handleItemClick(volume.mount_point)}
-                                        info={`${(volume.available_space / 1024 / 1024 / 1024).toFixed(1)}GB free of ${(volume.size / 1024 / 1024 / 1024).toFixed(1)}GB`}
-                                        actions={volume.is_removable ? [
+                                        onClick={() => openVolume(volume)}
+                                        info={volume.is_mounted === false
+                                            ? `${mountingDevice === volume.device ? 'Mounting…' : 'Not mounted'} · ${formatFileSize(volume.drive_size || volume.size)} drive`
+                                            : `${(volume.available_space / 1024 / 1024 / 1024).toFixed(1)}GB free of ${(volume.size / 1024 / 1024 / 1024).toFixed(1)}GB`}
+                                        actions={volume.is_mounted === false ? [{ icon: 'drive', tooltip: 'Mount drive', onClick: () => openVolume(volume) }] : volume.is_removable ? [
                                             {
                                                 icon: 'eject',
                                                 tooltip: 'Safely eject',
@@ -627,6 +647,7 @@ const Sidebar = ({ currentView }) => {
                                             icon="network"
                                             name={conn.name}
                                             path={`sftp://${conn.username}@${conn.host}:${conn.port}`}
+                                            dropPath={createSftpPath(conn, '.')}
                                             isCollapsed={isSidebarCollapsed}
                                             isActive={currentView === 'network' && currentPath === conn.name}
                                             onClick={async () => {
