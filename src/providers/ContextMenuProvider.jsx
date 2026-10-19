@@ -23,6 +23,7 @@ export const ContextMenuContext = createContext({
     endItemDrag: () => {},
     canDropItems: () => false,
     dropItems: () => {},
+    addToFavorites: () => {},
 });
 
 export default function ContextMenuProvider({ children, basicOnly = false }) {
@@ -62,7 +63,7 @@ export default function ContextMenuProvider({ children, basicOnly = false }) {
         setFocusedItem(item);
         draggedSelection.current = items;
         dropValidity.current.clear();
-        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.effectAllowed = 'linkMove';
         event.dataTransfer.setData(FILE_DRAG_TYPE, 'move');
         setDraggedItems(items);
     }, [selectedItems, isProcessing, isLoading, setFocusedItem]);
@@ -1238,6 +1239,7 @@ export default function ContextMenuProvider({ children, basicOnly = false }) {
         dropItems,
         openContextMenu,
         closeContextMenu,
+        addToFavorites,
         removeFromFavorites, // Export this for Sidebar to use
         copyToClipboard,
         cutToClipboard,

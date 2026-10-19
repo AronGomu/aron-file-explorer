@@ -140,6 +140,23 @@
     padding-top: 0;
 }
 
+.favorites-drop-target[data-favorites-drop-active="true"] {
+    background-color: var(--accent-surface);
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+    border-radius: var(--radius-md);
+}
+
+.favorites-drop-hint {
+    margin: var(--space-xs) var(--space-sm);
+    padding: var(--space-sm);
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+    text-align: center;
+}
+
 .sidebar-collapsed .sidebar-section:not(:first-child) {
     margin-left: 0;
     margin-right: 0;

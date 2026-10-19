@@ -15,6 +15,7 @@ import './sidebar.css';
 import {showConfirm, showError, showSuccess} from "../../utils/NotificationSystem.js";
 import { formatFileSize } from '../../utils/formatters';
 import { invoke } from '@tauri-apps/api/core';
+import useFavoritesDropTarget from '../../hooks/useFavoritesDropTarget';
 
 const COLLAPSED_WIDTH = 48;
 const MIN_SIDEBAR_WIDTH = 160;
@@ -53,7 +54,10 @@ const Sidebar = ({ currentView }) => {
         } finally { setMountingDevice(null); }
     };
     const { currentPath, navigateTo } = useHistory();
-    const { removeFromFavorites } = useContextMenu();
+    const { removeFromFavorites, addToFavorites: addItemToFavorites } = useContextMenu();
+    const { isDragging, dropTargetProps: favoritesDropProps } = useFavoritesDropTarget(items => {
+        items.forEach(item => addItemToFavorites(item));
+    });
     const { navigateToSftpConnection, createSftpUrl, isSftpPath, parseSftpPath, createSftpPath } = useSftp();
     const { isSidebarCollapsed, setIsSidebarCollapsed, toggleSidebar } = useAppState();
     const [sidebarWidth, setSidebarWidth] = usePersistedState('fileExplorerSidebarWidth', () => Math.min(240, getMaximumWidth()));
@@ -451,7 +455,8 @@ const Sidebar = ({ currentView }) => {
                             <button
                                 key={shortcut.id}
                                 type="button"
-                                className="sidebar-toggle"
+                                className={`sidebar-toggle${shortcut.id === 'favorites' ? ' favorites-drop-target' : ''}`}
+                                {...(shortcut.id === 'favorites' ? favoritesDropProps : {})}
                                 onClick={() => openSidebarSection(shortcut.id)}
                                 aria-label={`Open ${shortcut.label}`}
                                 aria-controls="explorer-sidebar-content"
@@ -489,7 +494,8 @@ const Sidebar = ({ currentView }) => {
                     */}
 
                     {/* Favorites section */}
-                    <section className="sidebar-section">
+                    <section className="sidebar-section favorites-drop-target" aria-label="Favorites"
+                        {...favoritesDropProps}>
                         <div className="sidebar-section-header">
                             <h3 className="sidebar-section-title" tabIndex={-1} ref={(element) => { sectionRefs.current.favorites = element; }}>Favorites</h3>
                             <div className="sidebar-section-actions">
@@ -518,6 +524,9 @@ const Sidebar = ({ currentView }) => {
                                 currentView={currentView}
                                 currentPath={currentPath}
                             />
+                        )}
+                        {isDragging && !sectionCollapsed.favorites && (
+                            <div className="favorites-drop-hint">Drop here to add to Favorites</div>
                         )}
                     </section>
 
