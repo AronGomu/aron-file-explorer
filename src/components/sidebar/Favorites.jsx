@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import SidebarItem from './SidebarItem';
+import { getDirectoryPath } from '../../utils/pathUtils';
 
 /**
  * Favorites component - Displays and manages favorite locations
@@ -99,7 +100,7 @@ const Favorites = ({
                     dropPath={item.icon === 'file' ? null : item.path}
                     isCollapsed={isCollapsed}
                     isActive={currentView === 'explorer' && currentPath === item.path}
-                    onClick={() => onItemClick(item.path)}
+                    onClick={() => onItemClick(item.icon === 'file' && !item.path.startsWith('sftp:') ? getDirectoryPath(item.path) : item.path)}
                     onContextMenu={(e) => handleContextMenu(e, item)}
                     actions={[
                         {

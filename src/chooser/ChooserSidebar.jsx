@@ -4,13 +4,17 @@ import { useFileSystem } from '../providers/FileSystemProvider';
 import { useHistory } from '../providers/HistoryProvider';
 import SidebarItem from '../components/sidebar/SidebarItem';
 import usePersistedState from '../hooks/usePersistedState';
+import useFavoritesDropTarget from '../hooks/useFavoritesDropTarget';
 import { formatFileSize } from '../utils/formatters';
+import { getDirectoryPath } from '../utils/pathUtils';
 import '../components/sidebar/sidebar.css';
 
 const MIN_WIDTH = 160;
 const MAX_WIDTH = 480;
 const COLLAPSED_WIDTH = 48;
 const maximumWidth = () => Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, window.innerWidth * 0.6));
+const favoritePath = item => typeof item === 'string' ? item : item.path;
+const folderFavorite = path => ({ path, name: path.split('/').filter(Boolean).at(-1) || '/', icon: 'folder' });
 
 export default function ChooserSidebar({ startingFolder, onError }) {
     const { currentPath } = useHistory();
@@ -18,6 +22,18 @@ export default function ChooserSidebar({ startingFolder, onError }) {
     const [collapsed, setCollapsed] = usePersistedState('chooserSidebarCollapsed', false);
     const [width, setWidth] = usePersistedState('chooserSidebarWidth', 240);
     const [favorites, setFavorites] = usePersistedState('chooserFavorites', []);
+    const { isDragging, dropTargetProps: favoritesDropProps } = useFavoritesDropTarget(items => {
+        setFavorites(previous => {
+            const paths = new Set(previous.map(favoritePath));
+            const additions = [];
+            for (const item of items) {
+                if (paths.has(item.path)) continue;
+                paths.add(item.path);
+                additions.push({ path: item.path, name: item.name, icon: item.isDirectory || 'sub_file_count' in item ? 'folder' : 'file' });
+            }
+            return additions.length ? [...previous, ...additions] : previous;
+        });
+    });
     const [sections, setSections] = usePersistedState('chooserSidebarSections', { favorites: false, drives: false });
     const [mounting, setMounting] = useState(null);
     const [resizing, setResizing] = useState(false);
@@ -66,8 +82,9 @@ export default function ChooserSidebar({ startingFolder, onError }) {
         else return;
         event.preventDefault(); event.stopPropagation();
     };
-    const toggleFavorite = () => setFavorites(previous => previous.includes(currentPath)
-        ? previous.filter(path => path !== currentPath) : [...previous, currentPath]);
+    const isCurrentFavorite = favorites.some(item => favoritePath(item) === currentPath);
+    const toggleFavorite = () => setFavorites(previous => previous.some(item => favoritePath(item) === currentPath)
+        ? previous.filter(item => favoritePath(item) !== currentPath) : [...previous, currentPath]);
     const openVolume = async volume => {
         if (volume.is_mounted !== false) { loadDirectory(volume.mount_point); return; }
         if (mounting) return;
@@ -78,7 +95,8 @@ export default function ChooserSidebar({ startingFolder, onError }) {
         } catch (error) { onError(String(error)); }
         finally { setMounting(null); }
     };
-    const locations = [...new Set([startingFolder, ...favorites])];
+    const locations = [...new Map([folderFavorite(startingFolder), ...favorites.map(item =>
+        typeof item === 'string' ? folderFavorite(item) : item)].map(item => [item.path, item])).values()];
     const sectionHeader = (id, label, action) => <div className="sidebar-section-header">
         <h3 className="sidebar-section-title">{label}</h3>
         <div className="sidebar-section-actions">{action}<button type="button" className="section-collapse-button"
@@ -99,19 +117,23 @@ export default function ChooserSidebar({ startingFolder, onError }) {
         </div>
         {collapsed && <nav className="sidebar-rail" aria-label="Sidebar sections">
             {[['favorites', 'Favorites', 'star'], ['drives', 'Drives', 'drive']].map(([id, label, icon]) => <button key={id} type="button"
-                className="sidebar-toggle" aria-label={`Open ${label}`} title={label} onClick={() => {
+                className={`sidebar-toggle${id === 'favorites' ? ' favorites-drop-target' : ''}`}
+                {...(id === 'favorites' ? favoritesDropProps : {})}
+                aria-label={`Open ${label}`} title={label} onClick={() => {
                     setSections(previous => ({ ...previous, [id]: false })); setCollapsed(false);
                 }}><span className={`icon icon-${icon}`} aria-hidden="true" /></button>)}
         </nav>}
         <div id="chooser-locations" className="sidebar-content" hidden={collapsed}>
-            <section className="sidebar-section">
+            <section className="sidebar-section favorites-drop-target" aria-label="Favorites" {...favoritesDropProps}>
                 {sectionHeader('favorites', 'Favorites', <button type="button" className="section-add-button" onClick={toggleFavorite}
-                    aria-label={favorites.includes(currentPath) ? 'Remove current folder from favorites' : 'Favorite current folder'}
-                    title={favorites.includes(currentPath) ? 'Remove favorite' : 'Favorite current folder'}>
-                    <span className={`icon icon-${favorites.includes(currentPath) ? 'minus' : 'plus-small'}`} aria-hidden="true" />
+                    aria-label={isCurrentFavorite ? 'Remove current folder from favorites' : 'Favorite current folder'}
+                    title={isCurrentFavorite ? 'Remove favorite' : 'Favorite current folder'}>
+                    <span className={`icon icon-${isCurrentFavorite ? 'minus' : 'plus-small'}`} aria-hidden="true" />
                 </button>)}
-                {!sections.favorites && <ul className="sidebar-list">{locations.map(path => <SidebarItem key={path} icon="folder" name={path.split('/').filter(Boolean).at(-1) || '/'}
-                    path={path} isActive={currentPath === path} onClick={() => loadDirectory(path)} />)}</ul>}
+                {!sections.favorites && <ul className="sidebar-list">{locations.map(item => <SidebarItem key={item.path} icon={item.icon} name={item.name}
+                    path={item.path} dropPath={item.icon === 'file' ? null : item.path} isActive={currentPath === item.path}
+                    onClick={() => loadDirectory(item.icon === 'file' ? getDirectoryPath(item.path) : item.path)} />)}</ul>}
+                {isDragging && !sections.favorites && <div className="favorites-drop-hint">Drop here to add to Favorites</div>}
             </section>
             <section className="sidebar-section">
                 {sectionHeader('drives', 'Drives')}
