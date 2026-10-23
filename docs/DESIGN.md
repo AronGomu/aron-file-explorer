@@ -1,6 +1,6 @@
 # Design
 
-React provider hierarchy feeds `MainLayout`. Providers/hooks invoke Rust commands through Tauri IPC. Rust command modules own filesystem, SFTP, search, metadata, settings, hashing, previews, permissions, volumes, templates, and shell operations. Shared backend resources are managed through Tauri state.
+React provider hierarchy feeds `MainLayout`. Providers/hooks invoke Rust commands through Tauri IPC. Rust command modules own filesystem, SFTP, search, metadata, settings, hashing, previews, permissions, volumes, and shell operations. Shared backend resources are managed through Tauri state.
 
 Primary flow:
 

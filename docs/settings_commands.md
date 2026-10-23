@@ -19,7 +19,7 @@ The current settings consist of the following fields. A nearer explanation of ea
    "active_theme_id":"system",
    "default_folder_path_on_opening":"",
    "default_view":"Grid",
-   "font_size":"Medium",
+   "font_size":12,
    "show_hidden_files_and_folders":false,
    "show_details_panel":false,
    "confirm_delete":true,
@@ -85,6 +85,8 @@ The current settings consist of the following fields. A nearer explanation of ea
    }
 }
 ```
+
+`font_size` is an integer from 8 to 32 pixels (default: 12), matching file-name text at 100% view zoom. Other interface text scales with it. Existing Small, Medium, and Large values migrate to 10, 12, and 14 pixels on load.
 
 ### Search Engine Configuration
 

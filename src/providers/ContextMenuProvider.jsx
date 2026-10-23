@@ -31,6 +31,7 @@ export default function ContextMenuProvider({ children, basicOnly = false }) {
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [target, setTarget] = useState(null);
     const [items, setItems] = useState([]);
+    const [openWithApplications, setOpenWithApplications] = useState(null);
     const [clipboard, setClipboard] = useState({ items: [], operation: null });
     const [isProcessing, setIsProcessing] = useState(false);
     const [draggedItems, setDraggedItems] = useState([]);
@@ -41,7 +42,7 @@ export default function ContextMenuProvider({ children, basicOnly = false }) {
     const clipboardWrite = useRef(Promise.resolve());
 
     const deletionBusy = useRef(false);
-    const { selectedItems, isLoading, loadDirectory, clearSelection, removeDeletedItems, currentDirData, setFocusedItem, selectMultiple, openFile } = useFileSystem();
+    const { selectedItems, isLoading, loadDirectory, clearSelection, removeDeletedItems, currentDirData, setFocusedItem, selectMultiple } = useFileSystem();
     const { currentPath } = useHistory();
     const { isSftpPath, parseSftpPath, copySftpItem, moveSftpItem, downloadAndOpenSftpFile, deleteSftpItem } = useSftp();
     const activePath = useRef(currentPath);
@@ -159,8 +160,9 @@ export default function ContextMenuProvider({ children, basicOnly = false }) {
     }, []);
 
     // Remove from favorites with live update
-    const removeFromFavorites = useCallback((path) => {
+    const removeFromFavorites = useCallback(async (path) => {
         try {
+            if (!await showConfirm(`Remove "${path}" from Favorites?`, 'Remove favorite')) return;
             const existingFavorites = JSON.parse(localStorage.getItem('fileExplorerFavorites') || '[]');
             const updatedFavorites = existingFavorites.filter(fav => fav.path !== path);
             localStorage.setItem('fileExplorerFavorites', JSON.stringify(updatedFavorites));
@@ -237,49 +239,6 @@ export default function ContextMenuProvider({ children, basicOnly = false }) {
         window.addEventListener('keydown', handleCopyPathShortcut, true);
         return () => window.removeEventListener('keydown', handleCopyPathShortcut, true);
     }, [copyPath, isProcessing, selectedItems]);
-
-    // Add as template
-    const addAsTemplate = useCallback(async (item) => {
-        if (!item || item.isDirectory || 'sub_file_count' in item) {
-            showError('Only files can be added as templates.');
-            return;
-        }
-
-        setIsProcessing(true);
-        try {
-            let templatePath = item.path;
-            
-            // Handle SFTP files by downloading them first
-            if (isSftpPath(item.path)) {
-                try {
-                    // Download SFTP file to a temporary location using SftpProvider function
-                    const tempPath = await downloadAndOpenSftpFile(item.path, false);
-                    
-                    if (!tempPath) {
-                        throw new Error('Failed to download SFTP file');
-                    }
-                    
-                    templatePath = tempPath;
-                } catch (downloadError) {
-                    console.error('Failed to download SFTP file for template:', downloadError);
-                    showError(`Failed to download SFTP file: ${downloadError.message || downloadError}`);
-                    return;
-                }
-            }
-            
-            const result = await invoke('add_template', {
-                templatePath: templatePath
-            });
-            showSuccess(`Template added successfully: ${result}`);
-
-            window.dispatchEvent(new CustomEvent('templates-updated'));
-        } catch (error) {
-            console.error('Failed to add template:', error);
-            showError(`Failed to add template: ${error.message || error}`);
-        } finally {
-            setIsProcessing(false);
-        }
-    }, [isSftpPath]);
 
     // Copy items to clipboard
     const copyToClipboard = useCallback(async (items) => {
@@ -943,6 +902,20 @@ export default function ContextMenuProvider({ children, basicOnly = false }) {
         }));
     }, [getCurrentFolderMetadata]);
 
+    const openWithApplication = useCallback(async (item, applicationId) => {
+        setIsProcessing(true);
+        try {
+            const path = isSftpPath(item.path)
+                ? await downloadAndOpenSftpFile(item.path, false) : item.path;
+            if (!path) throw new Error('Could not download this file.');
+            await invoke('open_file_with_application', { path, applicationId });
+        } catch (error) {
+            showError(`Failed to open file: ${error.message || error}`);
+        } finally {
+            setIsProcessing(false);
+        }
+    }, [isSftpPath, downloadAndOpenSftpFile]);
+
     // Generate menu items
     const getMenuItemsForContext = useCallback((contextTarget) => {
         if (contextTarget?.isParentNavigation) return [];
@@ -998,34 +971,32 @@ export default function ContextMenuProvider({ children, basicOnly = false }) {
         // File/folder context menu
         const targetItems = selectedItems.some(item => item.path === contextTarget.path) ? selectedItems.filter(item => !item.isParentNavigation) : [contextTarget];
         const itemIsInFavorites = isInFavorites(contextTarget);
+        const matchingApplications = openWithApplications?.path === contextTarget.path ? openWithApplications : null;
+        const applicationMenu = !matchingApplications
+            ? [{ id: 'applications-loading', label: 'Loading applications…', disabled: true }]
+            : matchingApplications.error
+                ? [{ id: 'applications-error', label: 'Could not load applications.', disabled: true }]
+                : matchingApplications.applications.length
+                    ? matchingApplications.applications.map(application => ({
+                        id: application.id,
+                        label: `${application.name}${application.isDefault ? ' (default)' : ''}`,
+                        icon: 'open',
+                        action: () => openWithApplication(contextTarget, application.id),
+                    }))
+                    : [{ id: 'applications-empty', label: 'No compatible applications installed.', disabled: true }];
 
         const menuItems = [
             {
                 id: 'open',
                 label: 'Open',
                 icon: 'open',
-                disabled: selectedItems.length > 1,
-                action: async () => {
-                    if (isDirectory) {
+                disabled: selectedItems.length > 1 || isProcessing,
+                ...(isFile ? { submenu: applicationMenu } : {
+                    action: async () => {
                         await loadDirectory(contextTarget.path);
                         updateNavigationHistory(contextTarget.path);
-                    } else if (basicOnly) {
-                        openFile(contextTarget.path);
-                    } else {
-                        try {
-                            // Handle SFTP files differently - download and open locally
-                            if (isSftpPath(contextTarget.path)) {
-                                await downloadAndOpenSftpFile(contextTarget.path);
-                            } else {
-                                // Regular local file - open with default app
-                                await invoke('open_in_default_app', { path: contextTarget.path });
-                            }
-                        } catch (error) {
-                            console.error('Failed to open file:', error);
-                            showError(`Failed to open file: ${error.message || error}`);
-                        }
-                    }
-                }
+                    },
+                })
             },
             { type: 'separator' },
             {
@@ -1076,20 +1047,6 @@ export default function ContextMenuProvider({ children, basicOnly = false }) {
 
         if (basicOnly) return [...menuItems, { type: 'separator' },
             { id: 'properties', label: 'Properties', icon: 'properties', action: () => showProperties(contextTarget) }];
-
-        // Add "Add as Template" for files only
-        if (isFile && selectedItems.length === 1) {
-            menuItems.push(
-                { type: 'separator' },
-                {
-                    id: 'add-as-template',
-                    label: 'Add as Template',
-                    icon: 'template',
-                    disabled: isProcessing,
-                    action: () => addAsTemplate(contextTarget)
-                }
-            );
-        }
 
         // Add zip/unzip options
         if (isZipFile && selectedItems.length === 1) {
@@ -1194,7 +1151,7 @@ export default function ContextMenuProvider({ children, basicOnly = false }) {
         );
 
         return menuItems;
-    }, [selectedItems, clipboard, isProcessing, currentPath, copyToClipboard, cutToClipboard, pasteFromClipboard, deleteItems, renameItem, loadDirectory, showProperties, addToFavorites, removeFromFavorites, updateNavigationHistory, zipItems, unzipItem, isInFavorites, getCurrentFolderMetadata, generateHash, generateHashToFile, compareHash, copyPath, addAsTemplate, isSftpPath, downloadAndOpenSftpFile, parseSftpPath, basicOnly, openFile]);
+    }, [selectedItems, clipboard, isProcessing, currentPath, copyToClipboard, cutToClipboard, pasteFromClipboard, deleteItems, renameItem, loadDirectory, showProperties, addToFavorites, removeFromFavorites, updateNavigationHistory, zipItems, unzipItem, isInFavorites, getCurrentFolderMetadata, generateHash, generateHashToFile, compareHash, copyPath, isSftpPath, downloadAndOpenSftpFile, parseSftpPath, basicOnly, openWithApplications, openWithApplication]);
 
     // Open context menu
     const openContextMenu = useCallback((e, contextTarget = null) => {
@@ -1219,6 +1176,20 @@ export default function ContextMenuProvider({ children, basicOnly = false }) {
     useEffect(() => {
         if (isOpen) setItems(getMenuItemsForContext(target));
     }, [isOpen, target, getMenuItemsForContext]);
+
+    useEffect(() => {
+        if (!isOpen || !target || target.isDirectory || 'sub_file_count' in target) return;
+        let cancelled = false;
+        setOpenWithApplications(null);
+        invoke('get_open_with_applications', { path: isSftpPath(target.path) ? target.name : target.path })
+            .then(applications => {
+                if (!cancelled) setOpenWithApplications({ path: target.path, applications });
+            })
+            .catch(() => {
+                if (!cancelled) setOpenWithApplications({ path: target.path, error: true });
+            });
+        return () => { cancelled = true; };
+    }, [isOpen, target, isSftpPath]);
 
     // Close context menu
     const closeContextMenu = useCallback(() => {

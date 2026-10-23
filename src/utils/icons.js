@@ -95,7 +95,6 @@ export const getFolderIconType = (folderName) => {
         'node_modules': 'node',
         'public': 'public',
         'assets': 'assets',
-        'templates': 'templates',
         'config': 'config',
         'settings': 'config',
     };

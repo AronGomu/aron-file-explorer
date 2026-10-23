@@ -39,6 +39,8 @@ const getMaximumWidth = () => Math.max(MIN_SIDEBAR_WIDTH,
 const Sidebar = ({ currentView }) => {
     const { volumes, loadDirectory, loadVolumes } = useFileSystem();
     const [mountingDevice, setMountingDevice] = useState(null);
+    const [favoriteCount, setFavoriteCount] = useState(0);
+    const sidebarRef = useRef(null);
     const openVolume = async volume => {
         if (mountingDevice) return;
         try {
@@ -224,6 +226,25 @@ const Sidebar = ({ currentView }) => {
             ...(saved ? JSON.parse(saved) : {})
         };
     });
+
+    const visibleFavoriteCount = sectionCollapsed.favorites ? 0 : favoriteCount;
+    const visibleDriveCount = sectionCollapsed.drives ? 0 : volumes.length;
+
+    useEffect(() => {
+        const shortcuts = event => {
+            if (event.defaultPrevented || event.isComposing || !event.altKey || event.ctrlKey ||
+                event.metaKey || event.shiftKey || document.querySelector('[role="dialog"], .modal-overlay, .context-menu')) return;
+            const number = /^[1-9]$/.test(event.key) ? event.key :
+                /^Digit[1-9]$/.test(event.code) ? event.code.slice(-1) : null;
+            if (!number) return;
+            const item = sidebarRef.current?.querySelector(`.sidebar-item[aria-keyshortcuts="Alt+${number}"]`);
+            if (!item) return;
+            event.preventDefault();
+            if (!event.repeat) item.click();
+        };
+        document.addEventListener('keydown', shortcuts);
+        return () => document.removeEventListener('keydown', shortcuts);
+    }, []);
 
     /**
      * Load system info to identify the current OS
@@ -419,6 +440,7 @@ const Sidebar = ({ currentView }) => {
     return (
         <>
             <aside
+                ref={sidebarRef}
                 id="explorer-sidebar"
                 className={`sidebar${isSidebarCollapsed ? ' sidebar-collapsed' : ''}${isResizing ? ' sidebar-resizing' : ''}`}
                 style={{ '--sidebar-width': `${sidebarWidth}px` }}
@@ -455,8 +477,7 @@ const Sidebar = ({ currentView }) => {
                             <button
                                 key={shortcut.id}
                                 type="button"
-                                className={`sidebar-toggle${shortcut.id === 'favorites' ? ' favorites-drop-target' : ''}`}
-                                {...(shortcut.id === 'favorites' ? favoritesDropProps : {})}
+                                className="sidebar-toggle"
                                 onClick={() => openSidebarSection(shortcut.id)}
                                 aria-label={`Open ${shortcut.label}`}
                                 aria-controls="explorer-sidebar-content"
@@ -494,8 +515,7 @@ const Sidebar = ({ currentView }) => {
                     */}
 
                     {/* Favorites section */}
-                    <section className="sidebar-section favorites-drop-target" aria-label="Favorites"
-                        {...favoritesDropProps}>
+                    <section className="sidebar-section" aria-label="Favorites">
                         <div className="sidebar-section-header">
                             <h3 className="sidebar-section-title" tabIndex={-1} ref={(element) => { sectionRefs.current.favorites = element; }}>Favorites</h3>
                             <div className="sidebar-section-actions">
@@ -517,6 +537,7 @@ const Sidebar = ({ currentView }) => {
                         </div>
                         {!sectionCollapsed.favorites && (
                             <Favorites
+                                onCountChange={setFavoriteCount}
                                 isCollapsed={isSidebarCollapsed}
                                 onItemClick={handleItemClick}
                                 onRemove={handleRemoveFromFavorites}
@@ -526,7 +547,7 @@ const Sidebar = ({ currentView }) => {
                             />
                         )}
                         {isDragging && !sectionCollapsed.favorites && (
-                            <div className="favorites-drop-hint">Drop here to add to Favorites</div>
+                            <div className="favorites-drop-hint" {...favoritesDropProps}>Drop here to add to Favorites</div>
                         )}
                     </section>
 
@@ -544,8 +565,9 @@ const Sidebar = ({ currentView }) => {
                         </div>
                         {!sectionCollapsed.drives && (
                             <ul className="sidebar-list">
-                                {volumes.map((volume) => (
+                                {volumes.map((volume, index) => (
                                     <SidebarItem
+                                        shortcutNumber={visibleFavoriteCount + index + 1}
                                         key={volume.device || volume.mount_point}
                                         icon={volume.is_removable ? 'usb' : 'drive'}
                                         name={volume.volume_name || volume.mount_point}
@@ -650,8 +672,9 @@ const Sidebar = ({ currentView }) => {
                                         </div>
                                     </div>
                                 ) : (
-                                    sftpConnections.map((conn) => (
+                                    sftpConnections.map((conn, index) => (
                                         <SidebarItem
+                                            shortcutNumber={visibleFavoriteCount + visibleDriveCount + index + 1}
                                             key={conn.name}
                                             icon="network"
                                             name={conn.name}

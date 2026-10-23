@@ -4,11 +4,9 @@ import usePersistedState from '../hooks/usePersistedState';
 // Create context
 const AppStateContext = createContext({
     isSearching: false,
-    isTemplateViewOpen: false,
     isSidebarCollapsed: false,
-    currentView: 'explorer', // 'explorer', 'this-pc', 'search-results', 'template-view'
+    currentView: 'explorer', // 'explorer', 'this-pc', 'search-results'
     setIsSearching: () => {},
-    toggleTemplateView: () => {},
     toggleSidebar: () => {},
     setIsSidebarCollapsed: () => {},
     setCurrentView: () => {},
@@ -17,20 +15,8 @@ const AppStateContext = createContext({
 // Provider component
 export default function AppStateProvider({ children }) {
     const [isSearching, setIsSearching] = useState(false);
-    const [isTemplateViewOpen, setIsTemplateViewOpen] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = usePersistedState('fileExplorerSidebarCollapsed', false);
     const [currentView, setCurrentView] = useState('explorer');
-
-    // Toggle template view
-    const toggleTemplateView = useCallback(() => {
-        setIsTemplateViewOpen(prev => !prev);
-
-        if (!isTemplateViewOpen) {
-            setCurrentView('template-view');
-        } else {
-            setCurrentView('explorer');
-        }
-    }, [isTemplateViewOpen]);
 
     // Toggle sidebar
     const toggleSidebar = useCallback(() => {
@@ -39,11 +25,9 @@ export default function AppStateProvider({ children }) {
 
     const contextValue = {
         isSearching,
-        isTemplateViewOpen,
         isSidebarCollapsed,
         currentView,
         setIsSearching,
-        toggleTemplateView,
         toggleSidebar,
         setIsSidebarCollapsed,
         setCurrentView,

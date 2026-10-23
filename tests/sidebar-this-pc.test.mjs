@@ -24,22 +24,23 @@ test('removes built-in user shortcuts', () => {
   }
 });
 
-test('retains sidebar shell and navigation', () => {
+test('retains sidebar sections and their add controls without obsolete footer actions', () => {
   assert.match(sidebar, /className="sidebar-content"/);
-  assert.match(sidebar, /className="sidebar-footer"/);
+  assert.match(sidebar, /aria-label="Resize sidebar"/);
+  assert.doesNotMatch(sidebar, /className="sidebar-footer"/);
 
   const headings = ['Favorites', 'Drives', 'Network'].map((heading) => {
-    const title = `<h3 className="sidebar-section-title">${heading}</h3>`;
-    assert.equal(sidebar.split(title).length - 1, 1);
-    return { index: sidebar.indexOf(title) };
+    const matches = [...sidebar.matchAll(new RegExp(`<h3 className="sidebar-section-title".*>${heading}</h3>`, 'g'))];
+    assert.equal(matches.length, 1);
+    return { index: matches[0].index };
   });
   assert.ok(headings.every(({ index }) => index >= 0));
   assert.ok(headings[0].index < headings[1].index);
   assert.ok(headings[1].index < headings[2].index);
-  assert.match(sidebar, />Settings<\/span>/);
-  assert.match(sidebar, />Templates<\/span>/);
-  assert.match(sidebar, />Add Source<\/span>/);
-  assert.match(sidebar, /aria-label="Add Datasource"/);
+  assert.doesNotMatch(sidebar, />Templates<\/span>/);
+  assert.match(sidebar, /title="Add Data Source"/);
+  assert.match(sidebar, /title="Add to Favorites"/);
+  assert.match(sidebar, /title="Add SFTP Connection"/);
 });
 
 test('retains drive metadata and shared loading', () => {

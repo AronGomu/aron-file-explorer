@@ -259,7 +259,6 @@ for (const theme of ['catppuccin-latte', 'catppuccin-mocha']) {
     test(`theme_icons_legacy_background_layer: ${theme}`, async ({ page }) => {
         await page.goto(`/?case=context-menu&theme=${theme}`, { waitUntil: 'networkidle' });
         // Actual unchanged peripheral styles also load in production MainLayout.
-        await page.addStyleTag({ path: 'src/components/templates/templates.css' });
         await page.addStyleTag({ path: 'src/components/search/searchBar.css' });
         await page.locator('.file-item').nth(1).click({ button: 'right' });
         const icon = page.locator('.context-menu-icon.icon-delete');

@@ -127,7 +127,7 @@ nix develop --no-warn-dirty --command node scripts/run-isolated-rust-tests.mjs -
 
 | Core cases | Peripheral cases |
 | --- | --- |
-| settings, explorer-grid, explorer-list, explorer-details | search, network, sftp-form, templates |
+| settings, explorer-grid, explorer-list, explorer-details | search, network, sftp-form |
 | sidebar-tabs, breadcrumb, context-menu, controls, this-pc | preview-image, preview-video, preview-text, preview-error |
 | — | dialogs, permissions, toasts, confirm, loading, error-fallback |
 

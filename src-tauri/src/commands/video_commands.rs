@@ -50,7 +50,25 @@ pub async fn get_video_preview(path: String) -> Result<String, String> {
     .await
 }
 
+#[tauri::command]
+pub async fn get_video_preview_segment(path: String, start: u32) -> Result<tauri::ipc::Response, String> {
+    let _permit = VIDEO_PREVIEW_WORKERS.acquire().await.map_err(|error| error.to_string())?;
+    let path = create_video_preview_segment(
+        Path::new(&path), &std::env::temp_dir().join("file_explorer_video_previews"), start,
+    ).await?;
+    let bytes = tokio::fs::read(path).await.map_err(|error| error.to_string())?;
+    Ok(tauri::ipc::Response::new(bytes))
+}
+
 async fn create_video_preview(source: &Path, directory: &Path) -> Result<String, String> {
+    create_video_preview_range(source, directory, None).await
+}
+
+async fn create_video_preview_segment(source: &Path, directory: &Path, start: u32) -> Result<String, String> {
+    create_video_preview_range(source, directory, Some(start)).await
+}
+
+async fn create_video_preview_range(source: &Path, directory: &Path, start: Option<u32>) -> Result<String, String> {
     let source = tokio::fs::canonicalize(source)
         .await
         .map_err(|error| error.to_string())?;
@@ -67,7 +85,8 @@ async fn create_video_preview(source: &Path, directory: &Path) -> Result<String,
     tokio::fs::create_dir_all(directory)
         .await
         .map_err(|error| error.to_string())?;
-    let cached = directory.join(format!("preview-v1-{:016x}.webm", hash.finish()));
+    start.hash(&mut hash);
+    let cached = directory.join(format!("preview-v3-{:016x}.webm", hash.finish()));
     if cached.is_file() {
         return Ok(cached.to_string_lossy().into_owned());
     }
@@ -78,15 +97,17 @@ async fn create_video_preview(source: &Path, directory: &Path) -> Result<String,
         .tempfile_in(directory)
         .map_err(|error| error.to_string())?;
     // VP8/Vorbis works without the optional H.264/HEVC GStreamer decoders on Linux.
-    // Bound preview resolution and encoder workers; retain the full clip and its audio.
+    // Bound resolution and encoder workers; segment requests keep audio and stop after five seconds.
     let mut command = Command::new("ffmpeg");
     command
         .args([
             "-nostdin", "-hide_banner", "-loglevel", "error", "-threads", "2",
-            "-protocol_whitelist", "file,pipe", "-i",
-        ])
-        .arg(&source)
-        .args([
+            "-protocol_whitelist", "file,pipe",
+        ]);
+    if let Some(start) = start.filter(|start| *start > 0) { command.args(["-ss", &start.to_string()]); }
+    command.arg("-i").arg(&source);
+    if start.is_some() { command.args(["-t", "5"]); }
+    command.args([
             "-map", "0:v:0", "-map", "0:a:0?", "-sn", "-dn", "-map_metadata", "-1",
             "-vf", "scale=w=min(1280\\,iw):h=min(720\\,ih):force_original_aspect_ratio=decrease:force_divisible_by=2",
             "-c:v", "libvpx", "-deadline", "realtime", "-cpu-used", "8",
@@ -100,7 +121,7 @@ async fn create_video_preview(source: &Path, directory: &Path) -> Result<String,
         .kill_on_drop(true);
     #[cfg(windows)]
     command.creation_flags(0x08000000);
-    let status = tokio::time::timeout(Duration::from_secs(600), command.status())
+    let status = tokio::time::timeout(Duration::from_secs(if start.is_some() { 30 } else { 600 }), command.status())
         .await
         .map_err(|_| "Preparing this video preview took too long.".to_string())?
         .map_err(|error| {
@@ -229,6 +250,42 @@ async fn create_video_thumbnail(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn preview_segment_is_five_seconds_and_can_seek_without_converting_the_whole_video() {
+        let root = tempfile::tempdir().unwrap();
+        let source = root.path().join("long.mkv");
+        video(&source, "red", "30");
+        for start in [0, 20] {
+            let path = create_video_preview_segment(&source, &root.path().join("cache"), start).await.unwrap();
+            let output = std::process::Command::new("ffprobe")
+                .args(["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0"])
+                .arg(&path).output().unwrap();
+            let duration: f64 = String::from_utf8(output.stdout).unwrap().trim().parse().unwrap();
+            assert!((4.9..5.2).contains(&duration), "segment duration: {duration}");
+            assert_eq!(create_video_preview_segment(&source, &root.path().join("cache"), start).await.unwrap(), path);
+        }
+        assert_eq!(std::fs::read_dir(root.path().join("cache")).unwrap().count(), 2);
+    }
+
+    #[tokio::test]
+    async fn first_segment_keeps_flv_headers_and_keyframes() {
+        let root = tempfile::tempdir().unwrap();
+        let source = root.path().join("clip.flv");
+        let status = std::process::Command::new("ffmpeg").args([
+            "-nostdin", "-hide_banner", "-loglevel", "error",
+            "-f", "lavfi", "-i", "testsrc2=s=128x96:r=12:d=3",
+            "-f", "lavfi", "-i", "sine=duration=3",
+            "-c:v", "flv", "-c:a", "mp3", "-shortest", "-y",
+        ]).arg(&source).status().unwrap();
+        assert!(status.success());
+        let path = create_video_preview_segment(&source, &root.path().join("cache"), 0).await.unwrap();
+        let probe = std::process::Command::new("ffprobe")
+            .args(["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=codec_name", "-of", "csv=p=0"])
+            .arg(path).output().unwrap();
+        assert!(probe.status.success());
+        assert_eq!(String::from_utf8(probe.stdout).unwrap().trim(), "vp8");
+    }
 
     #[tokio::test]
     async fn preview_preserves_audio_and_source_and_reuses_cache_until_source_changes() {

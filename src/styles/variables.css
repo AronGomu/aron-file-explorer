@@ -20,12 +20,13 @@
     Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 
     /* Font sizes */
-    --font-size-xs: 0.75rem;    /* 12px */
-    --font-size-sm: 0.875rem;   /* 14px */
-    --font-size-md: 1rem;       /* 16px */
-    --font-size-lg: 1.125rem;   /* 18px */
-    --font-size-xl: 1.25rem;    /* 20px */
-    --font-size-xxl: 1.5rem;    /* 24px */
+    --item-font-size: 12px;
+    --font-size-xs: var(--item-font-size);
+    --font-size-sm: calc(var(--item-font-size) + 2px);
+    --font-size-md: calc(var(--item-font-size) + 4px);
+    --font-size-lg: calc(var(--item-font-size) + 6px);
+    --font-size-xl: calc(var(--item-font-size) + 8px);
+    --font-size-xxl: calc(var(--item-font-size) + 12px);
 
     /* Font weights */
     --font-weight-regular: 400;

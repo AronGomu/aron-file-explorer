@@ -4,7 +4,7 @@ import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
 // Chromium fixture evidence only. Native disk/watch/restart use isolated packaged scripts.
 test.use({ channel: 'chromium' });
 const directory = 'artifacts/theme-validation/visual/integration';
-const cases = ['settings', 'explorer-grid', 'explorer-list', 'explorer-details', 'sidebar-tabs', 'breadcrumb', 'context-menu', 'controls', 'this-pc', 'search', 'network', 'sftp-form', 'templates', 'dialogs', 'permissions', 'toasts', 'confirm', 'loading', 'error-fallback'];
+const cases = ['settings', 'explorer-grid', 'explorer-list', 'explorer-details', 'sidebar-tabs', 'breadcrumb', 'context-menu', 'controls', 'this-pc', 'search', 'network', 'sftp-form', 'dialogs', 'permissions', 'toasts', 'confirm', 'loading', 'error-fallback'];
 const themes = ['catppuccin-latte', 'catppuccin-mocha'];
 
 async function readings(page) {

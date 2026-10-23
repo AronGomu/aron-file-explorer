@@ -16,8 +16,10 @@ Frequent actions also have direct shortcuts. Use Command in place of Ctrl for le
 | Select all visible items | Ctrl+A |
 | Icons / List view | Ctrl+Shift+1 / Ctrl+Shift+2 |
 | New tab / Close active tab | Ctrl+T / Ctrl+W (closing the last tab closes the window) |
+| Select an open tab by position | Ctrl+1 through Ctrl+9 |
+| Open a sidebar destination by position | Alt+1 through Alt+9, from top to bottom in expanded sections |
 | Toggle left panel | Ctrl+B |
-| Toggle preview panel | Space from the item pane |
+| Toggle preview panel | Ctrl+Shift+B |
 | Toggle preview information | Ctrl+Alt+I |
 | Settings | Ctrl+, |
 | New file / New folder | Ctrl+N / Ctrl+Shift+N |
@@ -43,3 +45,5 @@ Resize handles remain keyboard accessible: focus a list column separator and use
 Shortcut routing lives in `ContextMenuProvider.jsx`, `FileList.jsx`, `MainLayout.jsx`, `NavigationButtons.jsx`, `PathBreadcrumb.jsx`, `DetailsPanel.jsx`, `TabManager.jsx`, and `InterfaceShortcuts.jsx`. Text fields and dialogs suppress file-action shortcuts to protect editing.
 
 Ctrl+W also closes the active tab while a location/search input or another text field has focus. When another tab remains, it becomes active and keyboard focus returns to its items. Closing the final tab closes the native window; reopening Explr restores that folder. Modal dialogs retain their keyboard interaction. Held-key repeats do not close additional tabs. Ctrl+T remains suppressed while typing in a text field.
+
+Double-clicking a local TXT file opens the preview pane and focuses its text editor when the complete text is editable. The editor section and the middle item pane show the same border when focused. Other preview types keep their existing behavior. Ctrl+1–9 and Alt+1–9 also work from the editor; modal dialogs retain focus. Sidebar shortcut badges occupy the action slot on each numbered row and give way to its remove/eject button on hover or keyboard focus. Collapsing a sidebar section renumbers the remaining destinations. Positions beyond nine have no number shortcut.

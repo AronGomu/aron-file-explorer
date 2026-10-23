@@ -731,6 +731,15 @@ const FileList = ({ data, isLoading, viewMode = 'grid', isSearching = false, sea
             if (item.isDirectory) {
                 loadDirectory(item.path);
             } else {
+                if (/\.txt$/i.test(item.name) && !item.path.startsWith('sftp:')) {
+                    const request = new CustomEvent('edit-preview', { detail: item.path, cancelable: true });
+                    window.dispatchEvent(request);
+                    if (request.defaultPrevented) {
+                        selectItem(item, false);
+                        setLastSelectedIndex(index);
+                        return;
+                    }
+                }
                 openFile(item.path);
             }
             return;

@@ -102,16 +102,9 @@ test('theme_peripheral_fixture_IPC: deny unknown commands/hosts/credentials', ()
     expect(JSON.parse(peripheralIPC('network', 'load_dir', { host: 'fixture.invalid', username: 'fixture', password: '' }, EMBEDDED_THEMES))).toEqual({ files: ['./reference.txt'], directories: [] });
 });
 
-test('theme_template_file_types: owned icon tints use semantic file tokens', () => {
-    const css = readFileSync('src/components/templates/templates.css', 'utf8');
-    for (const [kind, token] of Object.entries({ folder: 'folder', file: 'file-text', image: 'file-image', video: 'file-video', audio: 'file-audio', code: 'file-code', archive: 'file-archive', pdf: 'file-pdf' })) {
-        expect(css).toContain(`.template-icon .icon-${kind} { color: var(--${token}); }`);
-    }
-});
-
 test('theme_peripheral_owned_sources: no literal/fallback/legacy color consumers or content filters', () => {
     const paths = ['src/utils/NotificationSystem.js', 'src/components/sidebar/AddSftpConnectionView.jsx', 'src/components/common/PermissionHelper.jsx',
-        ...['search', 'network', 'templates'].flatMap(dir => readdirSync(`src/components/${dir}`).filter(name => /\.(css|jsx)$/.test(name)).map(name => `src/components/${dir}/${name}`))];
+        ...['search', 'network'].flatMap(dir => readdirSync(`src/components/${dir}`).filter(name => /\.(css|jsx)$/.test(name)).map(name => `src/components/${dir}/${name}`))];
     const violations = [];
     for (const path of paths) {
         const source = readFileSync(path, 'utf8');

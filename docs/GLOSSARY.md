@@ -12,7 +12,7 @@
 | hook | reusable frontend state/IPC logic | `src/hooks/` |
 | panel | file-explorer UI region | `src/components/`, `src/layouts/` |
 | keymap | target scoped keyboard command registry | `src/utils/keyboard.js`, `docs/PRODUCT_VISION.md` |
-| preview | in-app media and metadata viewer | `src/hooks/usePreview.js`, `PreviewModal` |
+| preview | in-app file viewer with editable local TXT text | `src/components/explorer/DetailsPanel.jsx`, `src/components/explorer/FileContentPreview.jsx` |
 
 ## Backend
 

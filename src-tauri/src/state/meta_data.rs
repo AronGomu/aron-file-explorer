@@ -1,6 +1,6 @@
 use crate::commands::volume_operations_commands;
 use crate::models::VolumeInformation;
-use crate::{constants, log_error};
+use crate::constants;
 use home::home_dir;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
@@ -19,8 +19,6 @@ pub struct MetaData {
     version: String,
     abs_file_path_buf: PathBuf,
     abs_file_path_for_settings_json: PathBuf,
-    pub abs_folder_path_buf_for_templates: PathBuf,
-    pub template_paths: Vec<PathBuf>,
     all_volumes_with_information: Vec<VolumeInformation>,
     current_running_os: String,
     current_cpu_architecture: String,
@@ -31,7 +29,7 @@ impl Default for MetaData {
     ///
     /// This method initializes metadata with:
     /// 1. The current application version
-    /// 2. Default file paths for configuration and templates
+    /// 2. Default file paths for configuration
     /// 3. Current system information (volumes, OS, architecture)
     /// 4. User's home directory
     ///
@@ -43,8 +41,6 @@ impl Default for MetaData {
             version: constants::VERSION.to_owned(),
             abs_file_path_buf: constants::META_DATA_CONFIG_ABS_PATH.to_path_buf(),
             abs_file_path_for_settings_json: constants::SETTINGS_CONFIG_ABS_PATH.to_path_buf(),
-            abs_folder_path_buf_for_templates: constants::TEMPLATES_ABS_PATH_FOLDER.to_path_buf(),
-            template_paths: load_templates(),
             all_volumes_with_information:
                 volume_operations_commands::get_system_volumes_information(),
             current_running_os: std::env::consts::OS.to_string(),
@@ -54,34 +50,6 @@ impl Default for MetaData {
                 .to_string_lossy()
                 .to_string(),
         }
-    }
-}
-
-/// Loads template paths from the templates directory.
-///
-/// This function reads all files in the templates directory and returns
-/// their paths. If the directory doesn't exist, it creates an empty one.
-///
-/// # Returns
-///
-/// A vector of PathBuf objects pointing to templates, or an empty vector
-/// if the directory doesn't exist or can't be read
-fn load_templates() -> Vec<PathBuf> {
-    let templates_path = constants::TEMPLATES_ABS_PATH_FOLDER.to_path_buf();
-    if templates_path.exists() {
-        fs::read_dir(templates_path)
-            .unwrap()
-            .filter_map(|entry| entry.ok())
-            .map(|entry| entry.path())
-            .collect()
-    } else {
-        //create the empty folder
-        fs::create_dir_all(templates_path)
-            .map_err(|e| {
-                log_error!("Failed to create templates folder. Error: {}", e);
-            })
-            .unwrap();
-        vec![]
     }
 }
 
@@ -158,28 +126,6 @@ impl MetaDataState {
         let mut meta_data = self.0.lock().unwrap();
         meta_data.all_volumes_with_information =
             volume_operations_commands::get_system_volumes_information();
-        self.write_meta_data_to_file(&meta_data)
-    }
-
-    /// Updates the list of available templates.
-    ///
-    /// Rescans the templates directory and updates the metadata with
-    /// the current list of templates, then writes the updated metadata to disk.
-    ///
-    /// # Returns
-    ///
-    /// * `Ok(())` - If template paths were successfully updated
-    /// * `Err(io::Error)` - If there was an error writing metadata to disk
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// let metadata_state = MetaDataState::new();
-    /// metadata_state.update_template_paths()?;
-    /// ```
-    pub fn update_template_paths(&self) -> io::Result<()> {
-        let mut meta_data = self.0.lock().unwrap();
-        meta_data.template_paths = load_templates();
         self.write_meta_data_to_file(&meta_data)
     }
 
@@ -302,6 +248,22 @@ impl MetaDataState {
 mod metadata_tests {
     use super::*;
     use tempfile::tempdir;
+
+    #[test]
+    fn test_legacy_metadata_round_trip_preserves_configuration_without_templates() {
+        let mut legacy = serde_json::to_value(MetaData::default()).unwrap();
+        legacy["version"] = serde_json::json!("legacy-version");
+        legacy["user_home_dir"] = serde_json::json!("/legacy/home");
+        legacy["abs_folder_path_buf_for_templates"] = serde_json::json!("/legacy/templates");
+        legacy["template_paths"] = serde_json::json!(["/legacy/templates/example.txt"]);
+
+        let metadata: MetaData = serde_json::from_value(legacy).unwrap();
+        let current = serde_json::to_value(metadata).unwrap();
+        assert_eq!(current["version"], "legacy-version");
+        assert_eq!(current["user_home_dir"], "/legacy/home");
+        assert!(current.get("abs_folder_path_buf_for_templates").is_none());
+        assert!(current.get("template_paths").is_none());
+    }
 
     //test the default values of the metadata
     #[test]

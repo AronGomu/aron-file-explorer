@@ -49,7 +49,3 @@ pub const MAX_NUMBER_OF_LOG_FILES: usize = 3;
 pub static SETTINGS_CONFIG_ABS_PATH: LazyLock<PathBuf> =
     LazyLock::new(|| CONFIG_PATH.join(SETTINGS_CONFIG_FILE_NAME));
 pub static SETTINGS_CONFIG_FILE_NAME: &str = "settings.json";
-
-pub static TEMPLATES_ABS_PATH_FOLDER: LazyLock<PathBuf> =
-    LazyLock::new(|| CONFIG_PATH.join(TEMPLATES_FOLDER));
-pub static TEMPLATES_FOLDER: &str = "templates";

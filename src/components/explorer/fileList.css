@@ -8,6 +8,19 @@
     min-height: 0; /* Wichtig für Flexbox scrolling */
 }
 
+.file-list-wrapper:focus-within::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--focus-ring);
+    pointer-events: none;
+    z-index: 2;
+}
+
+.file-list-container:focus {
+    outline: none;
+}
+
 .file-list-container {
     flex: 1;
     overflow-y: auto;
@@ -128,7 +141,7 @@
     align-items: center;
     flex: 1;
     min-width: 0;
-    height: calc(28px * var(--file-list-zoom, 1));
+    height: calc((var(--font-size-xs) + 16px) * var(--file-list-zoom, 1));
     padding: 0 calc(8px * var(--file-list-zoom, 1));
     border: none;
     background: transparent;

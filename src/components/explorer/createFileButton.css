@@ -73,12 +73,6 @@
     flex-shrink: 0;
 }
 
-.create-divider {
-    height: 1px;
-    background-color: var(--border);
-    margin: var(--space-xs) 0;
-}
-
 /* Modal styles */
 .modal-backdrop {
     position: fixed;

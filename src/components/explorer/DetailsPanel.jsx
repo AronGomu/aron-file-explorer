@@ -1,20 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 import usePersistedState from '../../hooks/usePersistedState';
+import useMediaDuration from '../../hooks/useMediaDuration';
 import FileContentPreview from './FileContentPreview';
 import FileDetails from './FileDetails';
 import IconButton from '../common/IconButton';
-import { formatFileSize, formatDate, getFileType, formatDuration } from '../../utils/formatters';
-import { invoke } from '@tauri-apps/api/core';
+import { formatFileSize, formatDate, getFileType } from '../../utils/formatters';
 import { useSftp } from '../../providers/SftpProvider';
-import { getFileIconType } from '../../utils/icons';
-import { getPreviewFilePath } from '../../utils/imageThumbnails';
 import { getDirectoryPath } from '../../utils/pathUtils';
 import './detailsPanel.css';
 
 const MIN_PREVIEW_WIDTH = 200;
 const COLLAPSED_PREVIEW_WIDTH = 48;
 const COLLAPSE_RESISTANCE = 100;
-const mediaDurations = new Map();
 const getMaximumPreviewWidth = (panel) => Math.max(MIN_PREVIEW_WIDTH,
     Math.floor((panel?.parentElement?.clientWidth || window.innerWidth) * 0.75));
 
@@ -29,7 +26,7 @@ const getMaximumPreviewWidth = (panel) => Math.max(MIN_PREVIEW_WIDTH,
  * @param {string} [props.viewMode='grid'] - Active explorer view mode
  * @returns {React.ReactElement} Details panel component
  */
-const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, isCollapsed = false, onOpenChange, viewMode = 'grid', autoCopy = true }) => {
+const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, isCollapsed = false, onOpenChange, viewMode = 'grid', autoCopy = true, editorFocusRequest, onEditorFocused }) => {
     const [showInformation, setShowInformation] = usePersistedState('fileExplorerDetailsVisible', false);
     const [splitRatio, setSplitRatio] = usePersistedState('fileExplorerPreviewSplit', 0.6);
     const [isSplitting, setIsSplitting] = useState(false);
@@ -41,8 +38,7 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, isCollaps
     const [isResizing, setIsResizing] = useState(false);
     const panelRef = useRef(null);
     const resizeStart = useRef(null);
-    const { isSftpPath, parseSftpPath } = useSftp();
-    const [durationResult, setDurationResult] = useState(null);
+    const { isSftpPath } = useSftp();
 
     useEffect(() => {
         const shortcuts = event => {
@@ -188,32 +184,7 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, isCollaps
     const hasItem = item && !isMultipleSelection;
     const revision = item ? `${item.last_modified || ''}:${item.size_in_bytes ?? ''}` : '';
     const isDirectory = hasItem && (item.isDirectory || 'sub_file_count' in item);
-    const isMedia = hasItem && !isDirectory && ['audio', 'video'].includes(getFileIconType(item.name));
-    const durationKey = JSON.stringify([item?.path, revision]);
-    const duration = isMedia ? (durationResult?.key === durationKey ? durationResult.text : 'Loading…') : null;
-
-    useEffect(() => {
-        if (!isMedia || isCollapsed) return;
-        let cancelled = false;
-        let pending = mediaDurations.get(durationKey);
-        if (!pending) {
-            pending = (async () => {
-                const remote = isSftpPath(item.path) ? parseSftpPath(item.path) : null;
-                if (isSftpPath(item.path) && !remote?.connection) throw new Error('Connection unavailable');
-                const path = await getPreviewFilePath(item.path, revision, remote);
-                return invoke('get_media_duration', { path });
-            })();
-            if (mediaDurations.size >= 128) mediaDurations.delete(mediaDurations.keys().next().value);
-            mediaDurations.set(durationKey, pending);
-        }
-        pending.then(seconds => {
-            if (!cancelled) setDurationResult({ key: durationKey, text: formatDuration(seconds) });
-        }).catch(() => {
-            if (mediaDurations.get(durationKey) === pending) mediaDurations.delete(durationKey);
-            if (!cancelled) setDurationResult({ key: durationKey, text: 'Unavailable' });
-        });
-        return () => { cancelled = true; };
-    }, [isMedia, isCollapsed, durationKey, item?.path, revision, isSftpPath, parseSftpPath]);
+    const duration = useMediaDuration(hasItem ? item : null, !isCollapsed);
 
     const footerSummary = hasItem ? [
         duration ? `Duration ${duration}` : null,
@@ -236,9 +207,9 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, isCollaps
                     icon={isCollapsed ? 'chevron-left' : 'chevron-right'}
                     className="details-panel-toggle"
                     label={isCollapsed ? 'Expand preview panel' : 'Collapse preview panel'}
-                    title={`${isCollapsed ? 'Expand' : 'Collapse'} preview panel (Space)`}
+                    title={`${isCollapsed ? 'Expand' : 'Collapse'} preview panel (Ctrl+Shift+B)`}
                     aria-expanded={!isCollapsed}
-                    aria-keyshortcuts="Space"
+                    aria-keyshortcuts="Control+Shift+b Meta+Shift+b"
                     onClick={onCollapse}
                 />}
                 {!isCollapsed && hasItem && <span className="details-panel-title truncate" title={item.name}>{item.name}</span>}
@@ -250,7 +221,8 @@ const DetailsPanel = ({ item, isMultipleSelection = false, onCollapse, isCollaps
                         : 'minmax(0, 1fr)'
                 }}>
                     <section id="explorer-file-preview" className="details-preview-area" aria-label="File preview">
-                        <FileContentPreview key={`${item.path}:${revision}`} item={item} viewMode={viewMode} autoCopy={autoCopy} />
+                        <FileContentPreview key={!isSftpPath(item.path) && /\.txt$/i.test(item.name) ? item.path : `${item.path}:${revision}`} item={item} viewMode={viewMode} autoCopy={autoCopy}
+                            focusRequest={editorFocusRequest?.path === item.path ? editorFocusRequest : null} onEditorFocused={onEditorFocused} />
                     </section>
                     {showInformation && <>
                         <div className="details-split-handle" role="separator"

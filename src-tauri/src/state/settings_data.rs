@@ -24,10 +24,16 @@ pub enum DefaultView {
 ///
 /// Controls the text size throughout the application.
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub enum FontSize {
-    Small,
-    Medium,
-    Large,
+#[serde(try_from = "u8")]
+pub struct FontSize(u8);
+
+impl TryFrom<u8> for FontSize {
+    type Error = &'static str;
+
+    fn try_from(pixels: u8) -> Result<Self, Self::Error> {
+        if (8..=32).contains(&pixels) { Ok(Self(pixels)) }
+        else { Err("Font size must be a whole number from 8 to 32 pixels.") }
+    }
 }
 
 /// Direction for sorting files and directories.
@@ -115,7 +121,7 @@ impl Default for Settings {
             default_folder_path_on_opening: Default::default(),
             abs_file_path_buf: constants::SETTINGS_CONFIG_ABS_PATH.to_path_buf(),
             default_view: DefaultView::grid,
-            font_size: FontSize::Medium,
+            font_size: FontSize(12),
             show_hidden_files_and_folders: false,
             show_details_panel: false,
             confirm_delete: true,
@@ -192,6 +198,16 @@ fn merge_values(target: &mut Value, source: Value) {
 
 fn migrate(map: &mut serde_json::Map<String, Value>) -> bool {
     let mut changed = false;
+    let pixels = match map.get("font_size").and_then(Value::as_str) {
+        Some("Small") => Some(10),
+        Some("Medium") => Some(12),
+        Some("Large") => Some(14),
+        _ => None,
+    };
+    if let Some(pixels) = pixels {
+        map.insert("font_size".into(), Value::from(pixels));
+        changed = true;
+    }
     for key in ["darkmode", "custom_themes", "default_theme", "default_themes_path", "accent_color", "terminal_height"] {
         changed |= map.remove(key).is_some();
     }
@@ -1054,5 +1070,61 @@ mod system_theme_persistence {
         let (_, status) = load_system_settings_state(path.clone(), &legacy);
         assert!(status.0.is_some());
         assert_eq!(fs::read(path).unwrap(), b"{broken");
+    }
+}
+
+#[cfg(test)]
+mod font_size_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn font_size_migrates_named_preferences_without_losing_other_values() {
+        for (legacy, pixels) in [("Small", 10), ("Medium", 12), ("Large", 14)] {
+            let directory = tempfile::tempdir().unwrap();
+            let path = directory.path().join("settings.json");
+            std::fs::write(&path, serde_json::to_vec(&json!({
+                "active_theme_id": "system", "font_size": legacy,
+                "extra": {"keep": [1, 2]}, "show_hidden_files_and_folders": true,
+            })).unwrap()).unwrap();
+            let (state, status) = SettingsState::load_at(path.clone());
+            assert!(status.0.is_none());
+            let raw: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+            assert_eq!(raw["font_size"], pixels);
+            assert_eq!(raw["extra"], json!({"keep": [1, 2]}));
+            assert_eq!(raw["show_hidden_files_and_folders"], true);
+            let previous = std::fs::read(&path).unwrap();
+            drop(state);
+            let (_, status) = SettingsState::load_at(path.clone());
+            assert!(status.0.is_none());
+            assert_eq!(std::fs::read(&path).unwrap(), previous);
+        }
+    }
+
+    #[test]
+    fn font_size_saves_numeric_pixels_and_reloads_them() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("settings.json");
+        let state = SettingsState::new_with_path(path.clone());
+        assert_eq!(serde_json::to_value(Settings::default()).unwrap()["font_size"], 12);
+        for pixels in [8, 13, 32] {
+            state.update_setting_field("font_size", json!(pixels)).unwrap();
+            let (loaded, status) = SettingsState::load_at(path.clone());
+            assert!(status.0.is_none());
+            assert_eq!(serde_json::to_value(&*loaded.0.lock().unwrap()).unwrap()["font_size"], pixels);
+        }
+    }
+
+    #[test]
+    fn font_size_rejects_invalid_values_without_writing_settings() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("settings.json");
+        let state = SettingsState::new_with_path(path.clone());
+        let previous = std::fs::read(&path).unwrap();
+        for value in [json!(7), json!(33), json!(12.5), json!("12"), json!(null), json!(false)] {
+            assert!(state.update_setting_field("font_size", value.clone()).is_err());
+            assert!(state.update_multiple_settings(&serde_json::from_value(json!({"font_size": value})).unwrap()).is_err());
+            assert_eq!(std::fs::read(&path).unwrap(), previous);
+        }
     }
 }

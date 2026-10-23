@@ -73,7 +73,7 @@ test.each([
     const original = structuredClone(disk);
     await mount(false, false);
     const assertAuthority = () => {
-        expect(settings.settings).toMatchObject(preferences);
+        expect(settings.settings).toMatchObject({ ...preferences, font_size: 14 });
         expect(settings.settings.backend_settings.search_engine_config).toEqual(extras);
         expect(theme.activeThemeId).toBe(mocha.id);
         expect(theme.resolvedThemeId).toBe(mocha.id);

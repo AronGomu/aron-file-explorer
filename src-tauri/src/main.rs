@@ -14,7 +14,7 @@ mod launch_requests;
 
 use crate::commands::{
     command_exec_commands, file_system_operation_commands, hash_commands, meta_data_commands,
-    search_engine_commands, settings_commands, template_commands, volume_operations_commands, sftp_file_system_operation_commands, permission_commands, theme_commands
+    search_engine_commands, settings_commands, volume_operations_commands, sftp_file_system_operation_commands, permission_commands, theme_commands
 };
 use tauri::ipc::Invoke;
 use tauri::Manager;
@@ -49,14 +49,20 @@ fn all_commands() -> fn(Invoke) -> bool {
             commands::image_commands::get_image_thumbnail,
             commands::video_commands::get_video_thumbnail,
             commands::video_commands::get_video_preview,
+            commands::video_commands::get_video_preview_segment,
+            commands::media_preview_commands::get_video_preview_info,
             commands::media_preview_commands::get_media_preview_url,
             commands::file_preview_commands::get_text_preview,
+            commands::file_preview_commands::save_text_preview,
             commands::media_preview_commands::get_media_duration,
             file_system_operation_commands::open_directory,
+            commands::open_with_commands::get_open_with_applications,
+            commands::open_with_commands::open_file_with_application,
             commands::path_completion_commands::complete_path,
             volume_operations_commands::get_system_volumes_information,
             volume_operations_commands::mount_volume,
             settings_commands::get_settings_snapshot, settings_commands::get_settings_as_json,
+            settings_commands::update_settings_field,
             theme_commands::get_theme_catalog, theme_commands::set_active_theme_id,
         ];
     }
@@ -71,6 +77,8 @@ fn all_commands() -> fn(Invoke) -> bool {
         //file_system_operation_commands::open_file,
         file_system_operation_commands::open_directory,
         file_system_operation_commands::open_in_default_app,
+        commands::open_with_commands::get_open_with_applications,
+        commands::open_with_commands::open_file_with_application,
         file_system_operation_commands::create_file,
         file_system_operation_commands::create_directory,
         file_system_operation_commands::rename,
@@ -81,11 +89,14 @@ fn all_commands() -> fn(Invoke) -> bool {
         commands::image_commands::get_image_thumbnail,
         commands::video_commands::get_video_thumbnail,
         commands::video_commands::get_video_preview,
+        commands::video_commands::get_video_preview_segment,
+        commands::media_preview_commands::get_video_preview_info,
         commands::media_preview_commands::get_media_preview_url,
         commands::media_preview_commands::get_media_duration,
         commands::file_move_commands::move_items,
         sftp_file_system_operation_commands::move_items_sftp,
         commands::file_preview_commands::get_text_preview,
+        commands::file_preview_commands::save_text_preview,
         // Command execution commands
         command_exec_commands::execute_command,
         command_exec_commands::execute_command_improved,
@@ -110,11 +121,6 @@ fn all_commands() -> fn(Invoke) -> bool {
         hash_commands::gen_hash_and_return_string,
         hash_commands::gen_hash_and_save_to_file,
         hash_commands::compare_file_or_dir_with_hash,
-        // Template commands
-        template_commands::get_template_paths_as_json,
-        template_commands::add_template,
-        template_commands::use_template,
-        template_commands::remove_template,
         // Autocomplete commands
         search_engine_commands::search,
         search_engine_commands::search_with_extension,

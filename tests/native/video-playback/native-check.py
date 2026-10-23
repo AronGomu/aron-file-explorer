@@ -25,7 +25,7 @@ n = None
 (ROOT / '.tmp').mkdir(exist_ok=True)
 
 
-def wait(n, expression, seconds=120):
+def wait(n, expression, seconds=20):
     deadline = time.monotonic() + seconds
     while time.monotonic() < deadline:
         if n.js(expression):
@@ -114,7 +114,7 @@ with tempfile.TemporaryDirectory(prefix='video-playback-', dir=ROOT / '.tmp') as
             assert n.selected() == [name], n.selected()
             wait(n, '!!document.querySelector(".preview-media video")', 20)
             try:
-                wait(n, '(()=>{const v=document.querySelector(".preview-media video");if(v){v.muted=true;if(v.paused&&!v.error)v.play().catch(()=>{});}return v?.currentTime>.25||!!document.querySelector(".details-preview-area [role=alert]")})()', 10 if phase == 'red' else 120)
+                wait(n, '(()=>{const v=document.querySelector(".preview-media video");if(v){v.muted=true;if(v.paused&&!v.error)v.play().catch(()=>{});}return v?.currentTime>.25||!!document.querySelector(".details-preview-area [role=alert]")})()', 10 if phase == 'red' else 20)
             except AssertionError:
                 pass
             observed = n.js('(()=>{const v=document.querySelector(".preview-media video");return {ready:v?.readyState,error:v?.error?.code,message:v?.error?.message,width:v?.videoWidth,time:v?.currentTime,duration:v?.duration,audio:v?.audioTracks?.length,frames:v?.getVideoPlaybackQuality?.().totalVideoFrames,url:v?.currentSrc,alert:document.querySelector(".details-preview-area [role=alert]")?.textContent}})()')

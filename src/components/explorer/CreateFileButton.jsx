@@ -207,20 +207,6 @@ const CreateFileButton = ({ dialogsOnly = false }) => {
                                     <span className="shortcut">Ctrl+Shift+N</span>
                                 </button>
                             </li>
-                            <li className="create-divider"></li>
-                            <li>
-                                <button
-                                    className="create-option"
-                                    onClick={() => {
-                                        document.dispatchEvent(new CustomEvent('open-templates'));
-                                        closeDropdown();
-                                        skipNextToggle.current = false;
-                                    }}
-                                >
-                                    <span className="icon icon-template"></span>
-                                    <span>From Template...</span>
-                                </button>
-                            </li>
                         </ul>
                     </div>
                 )}

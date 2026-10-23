@@ -4,30 +4,45 @@ import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { useSftp } from '../../providers/SftpProvider';
 import { getFileIconType } from '../../utils/icons';
 import { getPreviewFilePath } from '../../utils/imageThumbnails';
-import { showError, showSuccess } from '../../utils/NotificationSystem';
+import { showConfirm, showError, showSuccess } from '../../utils/NotificationSystem';
 import FileIcon from './FileIcon';
 import FolderContentsPreview from './FolderContentsPreview';
+import VideoPreview from './VideoPreview';
 
-const FileContentPreview = ({ item, viewMode, autoCopy = true }) => {
+const FileContentPreview = ({ item, viewMode, autoCopy = true, focusRequest, onEditorFocused }) => {
     const { isSftpPath, parseSftpPath } = useSftp();
     const [result, setResult] = useState(null);
+    const [draft, setDraft] = useState('');
+    const [saving, setSaving] = useState(false);
+    const [saved, setSaved] = useState(false);
+    const savePending = useRef(false);
+    const dirtyRef = useRef(false);
+    const editorRef = useRef(null);
     const [playbackError, setPlaybackError] = useState(false);
-    // Normalize legacy containers up front: native demuxers can play them yet fail to seek.
-    const [compatibleVideo, setCompatibleVideo] = useState(() => getFileIconType(item.name) === 'video' &&
-        !['mp4', 'm4v', 'webm'].includes(item.name.split('.').pop().toLowerCase()));
     const mediaRef = useRef(null);
     const codeRef = useRef(null);
     const lineNumbers = useMemo(() => {
         if (result?.text == null) return '';
-        return Array.from({ length: result.text.split(/\r\n|\r|\n/).length }, (_, index) => index + 1).join('\n');
-    }, [result?.text]);
+        return Array.from({ length: (dirtyRef.current ? draft : result.text).split(/\r\n|\r|\n/).length }, (_, index) => index + 1).join('\n');
+    }, [result?.text, draft]);
     const isDirectory = item.isDirectory || 'sub_file_count' in item;
     const category = isDirectory ? 'folder' : getFileIconType(item.name);
     const revision = `${item.last_modified || ''}:${item.size_in_bytes ?? ''}`;
     const isMedia = category === 'video' || category === 'audio';
+    const editable = !isDirectory && /\.txt$/i.test(item.name) && !isSftpPath(item.path) &&
+        typeof result?.text === 'string' && !result.truncated;
 
     useEffect(() => {
-        if (isDirectory || category === 'image') return;
+        if (!focusRequest || !editable) return;
+        const frame = requestAnimationFrame(() => {
+            editorRef.current?.focus({ preventScroll: true });
+            onEditorFocused?.();
+        });
+        return () => cancelAnimationFrame(frame);
+    }, [focusRequest, editable, onEditorFocused]);
+
+    useEffect(() => {
+        if (isDirectory || category === 'image' || dirtyRef.current || savePending.current) return;
         let cancelled = false;
         setResult(null);
         setPlaybackError(false);
@@ -37,14 +52,11 @@ const FileContentPreview = ({ item, viewMode, autoCopy = true }) => {
                 if (isSftpPath(item.path) && !remote?.connection) throw new Error('Connection unavailable');
                 let preview;
                 if (isMedia || category === 'pdf') {
-                    let path = await getPreviewFilePath(item.path, revision, remote);
-                    if (category === 'video' && compatibleVideo) {
-                        path = await invoke('get_video_preview', { path });
-                    }
+                    const path = await getPreviewFilePath(item.path, revision, remote);
                     const media = isMedia
-                        ? await invoke('get_media_preview_url', { path, video: category === 'video' })
+                        ? await invoke('get_media_preview_url', { path, video: false })
                         : { url: convertFileSrc(path) };
-                    preview = { ...media, url: `${media.url}?v=${encodeURIComponent(revision)}` };
+                    preview = { ...media, path, url: `${media.url}?v=${encodeURIComponent(revision)}` };
                 } else if (remote) {
                     const { connection, remotePath } = remote;
                     preview = await invoke('get_text_preview_sftp', {
@@ -54,40 +66,55 @@ const FileContentPreview = ({ item, viewMode, autoCopy = true }) => {
                 } else {
                     preview = await invoke('get_text_preview', { path: item.path });
                 }
-                if (!cancelled) setResult(preview);
+                if (!cancelled) {
+                    setResult(preview);
+                    setDraft(preview.text?.replace(/\r\n|\r/g, '\n') || '');
+                }
             } catch (error) {
-                if (!cancelled) setResult({ error: compatibleVideo ? String(error) : 'Could not load this file’s preview.' });
+                if (!cancelled) setResult({ error: 'Could not load this file’s preview.' });
             }
         };
         load();
         return () => { cancelled = true; };
-    }, [item.path, revision, isDirectory, category, isMedia, compatibleVideo, isSftpPath, parseSftpPath]);
+    }, [item.path, revision, isDirectory, category, isMedia, isSftpPath, parseSftpPath]);
+
+    const saveText = useCallback(async () => {
+        if (!editable || savePending.current) return;
+        savePending.current = true;
+        setSaving(true);
+        try {
+            if (!await showConfirm(`Save changes to "${item.name}"?`, 'Save text file')) return;
+            const text = await invoke('save_text_preview', { path: item.path, originalText: result.text, text: draft });
+            setResult(previous => ({ ...previous, text }));
+            dirtyRef.current = false;
+            setSaved(true);
+        } catch (error) {
+            showError(`Could not save text file: ${error}`);
+        } finally {
+            savePending.current = false;
+            setSaving(false);
+            editorRef.current?.focus({ preventScroll: true });
+        }
+    }, [editable, item.path, item.name, result?.text, draft]);
+
+    useEffect(() => {
+        if (!editable) return;
+        const shortcut = event => {
+            if (!(event.ctrlKey || event.metaKey) || event.altKey || event.key.toLowerCase() !== 's') return;
+            if (document.querySelector('[role="dialog"], .modal-overlay') ||
+                (event.target.closest?.('input, textarea, select, [contenteditable="true"]') && event.target !== editorRef.current)) return;
+            event.preventDefault();
+            event.stopPropagation();
+            if (!event.repeat) saveText();
+        };
+        window.addEventListener('keydown', shortcut);
+        return () => window.removeEventListener('keydown', shortcut);
+    }, [editable, saveText]);
 
     useEffect(() => {
         const media = mediaRef.current;
         return () => { media?.pause(); };
     }, [result?.url]);
-
-    useEffect(() => {
-        if (category !== 'video' || compatibleVideo || !result?.url) return;
-        const media = mediaRef.current;
-        // Some missing decoders stall the pipeline instead of emitting a media error.
-        const fallbackIfStalled = () => {
-            if (media && (media.readyState === 0 || (!media.paused && media.readyState < 2))) {
-                setCompatibleVideo(true);
-            }
-        };
-        let timer = setTimeout(fallbackIfStalled, 5000);
-        const waiting = () => {
-            clearTimeout(timer);
-            timer = setTimeout(fallbackIfStalled, 5000);
-        };
-        media?.addEventListener('waiting', waiting);
-        return () => {
-            clearTimeout(timer);
-            media?.removeEventListener('waiting', waiting);
-        };
-    }, [category, compatibleVideo, result?.url]);
 
     const handleTextKeyDown = (event) => {
         if (!(event.ctrlKey || event.metaKey) || event.altKey || event.key.toLowerCase() !== 'a') return;
@@ -119,7 +146,7 @@ const FileContentPreview = ({ item, viewMode, autoCopy = true }) => {
     }, []);
 
     useEffect(() => {
-        if (!autoCopy || typeof result?.text !== 'string') return;
+        if (!autoCopy || editable || typeof result?.text !== 'string') return;
         let timer;
         let cancelled = false;
         let copyQueue = Promise.resolve();
@@ -146,7 +173,7 @@ const FileContentPreview = ({ item, viewMode, autoCopy = true }) => {
             clearTimeout(timer);
             document.removeEventListener('selectionchange', handleSelectionChange);
         };
-    }, [result?.text, getSelectedText, autoCopy]);
+    }, [result?.text, getSelectedText, autoCopy, editable]);
 
     const handleTextCopy = (event) => {
         const text = getSelectedText();
@@ -164,25 +191,15 @@ const FileContentPreview = ({ item, viewMode, autoCopy = true }) => {
         </div>;
     }
     if (!result) return <p className="preview-status" role="status">
-        {compatibleVideo ? 'Preparing video preview…' : 'Loading preview…'}
+        Loading preview…
     </p>;
     if (result.error) return <p className="preview-status" role="alert">{result.error}</p>;
 
-    if (isMedia) {
-        const Player = category === 'video' ? 'video' : 'audio';
+    if (category === 'video') return <VideoPreview path={result.path} url={result.url} name={item.name} />;
+    if (category === 'audio') {
         return <div className="preview-media">
-            <Player ref={mediaRef} src={result.url} controls preload="metadata" playsInline
-                onLoadedMetadata={(event) => {
-                    const media = event.currentTarget;
-                    if (category === 'video' && !compatibleVideo &&
-                        (media.videoWidth === 0 || (result.hasAudio && media.audioTracks?.length === 0))) {
-                        setCompatibleVideo(true);
-                    }
-                }}
-                aria-label={`Play ${item.name}`} onError={() => {
-                    if (category === 'video' && !compatibleVideo) setCompatibleVideo(true);
-                    else setPlaybackError(true);
-                }} />
+            <audio ref={mediaRef} src={result.url} controls preload="metadata"
+                aria-label={`Play ${item.name}`} onError={() => setPlaybackError(true)} />
             {playbackError && <p className="preview-status" role="alert">This media format could not be played.</p>}
         </div>;
     }
@@ -196,6 +213,29 @@ const FileContentPreview = ({ item, viewMode, autoCopy = true }) => {
             aria-label={`Preview of ${item.name}`}>{unavailable}</object>;
     }
     if (result.text === null) return unavailable;
+    if (editable) return <div className="preview-text">
+        <div className="preview-editor-layout">
+            <div className="preview-line-numbers" aria-hidden="true" ref={codeRef}>{lineNumbers}</div>
+            <textarea ref={editorRef} className="preview-text-editor" aria-label={`Edit ${item.name}`}
+                value={draft} readOnly={saving} spellCheck={false} wrap="off"
+                onScroll={event => { if (codeRef.current) codeRef.current.scrollTop = event.currentTarget.scrollTop; }}
+                onChange={event => {
+                    setDraft(event.target.value);
+                    dirtyRef.current = event.target.value !== result.text.replace(/\r\n|\r/g, '\n');
+                    setSaved(false);
+                }} />
+        </div>
+        <div className="preview-text-actions">
+            <button type="button" className="icon-button" aria-label="Save text file" title="Save text file (Ctrl+S)"
+                aria-keyshortcuts="Control+s Meta+s" disabled={saving} onClick={saveText}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z" />
+                    <path d="M17 21v-8H7v8M7 3v5h9V3" />
+                </svg>
+            </button>
+            <span role="status">{saving ? 'Saving…' : dirtyRef.current ? 'Unsaved changes' : saved ? 'Saved' : 'Click text to edit'}</span>
+        </div>
+    </div>;
     return <div className="preview-text">
         <div className="preview-code-scroll" tabIndex={0} role="region" aria-label={`Contents of ${item.name}`}
             onKeyDown={handleTextKeyDown} onCopy={handleTextCopy}

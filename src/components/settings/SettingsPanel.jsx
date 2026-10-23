@@ -57,13 +57,9 @@ const SettingsPanel = ({ isOpen, onClose }) => {
 
     /**
      * Font size options configuration
-     * @type {Array<{id: string, label: string}>}
+     * @type {Array<number>}
      */
-    const fontSizes = [
-        { id: 'Small', label: 'Small' },
-        { id: 'Medium', label: 'Medium' },
-        { id: 'Large', label: 'Large' }
-    ];
+    const fontSizes = Array.from({ length: 25 }, (_, index) => index + 8);
 
     /**
      * Sort options configuration
@@ -191,13 +187,15 @@ const SettingsPanel = ({ isOpen, onClose }) => {
 
             <div className="settings-section">
                 <h3>Font Size</h3>
+                <p>File-name text size at 100% zoom.</p>
                 <select
-                    value={settings.font_size || 'Medium'}
-                    onChange={(e) => updateSetting('font_size', e.target.value)}
+                    aria-label="Font size (px)"
+                    value={settings.font_size ?? 12}
+                    onChange={(e) => updateSetting('font_size', Number(e.target.value))}
                     className="settings-select"
                 >
                     {fontSizes.map(size => (
-                        <option key={size.id} value={size.id}>{size.label}</option>
+                        <option key={size} value={size}>{size} px</option>
                     ))}
                 </select>
             </div>

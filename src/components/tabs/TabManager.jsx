@@ -276,6 +276,18 @@ const TabManager = ({ children }) => {
             if (event.defaultPrevented || event.isComposing || event.altKey || event.shiftKey ||
                 !(event.ctrlKey || event.metaKey) || document.querySelector('[role="dialog"], .modal-overlay')) return;
             const key = event.key.toLowerCase();
+            const number = /^[1-9]$/.test(event.key) ? Number(event.key) :
+                /^Digit[1-9]$/.test(event.code) ? Number(event.code.slice(-1)) : null;
+            if (number) {
+                const tab = tabs[number - 1];
+                if (!tab) return;
+                event.preventDefault();
+                if (!event.repeat) {
+                    switchToTab(tab.id);
+                    requestAnimationFrame(focusItemPane);
+                }
+                return;
+            }
             if (key !== 't' && key !== 'w') return;
             if (key === 't' && event.target.closest?.('input, textarea, select, [contenteditable="true"], [role="textbox"]')) return;
             event.preventDefault();
@@ -305,6 +317,7 @@ const TabManager = ({ children }) => {
                             role="button"
                             tabIndex={0}
                             aria-label={`Open tab ${getTabTitle(tab.path)}`}
+                            aria-keyshortcuts={index < 9 ? `Control+${index + 1} Meta+${index + 1}` : undefined}
                             onKeyDown={event => {
                                 if (event.target !== event.currentTarget || !['Enter', ' '].includes(event.key)) return;
                                 event.preventDefault(); switchToTab(tab.id);

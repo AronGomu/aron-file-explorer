@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { confirm } from '@tauri-apps/plugin-dialog';
-import SettingsProvider from '../providers/SettingsProvider';
+import SettingsProvider, { useSettings } from '../providers/SettingsProvider';
+import SettingsApplier from '../utils/SettingsApplier';
 import ThemeProvider, { useTheme } from '../providers/ThemeProvider';
 import { FileSystemContext } from '../providers/FileSystemProvider';
 import { HistoryContext } from '../providers/HistoryProvider';
@@ -23,10 +24,11 @@ import '../components/explorer/viewModes.css';
 import './chooser.css';
 
 export default function ChooserApp({ request }) {
-    return <SettingsProvider><ThemeProvider><Chooser request={request} /></ThemeProvider></SettingsProvider>;
+    return <SettingsProvider><ThemeProvider><SettingsApplier /><Chooser request={request} /></ThemeProvider></SettingsProvider>;
 }
 
 function Chooser({ request }) {
+    const { settings, updateSetting, error: settingsError } = useSettings();
     const [navigation, setNavigation] = useState({ history: [request.currentFolder], index: 0 });
     const currentPath = navigation.history[navigation.index];
     const [data, setData] = useState(null);
@@ -134,7 +136,7 @@ function Chooser({ request }) {
             } else if (event.key === 'Backspace' && !isEditingTarget(event.target)) {
                 event.preventDefault(); backForward(event.shiftKey ? 1 : -1);
             } else if (event.key === 'F5') { event.preventDefault(); refresh(n => n + 1); loadVolumes(); }
-            else if (event.code === 'Space' && !isEditingTarget(event.target) && !event.target.closest?.('button, [role="button"], [role="separator"]')) {
+            else if ((event.ctrlKey || event.metaKey) && event.shiftKey && !event.altKey && event.key.toLowerCase() === 'b' && !isEditingTarget(event.target) && !event.target.closest?.('button, [role="button"], [role="separator"]')) {
                 event.preventDefault(); if (!event.repeat) setPreview(open => !open);
             }
         };
@@ -221,6 +223,10 @@ function Chooser({ request }) {
                 <label className="chooser-settings-field">Theme<select aria-label="File chooser theme" value={activeThemeId} disabled={themeSaving} onChange={event => setTheme(event.target.value)}>
                     <option value="system">System theme</option>{themes.map(theme => <option key={theme.id} value={theme.id}>{theme.name}</option>)}
                 </select></label>
+                <label className="chooser-settings-field">Font size (px)<select aria-label="Font size (px)" value={settings.font_size} onChange={event => updateSetting('font_size', Number(event.target.value))}>
+                    {Array.from({ length: 25 }, (_, index) => index + 8).map(size => <option key={size} value={size}>{size} px</option>)}
+                </select></label>
+                {settingsError && <p className="chooser-error" role="alert">{settingsError}</p>}
             </Modal>
         </main>
         }</ContextMenuContext.Consumer></ContextMenuProvider></HistoryContext.Provider></FileSystemContext.Provider>;

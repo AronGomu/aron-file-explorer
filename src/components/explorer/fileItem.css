@@ -11,6 +11,26 @@
     cursor: pointer;
 }
 
+.file-item-tooltip {
+    position: fixed;
+    z-index: var(--z-index-tooltip);
+    width: max-content;
+    max-width: min(360px, calc(100vw - 16px));
+    max-height: calc(100vh - 16px);
+    overflow: hidden;
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background-color: var(--surface);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-md);
+    font-size: var(--font-size-sm);
+    line-height: 1.5;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    pointer-events: none;
+}
+
 .file-item * {
     user-select: none;
     -webkit-user-select: none;
@@ -28,7 +48,7 @@
     overflow-wrap: anywhere;
     white-space: normal;
     text-overflow: ellipsis;
-    font-size: 0.9em;
+    font-size: inherit;
     line-height: 1.2;
 }
 
@@ -112,7 +132,7 @@
 
 .file-item.view-mode-grid .file-name {
     max-width: 100%;
-    font-size: calc(var(--font-size-xs) * 0.9 * var(--file-grid-zoom, 1));
+    font-size: calc(var(--font-size-xs) * var(--file-grid-zoom, 1));
 }
 
 .file-item.view-mode-grid.image-item {
@@ -130,7 +150,7 @@
 .file-item.view-mode-list {
     display: grid;
     grid-template-columns: var(--file-list-columns);
-    min-height: calc(26px * var(--file-list-zoom, 1));
+    min-height: calc((var(--font-size-xs) + 14px) * var(--file-list-zoom, 1));
     padding: 0;
     border-bottom: 1px solid var(--border);
     border-radius: 0;
@@ -150,7 +170,7 @@
     white-space: nowrap;
     text-overflow: ellipsis;
     font-size: calc(var(--font-size-xs) * var(--file-list-zoom, 1));
-    line-height: calc(20px * var(--file-list-zoom, 1));
+    line-height: calc((var(--font-size-xs) + 8px) * var(--file-list-zoom, 1));
 }
 
 .file-item.view-mode-list .file-icon-container {

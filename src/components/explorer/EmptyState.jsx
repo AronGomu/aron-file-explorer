@@ -28,11 +28,6 @@ const EmptyState = ({ type = 'empty-folder', searchTerm = null, title = null, me
             title: 'No favorites yet',
             message: 'Right-click on folders and files to add them to favorites',
         },
-        'no-templates': {
-            icon: 'template-empty',
-            title: 'No templates',
-            message: 'You haven\'t saved any templates yet. Templates help you create files and folders with predefined structures.',
-        },
         'error': {
             icon: 'error',
             title: 'Something went wrong',

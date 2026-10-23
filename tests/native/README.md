@@ -6,6 +6,8 @@ Reusable native checks live here; screenshots, logs and result receipts are gene
 python3 tests/native/drag-move/native-check.py
 python3 tests/native/path-input-focus/native-check.py
 python3 tests/native/close-tab/native-check.py
+python3 tests/native/focus-shortcuts/native-check.py
+python3 tests/native/hover-details/native-check.py
 python3 tests/native/zoom-scroll/native-check.py
 python3 tests/native/video-thumbnails/native-check.py
 python3 tests/native/video-playback/native-check.py

@@ -149,21 +149,6 @@ for theme in catppuccin-latte catppuccin-mocha; do
   peripheral_capture "$theme-search-query-attempt"
   printf 'query=reference\nfolder=/fixture/home/media/text\nwait-seconds=8\nresult=UNVERIFIED-inspect-UI-and-app-log\n' > "/evidence/$theme-search-query.txt"
   xdotool key Escape
-  xdotool mousemove 75 738 click 1
-  sleep 1
-  peripheral_capture "$theme-templates-list"
-  # Actual Add Template action, fixture path only.
-  xdotool mousemove 1120 111 click 1
-  sleep 0.5
-  peripheral_capture "$theme-template-add"
-  xdotool type --clearmodifiers '/fixture/home/media/text/reference.txt'
-  xdotool key Return
-  sleep 1
-  peripheral_capture "$theme-templates-populated-toast"
-  xdotool key Escape
-  # Production close-templates control, then reachable sidebar SFTP form.
-  xdotool mousemove 393 111 click 1
-  sleep 0.5
   xdotool mousemove 220 405 click 1
   sleep 0.5
   peripheral_capture "$theme-sftp-empty"

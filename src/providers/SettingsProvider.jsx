@@ -8,7 +8,7 @@ const defaultSettings = {
     active_theme_id: "system",
     default_folder_path_on_opening: "",
     default_view: "grid", // Grid, List, Details
-    font_size: "Medium", // Small, Medium, Large
+    font_size: 12, // File-name size in pixels at 100% zoom
     show_hidden_files_and_folders: false,
     show_details_panel: false,
 
@@ -41,9 +41,11 @@ const SettingsContext = createContext(null);
 
 function flattenSettings(settings) {
     const search = settings.backend_settings?.search_engine_config ?? {};
+    const fontSize = { Small: 10, Medium: 12, Large: 14 }[settings.font_size] ?? settings.font_size;
     return {
         ...defaultSettings,
         ...settings,
+        font_size: Number.isInteger(fontSize) && fontSize >= 8 && fontSize <= 32 ? fontSize : 12,
         ...Object.fromEntries([
             'search_engine_enabled', 'case_sensitive_search', 'index_hidden_files', 'fuzzy_search_enabled',
         ].filter(key => Object.hasOwn(search, key)).map(key => [key, search[key]])),

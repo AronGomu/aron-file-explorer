@@ -110,24 +110,6 @@ const MOCK_SETTINGS = {
     showDetailsPanel: false,
 };
 
-// Mock templates
-const MOCK_TEMPLATES = [
-    {
-        name: 'Project Template',
-        path: '/templates/project-template',
-        type: 'folder',
-        size: 2048,
-        createdAt: '2023-04-15'
-    },
-    {
-        name: 'Document Template.docx',
-        path: '/templates/document-template.docx',
-        type: 'file',
-        size: 1024,
-        createdAt: '2023-03-20'
-    }
-];
-
 /**
  * Mock implementation of Tauri's invoke function
  * @param {string} command - The command to invoke
@@ -187,9 +169,6 @@ export const mockInvoke = async (command, params) => {
                 showDetailsPanel: false,
             });
             return;
-
-        case 'get_template_paths_as_json':
-            return JSON.stringify(MOCK_TEMPLATES);
 
         // Mock implementations for file operations
         case 'open_file':

@@ -10,17 +10,7 @@ const SettingsApplier = () => {
 
     useEffect(() => {
         // Apply font size settings
-        if (settings.font_size) {
-            const fontSizeClass = `font-size-${settings.font_size.toLowerCase()}`;
-
-            // Remove existing font size classes
-            document.documentElement.classList.remove('font-size-small', 'font-size-medium', 'font-size-large');
-
-            // Add the current font size class
-            if (settings.font_size !== 'Medium') {
-                document.documentElement.classList.add(fontSizeClass);
-            }
-        }
+        document.documentElement.style.setProperty('--item-font-size', `${settings.font_size}px`);
 
         // Apply animation settings
         if (settings.enable_animations_and_transitions === false) {

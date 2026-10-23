@@ -1,22 +1,3 @@
-/* Font size adjustments */
-:root.font-size-small {
-    --font-size-xs: 0.625rem;   /* 10px */
-    --font-size-sm: 0.75rem;    /* 12px */
-    --font-size-md: 0.875rem;   /* 14px */
-    --font-size-lg: 1rem;       /* 16px */
-    --font-size-xl: 1.125rem;   /* 18px */
-    --font-size-xxl: 1.25rem;   /* 20px */
-}
-
-:root.font-size-large {
-    --font-size-xs: 0.875rem;   /* 14px */
-    --font-size-sm: 1rem;       /* 16px */
-    --font-size-md: 1.125rem;   /* 18px */
-    --font-size-lg: 1.25rem;    /* 20px */
-    --font-size-xl: 1.5rem;     /* 24px */
-    --font-size-xxl: 1.75rem;   /* 28px */
-}
-
 /* Animation durations */
 :root.reduce-motion,
 @media (prefers-reduced-motion) {

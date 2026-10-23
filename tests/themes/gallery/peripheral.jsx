@@ -7,7 +7,6 @@ import SftpProvider from '../../../src/providers/SftpProvider.jsx';
 import GlobalSearch from '../../../src/components/search/GlobalSearch.jsx';
 import NetworkView from '../../../src/components/network/NetworkView.jsx';
 import AddSftpConnectionView from '../../../src/components/sidebar/AddSftpConnectionView.jsx';
-import TemplateList from '../../../src/components/templates/TemplateList.jsx';
 import HashCompareModal from '../../../src/components/common/HashCompareModal.jsx';
 import HashDisplayModal from '../../../src/components/common/HashDisplayModal.jsx';
 import HashFileModal from '../../../src/components/common/HashFileModal.jsx';
@@ -15,7 +14,7 @@ import RenameModal from '../../../src/components/common/RenameModal.jsx';
 import PermissionHelper from '../../../src/components/common/PermissionHelper.jsx';
 import { showNotification, showConfirm } from '../../../src/utils/NotificationSystem.js';
 
-export const PERIPHERAL_CASES = ['search', 'network', 'sftp-form', 'templates', 'dialogs', 'permissions', 'toasts', 'confirm', 'loading', 'error-fallback'];
+export const PERIPHERAL_CASES = ['search', 'network', 'sftp-form', 'dialogs', 'permissions', 'toasts', 'confirm', 'loading', 'error-fallback'];
 const item = { name: 'reference.txt', path: '/fixture/reference.txt', isDirectory: false };
 const noop = () => {};
 
@@ -50,7 +49,6 @@ export function renderPeripheral(caseId) {
         case 'search': return <HistoryProvider><GlobalSearch isOpen onClose={close} /></HistoryProvider>;
         case 'network': return <HistoryProvider><SftpProvider><NetworkView /></SftpProvider></HistoryProvider>;
         case 'sftp-form': return <AddSftpConnectionView isOpen onClose={close} onAdd={connection => { window.__peripheralResult = { ...connection, password: '[fixture omitted]' }; }} />;
-        case 'templates': return <HistoryProvider><TemplateList onClose={close} /></HistoryProvider>;
         case 'dialogs': return <HistoryProvider><Dialogs variant={variant} /></HistoryProvider>;
         case 'permissions': return <PermissionHelper isOpen onClose={close} directoryPath="/fixture/protected" directoryName="Fixture" onDirectorySelected={close} />;
         case 'toasts': return <Notifications />;

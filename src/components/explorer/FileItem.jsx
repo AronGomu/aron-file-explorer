@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useId } from 'react';
 import FileIcon from './FileIcon';
+import FileItemTooltip from './FileItemTooltip';
+import useMediaDuration from '../../hooks/useMediaDuration';
 import { formatFileSize, formatDate, getFileType } from '../../utils/formatters';
 import { replaceFileName, getDirectoryPath } from '../../utils/pathUtils.js';
 import { getFileIconType } from '../../utils/icons';
@@ -37,6 +39,23 @@ const FileItem = ({
     const { currentPath } = useHistory();
     const { clipboard, isProcessing, draggedItems, beginItemDrag, endItemDrag } = useContextMenu();
     const dropTargetProps = useFileDropTarget();
+    const [hoverPoint, setHoverPoint] = useState(null);
+    const tooltipId = useId();
+    const duration = useMediaDuration(item, Boolean(hoverPoint));
+
+    useEffect(() => {
+        if (!hoverPoint) return;
+        const hide = () => setHoverPoint(null);
+        const escape = event => { if (event.key === 'Escape') hide(); };
+        window.addEventListener('scroll', hide, true);
+        window.addEventListener('resize', hide);
+        window.addEventListener('keydown', escape);
+        return () => {
+            window.removeEventListener('scroll', hide, true);
+            window.removeEventListener('resize', hide);
+            window.removeEventListener('keydown', escape);
+        };
+    }, [hoverPoint]);
 
     const isDirectory = item.isDirectory || 'sub_file_count' in item;
     const hideImageName = viewMode === 'grid' && !isDirectory && getFileIconType(item.name) === 'image';
@@ -55,6 +74,7 @@ const FileItem = ({
     const tooltip = item.isParentNavigation ? `Parent folder\n${item.path}` : [
         item.name,
         `Type: ${fileType}`,
+        duration !== null ? `Duration: ${duration}` : null,
         isDirectory ? [
             Number.isFinite(item.sub_file_count) ? `${item.sub_file_count} files` : null,
             Number.isFinite(item.sub_dir_count) ? `${item.sub_dir_count} folders` : null,
@@ -110,6 +130,7 @@ const FileItem = ({
      * @param {React.MouseEvent} e - The click event
      */
     const handleClick = (e) => {
+        setHoverPoint(null);
         if (onClick) onClick(e);
     };
 
@@ -135,6 +156,7 @@ const FileItem = ({
      * @param {React.MouseEvent} e - The context menu event
      */
     const handleContextMenu = (e) => {
+        setHoverPoint(null);
         if (onContextMenu) onContextMenu(e);
     };
 
@@ -145,13 +167,17 @@ const FileItem = ({
                 onClick={handleClick}
                 onDoubleClick={handleDoubleClick}
                 draggable={!isProcessing}
-                onDragStart={event => beginItemDrag(event, item)}
+                onDragStart={event => { setHoverPoint(null); beginItemDrag(event, item); }}
                 onDragEnd={endItemDrag}
                 data-file-drag-source={draggedItems.some(dragged => dragged.path === item.path) ? 'true' : undefined}
                 {...dropTargetProps(isDirectory ? item.path : null)}
                 onContextMenu={handleContextMenu}
                 data-path={item.path}
-                title={tooltip}
+                onMouseEnter={event => {
+                    if (!event.buttons && !draggedItems.length) setHoverPoint({ x: event.clientX, y: event.clientY });
+                }}
+                onMouseLeave={() => setHoverPoint(null)}
+                aria-describedby={hoverPoint ? tooltipId : undefined}
                 aria-label={hideImageName ? item.name : undefined}
                 role={viewMode === 'list' ? 'row' : undefined}
             >
@@ -217,7 +243,7 @@ const FileItem = ({
                     </div>
                 )}
             </div>
-
+            {hoverPoint && <FileItemTooltip id={tooltipId} text={tooltip} point={hoverPoint} />}
         </>
     );
 };

@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useLayoutEffect } from 'react';
 
 /**
  * Single context menu item that can render both main menu items and submenu items
@@ -25,15 +25,17 @@ const ContextMenuItem = ({
                          }) => {
     const [submenuPosition, setSubmenuPosition] = useState({ x: 0, y: 0, alignLeft: false });
     const itemRef = useRef(null);
+    const submenuRef = useRef(null);
 
     /**
      * Calculates the submenu position based on the parent element position and available space
      */
-    useEffect(() => {
-        if (isSubmenuOpen && itemRef.current && item.submenu) {
+    useLayoutEffect(() => {
+        if (isSubmenuOpen && itemRef.current && submenuRef.current) {
             const itemRect = itemRef.current.getBoundingClientRect();
             const viewportWidth = window.innerWidth;
-            const submenuWidth = 180; // min-width from CSS
+            const submenuWidth = submenuRef.current.offsetWidth;
+            const submenuHeight = submenuRef.current.offsetHeight;
             const padding = 8; // safety padding
 
             let x = itemRect.right; // default to right side
@@ -54,8 +56,8 @@ const ContextMenuItem = ({
             }
 
             setSubmenuPosition({
-                x: x,
-                y: itemRect.top,
+                x: Math.max(padding, x),
+                y: Math.max(padding, Math.min(itemRect.top, window.innerHeight - submenuHeight - padding)),
                 alignLeft: alignLeft
             });
         }
@@ -65,7 +67,7 @@ const ContextMenuItem = ({
      * Handles mouse enter - opens submenu
      */
     const handleMouseEnter = () => {
-        if (item.submenu) {
+        if (item.submenu && !item.disabled) {
             onSubmenuOpen();
         }
     };
@@ -138,6 +140,7 @@ const ContextMenuItem = ({
             {/* Submenu */}
             {isSubmenuOpen && item.submenu && (
                 <div
+                    ref={submenuRef}
                     className="context-submenu"
                     style={{
                         left: `${submenuPosition.x}px`,

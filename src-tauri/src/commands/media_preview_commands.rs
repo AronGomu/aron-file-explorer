@@ -61,6 +61,22 @@ pub struct MediaPreview {
     pub has_audio: Option<bool>,
 }
 
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VideoPreviewInfo {
+    duration: Option<f64>,
+    has_audio: Option<bool>,
+}
+
+#[tauri::command]
+pub async fn get_video_preview_info(path: String) -> Result<VideoPreviewInfo, String> {
+    let (duration, has_audio) = tokio::join!(
+        get_media_duration(path.clone()),
+        super::video_commands::video_has_audio(std::path::Path::new(&path)),
+    );
+    Ok(VideoPreviewInfo { duration: duration?, has_audio })
+}
+
 async fn serve_media(
     State(files): State<MediaFiles>,
     Path(token): Path<String>,

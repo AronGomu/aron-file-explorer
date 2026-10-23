@@ -86,6 +86,20 @@ test('chooser has one breadcrumb row, two view icons, pane toggles and no tabs o
     await click(button('Icons view')); expect(pane().classList.contains('view-mode-grid')).toBe(true);
 });
 
+test('chooser selects numeric font pixels and retains the previous size if saving fails', async () => {
+    await mount(); await click(button('File chooser settings'));
+    const field = document.querySelector('select[aria-label="Font size (px)"]');
+    expect(field.value).toBe('12');
+    invoke.mockResolvedValueOnce(JSON.stringify({ font_size: 13 }));
+    await act(async () => { field.value = '13'; field.dispatchEvent(new Event('change', { bubbles: true })); });
+    expect(invoke).toHaveBeenCalledWith('update_settings_field', { key: 'font_size', value: 13 });
+    expect(field.value).toBe('13');
+    invoke.mockRejectedValueOnce(new Error('Read-only settings'));
+    await act(async () => { field.value = '14'; field.dispatchEvent(new Event('change', { bubbles: true })); });
+    expect(field.value).toBe('13');
+    expect(document.querySelector('.chooser-settings [role="alert"]').textContent).toContain('Read-only settings');
+});
+
 test('first entry receives focus, arrows work after a chrome button, and parent stays first after reverse sort', async () => {
     await mount();
     expect(document.activeElement).toBe(pane());

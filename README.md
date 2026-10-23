@@ -24,7 +24,6 @@
 - **🔐 Advanced Permissions**: File and directory permission management
 - **📊 File Metadata**: Comprehensive metadata viewing and management
 - **🔨 File Hashing**: MD5, SHA2, and CRC32 hash generation for file integrity
-- **📄 File Templates**: Template system for creating new files
 - **👁️ File Preview**: Built-in preview system for various file types (spotlight-like)
 - **💾 Volume Operations**: Drive management and volume operations
 - **⚙️ Customizable Settings**: Extensive configuration options

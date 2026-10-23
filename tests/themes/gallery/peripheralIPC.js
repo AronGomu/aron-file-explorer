@@ -20,10 +20,6 @@ export function peripheralIPC(caseId, command, args, themes) {
         if (command === 'get_suggestions') return ['reference.txt', 'reference.pdf'];
         if (['search', 'search_with_extension'].includes(command)) return state === 'error' ? failure() : state === 'empty' ? [] : [['/fixture/reference.txt', 1], ['/fixture/reference.pdf', 0.8]];
     }
-    if (caseId === 'templates') {
-        if (command === 'get_template_paths_as_json') return state === 'loading' ? pending() : state === 'error' ? failure() : JSON.stringify(state === 'empty' ? [] : [{ name: 'Reference template', path: '/fixture/template.txt', type: 'file', size: 128, createdAt: '2026-01-01' }]);
-        if (['add_template', 'use_template', 'remove_template'].includes(command)) return null;
-    }
     if (['network', 'sftp-form'].includes(caseId) && command === 'load_dir') {
         if (args.host !== 'fixture.invalid' || args.username !== 'fixture' || args.password) throw new Error('Fixture SFTP only; no credentials permitted');
         return state === 'loading' ? pending() : state === 'error' ? failure() : JSON.stringify({ files: ['./reference.txt'], directories: [] });

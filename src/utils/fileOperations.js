@@ -123,46 +123,6 @@ export const unzipItem = async (zipPath, destinationPath = null) => {
 };
 
 /**
- * Get available templates.
- * @returns {Promise<Array<string>>} - An array of template paths.
- */
-export const getTemplatePaths = async () => {
-    const templatesJson = await invoke('get_template_paths_as_json');
-    return JSON.parse(templatesJson);
-};
-
-/**
- * Add a template.
- * @param {string} templatePath - Path to the file or directory to add as a template.
- * @returns {Promise<string>} - Success message.
- */
-export const addTemplate = async (templatePath) => {
-    return invoke('add_template', { templatePath: templatePath });
-};
-
-/**
- * Use a template.
- * @param {string} templatePath - Path to the template to use.
- * @param {string} destPath - Destination path where to apply the template.
- * @returns {Promise<string>} - Success message.
- */
-export const useTemplate = async (templatePath, destPath) => {
-    return invoke('use_template', {
-        templatePath: templatePath,
-        destPath: destPath
-    });
-};
-
-/**
- * Remove a template.
- * @param {string} templatePath - Path to the template to remove.
- * @returns {Promise<string>} - Success message.
- */
-export const removeTemplate = async (templatePath) => {
-    return invoke('remove_template', { templatePath: templatePath });
-};
-
-/**
  * Generate a hash for a file.
  * @param {string} path - Path to the file to hash.
  * @returns {Promise<string>} - The generated hash.

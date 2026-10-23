@@ -27,6 +27,7 @@ const SidebarItem = ({
                          isActive = false,
                          onClick,
                          onContextMenu,
+                         shortcutNumber,
                          actions = []
                      }) => {
     const dropTargetProps = useFileDropTarget();
@@ -70,6 +71,7 @@ const SidebarItem = ({
             className={`sidebar-item ${isActive ? 'active' : ''}`}
             {...dropTargetProps(dropPath)}
             role="button"
+            aria-keyshortcuts={shortcutNumber <= 9 ? `Alt+${shortcutNumber}` : undefined}
             tabIndex={0}
             onKeyDown={event => {
                 if (event.target !== event.currentTarget || !['Enter', ' '].includes(event.key)) return;
@@ -88,22 +90,25 @@ const SidebarItem = ({
                 {info && <span className="sidebar-item-info">{info}</span>}
             </div>
 
-            {actions.length > 0 && !isCollapsed && (
-                <div className="sidebar-item-actions">
-                    {actions.map((action, index) => (
-                        <button
-                            key={`action-${index}`}
-                            className="sidebar-item-action"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                action.onClick();
-                            }}
-                            title={action.tooltip}
-                            aria-label={action.tooltip}
-                        >
-                            <span className={`icon icon-${action.icon}`}></span>
-                        </button>
-                    ))}
+            {!isCollapsed && (actions.length > 0 || shortcutNumber <= 9) && (
+                <div className={`sidebar-item-trailing${actions.length ? ' has-actions' : ''}`}>
+                    {shortcutNumber <= 9 && <kbd className="sidebar-item-shortcut" aria-hidden="true">Alt+{shortcutNumber}</kbd>}
+                    {actions.length > 0 && <div className="sidebar-item-actions">
+                        {actions.map((action, index) => (
+                            <button
+                                key={`action-${index}`}
+                                className="sidebar-item-action"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    action.onClick();
+                                }}
+                                title={action.tooltip}
+                                aria-label={action.tooltip}
+                            >
+                                <span className={`icon icon-${action.icon}`}></span>
+                            </button>
+                        ))}
+                    </div>}
                 </div>
             )}
         </li>

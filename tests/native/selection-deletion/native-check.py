@@ -7,10 +7,14 @@ class Native:
     def __init__(self):
         self.ws=websocket.create_connection('ws://127.0.0.1:9234/socket/1/1/WebPage',timeout=8)
         self.target=None; self.sequence=0
+        self.page_enabled=False
         while self.target is None:
             message=json.loads(self.ws.recv())
             if message.get('method')=='Target.targetCreated' and message['params']['targetInfo']['type']=='page': self.target=message['params']['targetInfo']['targetId']
     def call(self,method,params):
+        # WebKit 2.52 dereferences a null InspectorPageAgent if CSS is enabled first.
+        if method=='CSS.enable' and not self.page_enabled:
+            self.call('Page.enable',{})
         self.sequence+=1; seq=self.sequence
         self.ws.send(json.dumps({'id':seq+1000,'method':'Target.sendMessageToTarget','params':{'targetId':self.target,'message':json.dumps({'id':seq,'method':method,'params':params})}}))
         while True:
@@ -19,6 +23,8 @@ class Native:
                 inner=json.loads(message['params']['message'])
                 if inner.get('id')==seq:
                     if 'error' in inner: raise Exception(inner['error'])
+                    if method in ('Page.enable','Page.disable'):
+                        self.page_enabled=method=='Page.enable'
                     return inner['result']
     def js(self,code):
         result=self.call('Runtime.evaluate',{'expression':code,'returnByValue':True})

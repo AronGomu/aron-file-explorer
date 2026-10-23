@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_templates"],"struct":["MetaData","MetaDataState"]};
+window.SIDEBAR_ITEMS = {"fn":[],"struct":["MetaData","MetaDataState"]};

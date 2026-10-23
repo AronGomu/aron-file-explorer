@@ -20,9 +20,14 @@ const Favorites = ({
                        onRemove,
                        onAdd,
                        currentView,
-                       currentPath
+                       currentPath,
+                       onCountChange
                    }) => {
     const [favorites, setFavorites] = useState([]);
+
+    useEffect(() => {
+        onCountChange?.(favorites.length);
+    }, [favorites.length, onCountChange]);
 
     /**
      * Load favorites from localStorage
@@ -79,10 +84,7 @@ const Favorites = ({
     const handleContextMenu = (e, item) => {
         e.preventDefault();
 
-        const choice = confirm('Remove from favorites?');
-        if (choice) {
-            onRemove(item.path);
-        }
+        onRemove(item.path);
     };
 
     if (favorites.length === 0) {
@@ -91,9 +93,10 @@ const Favorites = ({
 
     return (
         <ul className="sidebar-list">
-            {favorites.map((item) => (
+            {favorites.map((item, index) => (
                 <SidebarItem
                     key={item.path}
+                    shortcutNumber={index + 1}
                     icon={item.icon || 'star'}
                     name={item.name}
                     path={item.path}

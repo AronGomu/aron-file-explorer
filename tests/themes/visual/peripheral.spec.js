@@ -4,12 +4,11 @@ import { writeFileSync } from 'node:fs';
 test.use({ channel: 'chromium' });
 
 const themes = ['catppuccin-latte', 'catppuccin-mocha'];
-const cases = ['search', 'network', 'sftp-form', 'templates', 'dialogs', 'permissions', 'toasts', 'confirm', 'loading', 'error-fallback'];
+const cases = ['search', 'network', 'sftp-form', 'dialogs', 'permissions', 'toasts', 'confirm', 'loading', 'error-fallback'];
 // Only T5-owned declarations; shared Modal/Button/input/Icon colors are T4's gate.
 const ownedText = {
     search: '.search-input-field, .result-name-container, .result-path-container, .suggestion-item span',
     network: '.network-view-title, .network-view-subtitle, .connection-name, .connection-address, .connect-button, .add-connection-button, .empty-connections p',
-    templates: '.template-name, .template-meta span, .template-list-error p',
     permissions: '.permission-content h3, .permission-content p, .instructions h4, .instructions h5, .instructions li',
     toasts: '#notification-container > div', confirm: 'body > div:last-child h3, body > div:last-child p, body > div:last-child button',
     loading: 'main div[style] > div:last-of-type', 'error-fallback': 'main h1, main p, main button',
@@ -81,14 +80,9 @@ for (const theme of themes) {
             await page.screenshot({ path: `artifacts/theme-validation/visual/${theme}-${caseId}.png`, fullPage: true });
         });
     }
-    test(`theme_search_network_templates ${theme} populated empty loading error`, async ({ page }) => {
+    test(`theme_search_network ${theme} populated empty loading error`, async ({ page }) => {
         for (const state of ['empty', 'loading', 'error']) {
-            let errors = await visit(page, 'templates', theme, `&state=${state}`);
-            await expect(page.getByText(state === 'empty' ? 'No Templates' : state === 'loading' ? 'Loading templates...' : 'Failed to load templates. Please try again.', { exact: true })).toBeVisible();
-            expect(errors.length).toBe(state === 'error' ? 1 : 0);
-            if (state === 'error') { expect(errors[0]).toContain('T5 injected fixture failure'); await contrast(page, '.template-list-error p', `${theme}-templates-error`); }
-            await page.screenshot({ path: `artifacts/theme-validation/visual/${theme}-templates-${state}.png` });
-            errors = await visit(page, 'search', theme, `&state=${state}`);
+            const errors = await visit(page, 'search', theme, `&state=${state}`);
             if (state === 'loading') await expect(page.getByText('Indexing Files...', { exact: true }).first()).toBeVisible();
             else {
                 await page.locator('.search-input-field').fill('reference');

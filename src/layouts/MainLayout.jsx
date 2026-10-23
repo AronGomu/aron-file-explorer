@@ -24,7 +24,6 @@ import GlobalSearch from '../components/search/GlobalSearch';
 import SettingsPanel from '../components/settings/SettingsPanel';
 import ThisPCView from '../components/thisPc/ThisPCView';
 import NetworkView from '../components/network/NetworkView';
-import TemplateList from '../components/templates/TemplateList';
 import WindowControls from '../components/common/WindowControls';
 import CreateFileButton from '../components/explorer/CreateFileButton';
 
@@ -65,15 +64,16 @@ const MainLayout = () => {
     // UI State - Initialize from settings
     const [isDetailsPanelOpen, setIsDetailsPanelOpen] = usePersistedState('fileExplorerDetailsPanelOpen', () => settings.show_details_panel || false);
     const previousDetailsPreference = useRef(settings.show_details_panel);
+    const [editorFocusRequest, setEditorFocusRequest] = useState(null);
+    const clearEditorFocusRequest = useCallback(() => setEditorFocusRequest(null), []);
     const [viewMode, setViewMode] = useState(settings.default_view || 'grid');
     const [searchValue, setSearchValue] = useState('');
     const [searchResults, setSearchResults] = useState(null);
-    const [currentView, setCurrentView] = useState('explorer'); // 'explorer', 'this-pc', 'templates'
+    const [currentView, setCurrentView] = useState('explorer'); // 'explorer', 'this-pc', 'network'
 
     // Modal states
     const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
     const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
     const [itemToRename, setItemToRename] = useState(null);
 
@@ -189,15 +189,6 @@ const MainLayout = () => {
      */
     useEffect(() => {
         /**
-         * Handler for opening templates view
-         */
-        const handleOpenTemplates = () => {
-            setCurrentView('templates');
-            setIsTemplatesOpen(true);
-            navigateTo(null); // Clear explorer path
-        };
-
-        /**
          * Handler for showing properties panel
          */
         const handleShowProperties = (e) => {
@@ -302,7 +293,6 @@ const MainLayout = () => {
         };
 
         // Register event listeners
-    document.addEventListener('open-templates', handleOpenTemplates);
     document.addEventListener('show-properties', handleShowProperties);
     document.addEventListener('open-this-pc', handleOpenThisPC);
     document.addEventListener('open-network', handleOpenNetwork);
@@ -317,7 +307,6 @@ const MainLayout = () => {
         console.log('MainLayout: All event listeners registered');
 
         return () => {
-            document.removeEventListener('open-templates', handleOpenTemplates);
             document.removeEventListener('show-properties', handleShowProperties);
             document.removeEventListener('open-this-pc', handleOpenThisPC);
             document.removeEventListener('open-network', handleOpenNetwork);
@@ -542,6 +531,7 @@ const MainLayout = () => {
      */
     const handleDetailsPanelOpenChange = useCallback(async (open) => {
         setIsDetailsPanelOpen(open);
+        if (!open) setEditorFocusRequest(null);
 
         // Save to settings
         try {
@@ -555,11 +545,27 @@ const MainLayout = () => {
         [isDetailsPanelOpen, handleDetailsPanelOpenChange]);
 
     useEffect(() => {
+        const editPreview = event => {
+            event.preventDefault();
+            setEditorFocusRequest({ path: event.detail });
+            handleDetailsPanelOpenChange(true);
+        };
+        window.addEventListener('edit-preview', editPreview);
+        return () => window.removeEventListener('edit-preview', editPreview);
+    }, [handleDetailsPanelOpenChange]);
+
+    useEffect(() => {
+        if (editorFocusRequest && (selectedItems.length !== 1 || selectedItems[0].path !== editorFocusRequest.path)) {
+            setEditorFocusRequest(null);
+        }
+    }, [selectedItems, editorFocusRequest]);
+
+    useEffect(() => {
         const handlePreviewToggle = (event) => {
             if (event.defaultPrevented || document.querySelector('[role="dialog"], .modal-overlay') ||
                 event.target.closest?.('button, [role="button"], select, video, audio, object, iframe')) return;
-            if ((event.key !== ' ' && event.code !== 'Space') || event.ctrlKey || event.metaKey ||
-                event.altKey || event.shiftKey || event.isComposing) return;
+            if (!(event.ctrlKey || event.metaKey) || !event.shiftKey || event.key.toLowerCase() !== 'b' ||
+                event.altKey || event.isComposing) return;
             const field = event.target.closest?.('input, textarea');
             const isTyping = event.target.isContentEditable ||
                 event.target.closest?.('[role="textbox"]:not([aria-readonly="true"]), [role="searchbox"]:not([aria-readonly="true"])') ||
@@ -596,11 +602,6 @@ const MainLayout = () => {
                 return <ThisPCView />;
             case 'network':
                 return <NetworkView />;
-            case 'templates':
-                return <TemplateList onClose={() => {
-                    setCurrentView('explorer');
-                    setIsTemplatesOpen(false);
-                }} />;
             default:
                 return (
                     <div className="files-container">
@@ -696,6 +697,8 @@ const MainLayout = () => {
                             {/* Details panel (when selected) */}
                             <DetailsPanel
                                 item={selectedItems[0] || null}
+                                editorFocusRequest={editorFocusRequest}
+                                onEditorFocused={clearEditorFocusRequest}
                                 isMultipleSelection={selectedItems.length > 1}
                                 isCollapsed={!isDetailsPanelOpen}
                                 onOpenChange={handleDetailsPanelOpenChange}
